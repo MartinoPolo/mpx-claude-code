@@ -38,86 +38,60 @@ Use `ToolSearch` to load deferred tools only when needed.
 - Question mentions context7 or library documentation
 - "Use [library] best practices", "How do I use [library]?", "What's the best way to [library task]?"
 
-**Spawn `mp-css-layout-debugger` agent when:**
-
-- Layout issues: "fix layout", "elements overlapping", "overflow"
-- CSS systems: "flexbox not working", "grid issues", "centering"
-- Responsive: "mobile layout broken", "responsive design"
-
-**Spawn `mp-bash-script-colorizer` agent when:**
-
-- Creating new bash/shell scripts
-- Adding echo/printf output to scripts
-- Scripts have success/error/warning messages
-
 **Spawn `mp-base-branch-detector` agent when:**
 
 - Detecting base branch for PR creation/update
-- Called from mp-pr, mp-commit-push-pr, or mp-rebase skills
 
 **Spawn `mp-chrome-devtools-tester` agent when:**
 
 - Need to verify UI behavior via browser
 - "Verify with chrome devtools", "Test in browser"
 
-**Spawn `mp-gh-issue-finder` agent when:**
-
-- Creating a PR and need to find linked issue
-- Called from mp-pr or mp-commit-push-pr skills
-
 **Use `/mp-gh-issue-create` skill when:**
 
-- "Create issue", "Open issue", "File a bug", "Report issue"
-- User wants to create a GitHub issue
+- "Create github issue", "Open github issue"
 
 **Use `/mp-commit` skill when:**
 
 - User asks to commit changes
-- "Commit this", "Stage and commit", "Make a commit"
+- "Commit"
 
 **Use `/mp-pr` skill when:**
 
-- User asks to create or update a PR (without committing)
-- "Create PR", "Open pull request", "Make a PR", "Update PR"
+- User asks to create or update a PR
+- "Create PR", "Open pull request", "Update PR"
 
 **Use `/mp-commit-push` skill when:**
 
-- User asks to commit and push (without PR)
+- User asks to commit and push
 - "Commit and push", "Push my changes", "Ship it"
 
 **Use `/mp-rebase` skill when:**
 
 - User asks to rebase or merge upstream changes
-- "Rebase on main", "Update from dev", "Merge main into branch"
+- "Rebase...", "Merge ... into ..."
 
 **Use `/mp-check-fix` skill when:**
 
 - "Fix lint errors", "Fix type errors", "Check and fix", "Run checks"
-- Before committing if build/lint issues suspected
 
 **Use `/mpx-report-issue-or-bug` skill when:**
 
 - "Track this bug", "Add issue to project", "Log this bug"
-- User reports a bug for internal .mpx/ tracking (not GitHub)
-- "Add bug to checklist", "Track issue in phases"
 
 **Use `/mp-release` skill when:**
 
 - "Release", "Bump version", "Version bump", "Cut a release"
-- "npm version", "Tag and release", "Publish release"
-- User wants to bump version and push a release tag
 
 **Use `/mp-update-docs` skill when:**
 
 - "Update docs", "Refresh documentation", "Sync docs"
 - "Update README", "Update instructions", "Fix tracking"
-- Auto-spawned from mpx-execute after phase completion
 
 **Use `/mp-brainstorm` skill when:**
 
 - User wants to explore/design before coding
-- "Brainstorm", "Design a...", "How should we approach..."
-- Before any large feature implementation
+- "Brainstorm", "Design a..."
 
 ## Self-Improvement Protocol
 
