@@ -1,6 +1,6 @@
 #!/bin/bash
 # Creates a new git worktree for isolated development
-# Usage: bash setup-worktree.sh <name>
+# Usage: bash setup-worktree.sh <name> [--color <hex>]
 
 set -e
 
@@ -12,10 +12,61 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 
-NAME=$1
+NAME=""
+WORKTREE_COLOR=""
+
+usage() {
+  echo -e "${RED}✗${RESET} Usage: bash setup-worktree.sh <name> [--color <hex>]"
+  echo -e "${DIM}   Example: bash setup-worktree.sh feature-auth --color 7C3AED${RESET}"
+}
+
+normalize_hex_color() {
+  local raw="$1"
+  local normalized="${raw#\#}"
+  normalized=$(echo "$normalized" | tr '[:lower:]' '[:upper:]')
+  if [[ ! "$normalized" =~ ^[0-9A-F]{6}$ ]]; then
+    return 1
+  fi
+  echo "#$normalized"
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --color|-c)
+      if [ -z "$2" ]; then
+        usage
+        exit 1
+      fi
+      WORKTREE_COLOR=$(normalize_hex_color "$2") || {
+        echo -e "${RED}✗${RESET} Invalid color '$2'. Use 6-char hex like '${BOLD}7C3AED${RESET}' or '${BOLD}#7C3AED${RESET}'."
+        exit 1
+      }
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo -e "${RED}✗${RESET} Unknown option: $1"
+      usage
+      exit 1
+      ;;
+    *)
+      if [ -z "$NAME" ]; then
+        NAME="$1"
+      else
+        echo -e "${RED}✗${RESET} Unexpected argument: $1"
+        usage
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
 
 if [ -z "$NAME" ]; then
-  echo -e "${RED}✗${RESET} Usage: bash setup-worktree.sh <name>"
+  usage
   exit 1
 fi
 
@@ -46,7 +97,60 @@ copy_file() {
   fi
 }
 
+set_peacock_color() {
+  local target_dir="$1"
+  local color="$2"
+  local vscode_dir="$target_dir/.vscode"
+  local settings_file="$vscode_dir/settings.json"
+
+  if [ -z "$color" ]; then
+    return 0
+  fi
+
+  mkdir -p "$vscode_dir"
+
+  if [ ! -f "$settings_file" ]; then
+    printf '{\n  "peacock.color": "%s"\n}\n' "$color" > "$settings_file"
+    echo -e "  ${DIM}Set Peacock color: $color${RESET}"
+    return 0
+  fi
+
+  if grep -q '"peacock.color"' "$settings_file"; then
+    perl -0777 -i.bak -pe "s/\"peacock\\.color\"\s*:\s*\"[^\"]*\"/\"peacock.color\": \"$color\"/g" "$settings_file"
+    rm -f "$settings_file.bak"
+    echo -e "  ${DIM}Updated Peacock color: $color${RESET}"
+    return 0
+  fi
+
+  if grep -q '^\s*{\s*}\s*$' "$settings_file"; then
+    printf '{\n  "peacock.color": "%s"\n}\n' "$color" > "$settings_file"
+  else
+    perl -0777 -i.bak -pe "s/\}\s*$/,\n  \"peacock.color\": \"$color\"\n}\n/s" "$settings_file"
+    rm -f "$settings_file.bak"
+  fi
+  echo -e "  ${DIM}Added Peacock color: $color${RESET}"
+}
+
 mkdir -p "$WORKTREE_DIR"
+
+if [ "$CURRENT_BRANCH" != "dev" ] && [ "$CURRENT_BRANCH" != "develop" ]; then
+  echo -e "${RED}⚠${RESET} Current branch is '${BOLD}$CURRENT_BRANCH${RESET}', not '${BOLD}dev${RESET}' or '${BOLD}develop${RESET}'."
+  if [ -t 0 ]; then
+    read -r -p "Base new worktree on '$CURRENT_BRANCH' anyway? [y/N]: " continue_non_dev
+    case "$continue_non_dev" in
+      y|Y|yes|YES)
+        echo -e "${DIM}Continuing with base branch '$CURRENT_BRANCH'.${RESET}"
+        ;;
+      *)
+        echo -e "${CYAN}→${RESET} Aborted. Switch to '${BOLD}dev${RESET}' or '${BOLD}develop${RESET}', then run again."
+        exit 1
+        ;;
+    esac
+  else
+    echo -e "${RED}✗${RESET} Non-interactive shell: refusing non-dev/develop base branch '$CURRENT_BRANCH'."
+    exit 1
+  fi
+fi
 
 echo -e "${CYAN}→${RESET} Creating worktree '${BOLD}$NAME${RESET}' from '${BOLD}$CURRENT_BRANCH${RESET}'..."
 git worktree add -b "$NAME" "$WORKTREE_PATH"
@@ -56,6 +160,11 @@ cd "$WORKTREE_PATH"
 echo -e "${CYAN}→${RESET} Copying IDE configs..."
 copy_dir "$SOURCE_DIR/.vscode" "$PWD/.vscode"
 copy_dir "$SOURCE_DIR/.cursor" "$PWD/.cursor"
+
+if [ -n "$WORKTREE_COLOR" ]; then
+  echo -e "${CYAN}→${RESET} Applying Peacock color to workspace settings..."
+  set_peacock_color "$PWD" "$WORKTREE_COLOR"
+fi
 
 echo -e "${CYAN}→${RESET} Copying Claude Code local settings..."
 copy_file "$SOURCE_DIR/.claude/settings.local.json" "$PWD/.claude/settings.local.json"
