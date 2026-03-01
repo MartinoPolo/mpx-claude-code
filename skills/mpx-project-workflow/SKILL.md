@@ -30,7 +30,7 @@ This document provides background knowledge about spec-driven development workfl
 
 | File            | Purpose                                                     | When Updated                    |
 | --------------- | ----------------------------------------------------------- | ------------------------------- |
-| SPEC.md         | Requirements, tech stack, scope                             | Initial creation, scope changes |
+| SPEC.md         | Requirements source of truth (checkbox list)                | Initial creation, scope changes |
 | ROADMAP.md      | Phase overview, dependencies, tracking, decisions, blockers | Phase completion, decisions     |
 | phases/NN-name/ | Phase folder with CHECKLIST.md (specs + tasks + state)      | During phase execution          |
 
@@ -38,10 +38,10 @@ This document provides background knowledge about spec-driven development workfl
 
 ### Writing Good Specifications
 
-- Be specific about features, not implementation
-- Include success criteria
-- Define what's OUT of scope
-- List assumptions explicitly
+- Write each requirement as a checkbox item (`- [ ]` / `- [x]`)
+- Use precise, testable language with no ambiguity
+- Preserve constraints and edge cases inline
+- Prefer zero information loss over brevity
 
 ### Breaking Down Tasks
 
@@ -59,8 +59,9 @@ This document provides background knowledge about spec-driven development workfl
 
 ### Requirements vs Implementation
 
-- Requirements skills (`/mpx-add-requirements`, `/mpx-report-issue-or-bug`, `/mpx-create-spec`, `/mpx-parse-spec`) are documentation-only
+- Requirements skills (`/mpx-add-requirements`, `/mpx-report-issue-or-bug`, `/mpx-parse-spec`) are documentation-only
 - They update `.mpx/` files — never source code, configs, or tests
+- `mpx-spec-analyzer` is the dedicated parser that converts SPEC into ROADMAP + phase checklists
 - Implementation happens only via `/mp-execute mpx`
 
 ### Session Handoff
@@ -94,8 +95,8 @@ This document provides background knowledge about spec-driven development workfl
 
 ### "I need to change scope"
 
-1. Update SPEC.md with new requirements
-2. Regenerate with `/mpx-parse-spec`
+1. Run `/mpx-add-requirements "..."` to update SPEC safely
+2. It automatically re-parses via analyzer
 3. Completed work is preserved in git
 
 ### "I want to control what gets executed"
@@ -107,8 +108,8 @@ This document provides background knowledge about spec-driven development workfl
 ### "I need to add new requirements"
 
 1. Run `/mpx-add-requirements "description"`
-2. Reviews current state and detects conflicts
-3. Updates SPEC.md and generates new tasks
+2. Clarifies ambiguous input before writing
+3. Updates SPEC.md and re-parses via analyzer into roadmap/checklists
 
 ### "I found a bug to track"
 
@@ -120,11 +121,10 @@ This document provides background knowledge about spec-driven development workfl
 
 ```
 /mpx-setup              - Unified setup (auto-detects: init, convert, restructure)
-/mpx-create-spec        - Interactive spec creation
 /mpx-init-repo          - Git initialization only
-/mpx-parse-spec         - Generate checklists from spec
+/mpx-parse-spec         - Re-parse edited SPEC via analyzer
 /mp-execute mpx              - Execute tasks (auto-selects phase and scope)
 /mpx-show-project-status     - Show progress and next steps
-/mpx-add-requirements   - Add new requirements to existing project
+/mpx-add-requirements   - Primary requirements entry (create/update + parse)
 /mpx-report-issue-or-bug          - Track bugs/issues in phase system
 ```

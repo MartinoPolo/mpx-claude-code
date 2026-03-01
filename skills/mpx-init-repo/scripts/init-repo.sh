@@ -139,40 +139,6 @@ if [ ! -f ".claude/CLAUDE.md" ]; then
 EOF
 fi
 
-# Create SPEC.md template
-if [ ! -f ".claude/SPEC.md" ]; then
-    echo "Creating .claude/SPEC.md template..."
-    cat > .claude/SPEC.md << 'EOF'
-# Project Specification
-
-## Project Name
-[Name]
-
-## Description
-[What does this project do? Who is it for?]
-
-## Core Features
-1. [Feature 1]
-2. [Feature 2]
-3. [Feature 3]
-
-## Technical Requirements
-- [ ] [Requirement 1]
-- [ ] [Requirement 2]
-
-## Non-Functional Requirements
-- Performance: [requirements]
-- Security: [requirements]
-- Accessibility: [requirements]
-
-## Out of Scope
-- [What this project will NOT do]
-
-## Success Criteria
-- [How do we know when it's done?]
-EOF
-fi
-
 # Stage and commit
 echo "Creating initial commit..."
 git add .gitignore .gitattributes .editorconfig .claude/
@@ -187,7 +153,7 @@ else
 - Add .gitattributes for line ending normalization
 - Add .editorconfig for editor consistency
 - Add .claude/ project structure
-- Add CLAUDE.md and SPEC.md templates"
+- Add CLAUDE.md template"
 fi
 
 echo ""
@@ -198,8 +164,7 @@ echo "  .gitignore          - Comprehensive ignore patterns"
 echo "  .gitattributes      - Line ending normalization"
 echo "  .editorconfig       - Editor consistency settings"
 echo "  .claude/CLAUDE.md   - Project context template"
-echo "  .claude/SPEC.md     - Requirements template"
 echo ""
 echo "Next steps:"
-echo "  1. Edit .claude/SPEC.md with your project requirements"
-echo "  2. Run /parse-spec to generate implementation checklist"
+echo "  1. Run /mpx-add-requirements to create/update .mpx/SPEC.md"
+echo "  2. Run /mpx-parse-spec only if you manually edited SPEC.md"

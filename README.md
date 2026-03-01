@@ -31,13 +31,13 @@ Auto-detects project state — fresh init, existing codebase, or restructure. Cr
 /mpx-setup                 ◄── Auto-detects: fresh init, convert existing, or restructure
         │
         ▼
-/mpx-create-spec           ◄── Interactive tech stack Q&A → SPEC.md
+/mpx-add-requirements      ◄── Primary requirements entry → SPEC.md
         │
         ▼
 /mpx-init-repo             ◄── Git setup (.gitignore, .editorconfig, etc.)
         │
         ▼
-/mpx-parse-spec            ◄── SPEC.md → ROADMAP.md + phase folders
+/mpx-parse-spec            ◄── Spawn mpx-spec-analyzer → ROADMAP.md + phase folders
         │
         ▼
 /mpx-execute               ◄── Pick phase, execute tasks (loop)
@@ -65,8 +65,9 @@ All mpx projects use phase-based organization inside `.mpx/`:
         └── CHECKLIST.md
 ```
 
-- `ROADMAP.md` — tracks phase completion, project-level decisions and blockers
-- Each phase has `CHECKLIST.md` (single source of truth for specs + tasks + state)
+- `SPEC.md` — project requirements source of truth for full lifecycle
+- `ROADMAP.md` — phase tracking, dependencies, project-level decisions and blockers
+- Each phase has `CHECKLIST.md` (phase-level source of truth for scope + tasks + state)
 - `HANDOFF.md` is ephemeral and optional — created in project root by `/mp-handoff`, consumed by `/mpx-execute`
 
 ## Skills Reference
@@ -76,12 +77,11 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | Skill                      | Description                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------- |
 | `/mpx-setup`               | Unified project setup (auto-detects: fresh init, convert existing, restructure) |
-| `/mpx-create-spec`         | Interactive spec creation                                                       |
 | `/mpx-init-repo`           | Initialize git repo                                                             |
-| `/mpx-parse-spec`          | Parse SPEC.md → ROADMAP.md + phases                                             |
+| `/mpx-parse-spec`          | Re-parse SPEC.md via `mpx-spec-analyzer`                                        |
 | `/mpx-execute`             | Select phase, execute tasks (full phase or single)                              |
 | `/mpx-show-project-status` | Show progress                                                                   |
-| `/mpx-add-requirements`    | Add requirements with conflict detection                                        |
+| `/mpx-add-requirements`    | Primary requirements skill (create/update SPEC + auto-parse)                    |
 | `/mpx-report-issue-or-bug` | Track bugs/issues in .mpx/ phase system                                         |
 
 ### mp- Skills (General Purpose)

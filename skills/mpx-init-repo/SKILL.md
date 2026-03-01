@@ -36,8 +36,7 @@ project/
 ├── .git/
 ├── .gitignore              # Comprehensive multi-language
 └── .claude/
-    ├── CLAUDE.md           # Project context template
-    └── SPEC.md             # Requirements template
+   └── CLAUDE.md           # Project context template
 ```
 
 ## Notes
@@ -45,5 +44,5 @@ project/
 - `.gitignore` is copied from `templates/gitignore.template` — deterministic, no LLM generation
 - Project-specific ignores (e.g., Obsidian's `main.js`, `data.json`) should be appended after init
 - `.mpx/` is intentionally NOT ignored — it contains plans/roadmap that should be versioned
-- Creates templates in `.claude/` for project documentation
+- Creates `.claude/CLAUDE.md` template for project context
 - Makes an initial commit with message "Initial project setup"

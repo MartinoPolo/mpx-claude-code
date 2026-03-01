@@ -38,6 +38,11 @@ Use `ToolSearch` to load deferred tools only when needed.
 - Question mentions context7 or library documentation
 - "Use [library] best practices", "How do I use [library]?", "What's the best way to [library task]?"
 
+**Spawn `mpx-spec-analyzer` agent when:**
+
+- Parsing `.mpx/SPEC.md` into roadmap/phases
+- User asks to "parse spec", "regenerate roadmap", or "rebuild phase checklists"
+
 **Spawn `mp-base-branch-detector` agent when:**
 
 - Detecting base branch for PR creation/update
@@ -78,6 +83,11 @@ Use `ToolSearch` to load deferred tools only when needed.
 **Use `/mpx-report-issue-or-bug` skill when:**
 
 - "Track this bug", "Add issue to project", "Log this bug"
+
+**Use `/mpx-add-requirements` skill when:**
+
+- User asks to create spec, add requirements, or update spec
+- User provides requirement text that should become entries in `.mpx/SPEC.md`
 
 **Use `/mp-release` skill when:**
 
