@@ -453,6 +453,9 @@ Regenerate ROADMAP.md from current phase directories:
 - Fix phase numbering to match directory structure
 - Update task counts per phase
 - Fix dependency references if phases were renumbered
+- Collapse each completed phase to one concise line in roadmap phase list
+- Remove redundant completed-phase mentions in roadmap details/overview
+- Keep completed-phase mentions outside phase list only when needed to explain unblocked dependencies for incomplete/blocked phases
 
 **C6: Update .claude/CLAUDE.md**
 

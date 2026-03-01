@@ -98,8 +98,11 @@ Use `AskUserQuestion` for weak-match decisions.
    ```
 
 2. **Update ROADMAP.md**:
-   - Update task counts for affected phase
-   - Or add new bugfix phase entry if created
+
+- Update task counts/status for affected incomplete/blocked phase
+- Keep completed phases as one-line records only
+- Remove redundant completed-phase references unless required to explain an unblock dependency
+- Add new bugfix phase entry when created
 
 3. **Update SPEC.md** (critical/high severity only):
    - Add to `## Known Issues` section (create section if missing)
@@ -150,3 +153,4 @@ Next: Run `/mp-execute mpx` to implement the fix.
 - Bug tasks use `Fix:` prefix to distinguish from feature tasks
 - Critical/high issues are surfaced in SPEC.md Known Issues for visibility
 - Completed phases are never reopened — new bugfix phase created instead
+- ROADMAP concision policy: completed phase = one line; detailed status belongs to incomplete/blocked phases

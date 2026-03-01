@@ -4,11 +4,11 @@ Shared across all paths. Runs after phase generation or during restructure.
 
 ### When to Split
 
-| Uncompleted tasks | Action |
-|-------------------|--------|
-| ≤6 | No split |
-| 7–10 | Split unless all tasks under single section heading (tightly coupled) |
-| >10 | Always split |
+| Uncompleted tasks | Action                                                                |
+| ----------------- | --------------------------------------------------------------------- |
+| ≤6                | No split                                                              |
+| 7–10              | Split unless all tasks under single section heading (tightly coupled) |
+| >10               | Always split                                                          |
 
 ### How to Split
 
@@ -22,6 +22,8 @@ Shared across all paths. Runs after phase generation or during restructure.
    - Replace the split phase entry with multiple new entries
    - Fix all dependency references to renumbered phases
    - Set status: all tasks done → Complete, mixed → In Progress, none done → Not Started
+   - Keep completed phases to one-line records only
+   - Remove redundant completed-phase mentions from roadmap details unless needed to explain unblocked dependencies for incomplete/blocked phases
 
 ### Splitting Rules
 
@@ -33,6 +35,7 @@ Shared across all paths. Runs after phase generation or during restructure.
 ### Example
 
 **Before (Phase 03 has 11 uncompleted tasks):**
+
 ```
 .mpx/phases/
 ├── 01-foundation/
@@ -43,6 +46,7 @@ Shared across all paths. Runs after phase generation or during restructure.
 ```
 
 CHECKLIST.md sections:
+
 ```
 ### Auth System          (4 tasks — 0 done)
 ### User Profiles        (4 tasks — 0 done)
@@ -50,6 +54,7 @@ CHECKLIST.md sections:
 ```
 
 **After split:**
+
 ```
 .mpx/phases/
 ├── 01-foundation/
@@ -64,6 +69,7 @@ CHECKLIST.md sections:
 ```
 
 ROADMAP.md changes:
+
 ```
 Before:
 - [ ] Phase 3: Features (depends on: Phase 2)
@@ -87,6 +93,7 @@ If splitting a phase that has some completed tasks:
 ```
 
 Result:
+
 - Auth System phase → status: **Complete** (all 4 done)
 - User Profiles phase → status: **In Progress** (2/4 done)
 - Notifications phase → status: **Not Started** (0/3 done)

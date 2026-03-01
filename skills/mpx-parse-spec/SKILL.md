@@ -204,3 +204,5 @@ When breaking features into tasks, ensure:
 - Phase folders should be numbered (01-, 02-, etc.) for ordering
 - Each phase folder contains only CHECKLIST.md (single source of truth)
 - ROADMAP.md tracks phase completion (check phase checkbox when phases complete)
+- ROADMAP concision policy: once a phase is complete, keep only a one-line record for that phase
+- Remove completed-phase detail blocks and extra mentions unless needed to explain why an incomplete/blocked phase was unblocked

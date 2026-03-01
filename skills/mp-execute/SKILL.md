@@ -88,6 +88,15 @@ For each group:
 
 In MPX mode, update phase `CHECKLIST.md` and roadmap phase status where relevant.
 
+### ROADMAP Concision Rule (MPX mode)
+
+When a phase becomes complete, keep ROADMAP records minimal:
+
+- Completed phase gets **one line only** in `## Phases` (mark complete)
+- Remove completed phase details from other roadmap sections
+- Keep extra mention only when needed to explain an unblock/dependency for an incomplete or blocked phase
+- Keep `## Phase Details` focused on incomplete/blocked phases only
+
 ### Step 5: Group hard gate review
 
 After all tasks are completed or unresolved, run full gate:
@@ -110,6 +119,7 @@ After all tasks are completed or unresolved, run full gate:
 - Ensure tracked state reflects actual status:
   - Checklist mode: target checklist (`[x]`, unresolved notes, blockers)
   - MPX mode: phase checklists + roadmap phase progress
+- In MPX mode, if a phase changed to complete during execution, collapse its roadmap record to one concise line and prune redundant references
 - Final commit — invoke `/mp-commit` for any remaining uncommitted changes (checklist updates, roadmap status, docs)
 - Summarize completed/skipped/unresolved tasks
 - Spawn `mp-docs-updater` agent with list of changes to update docs

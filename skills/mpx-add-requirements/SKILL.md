@@ -117,8 +117,9 @@ Use `AskUserQuestion` for conflict resolution.
    - Spans multiple phases? → Distribute tasks appropriately
 
 3. **Update ROADMAP.md:**
-   - Add tasks to phase summary
-   - Update task counts
+   - Update only affected incomplete/blocked phase summaries
+   - Keep completed phases as one-line records only
+   - Remove redundant references to completed phases from other sections unless needed to explain an unblock
 
 4. **Update phase CHECKLIST.md files:**
    - Add new tasks with inline spec paragraphs to appropriate phase's CHECKLIST.md
@@ -194,3 +195,4 @@ When generating tasks for new requirements:
 - Conflict detection is advisory - user has final say
 - Tasks are generated based on the requirement description
 - Complex requirements may need manual task refinement
+- ROADMAP concision policy: completed phase = one line; details stay only for incomplete/blocked phases
