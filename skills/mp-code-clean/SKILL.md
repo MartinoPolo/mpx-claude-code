@@ -40,23 +40,64 @@ Rules:
 
 For each file group, spawn a review subagent.
 
-Review prompt must require:
+Use this exact review prompt shape:
 
-1. Detect duplication and repetition
-2. Detect dead/unused code paths, exports, imports, and helpers
-3. Propose concrete low-risk cleanup edits
-4. Prioritize easy wins first
+```text
+You are reviewing one module group for immediate code cleanup.
+
+Goal:
+- Find DRY violations, duplication/repetition, and dead/unused code.
+- Propose low-risk cleanups that preserve behavior.
+- Code line number reduction is the best win here.
+
+Input:
+- Module group: <folder/files list>
+- Boundaries: review only this group and direct dependencies.
+
+Required actions:
+1) Identify duplicated logic and repeated patterns.
+2) Identify dead/unused exports, imports, helpers, and unreachable code.
+3) Prioritize easy wins first.
+4) Produce an edit plan with exact files and concrete changes.
+
+Required output:
+- Findings grouped by file
+- Ranked cleanup plan (easy wins first)
+- Risk notes per proposed change
+```
 
 ### Step 3: Spawn Fix Subagents per Group
 
 For each reviewed group, spawn a fix subagent with approved findings.
 
-Fix prompt must require:
+Use this exact fix prompt shape:
 
-1. Apply deduplication and dead code removal
-2. Keep signatures and behavior stable
-3. Avoid broad architectural rewrites
-4. Run relevant targeted checks where available
+```text
+You are applying approved cleanup changes for one module group.
+
+Goal:
+- Execute the approved deduplication and dead-code-removal plan.
+- Keep behavior and signatures stable.
+
+Input:
+- Module group: <folder/files list>
+- Approved findings/plan: <review output>
+
+Required actions:
+1) Apply deduplication and repetition removal.
+2) Remove dead/unused code safely.
+3) Keep public contracts stable unless plan explicitly allows change.
+4) Avoid broad rewrites and feature changes.
+5) Run targeted checks/tests for touched files when available.
+
+Required output:
+- Applied edits by file
+- What was removed/consolidated
+- Validation results
+- Follow-ups not completed and why
+```
+
+Fix subagent must reject unapproved scope expansion.
 
 ### Step 4: Validate and Summarize
 
