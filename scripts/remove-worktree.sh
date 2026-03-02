@@ -1,6 +1,6 @@
 #!/bin/bash
 # Remove worktree script
-# Usage: bash remove-worktree.sh [name...]
+# Usage: bash remove-worktree.sh [--skip-confirmation] [name...]
 
 set -e
 
@@ -19,7 +19,13 @@ WORKTREE_DIR="$MAIN_REPO/../worktrees"
 
 # Parse arguments
 NAMES=()
+SKIP_CONFIRMATION=false
 for arg in "$@"; do
+  if [ "$arg" = "--skip-confirmation" ]; then
+    SKIP_CONFIRMATION=true
+    continue
+  fi
+
   normalized="${arg//,/ }"
   for word in $normalized; do
     NAMES+=("$word")
@@ -79,16 +85,18 @@ for NAME in "${NAMES[@]}"; do
 done
 
 # Show confirmation
-echo ""
-echo -e "${YELLOW}⚠${RESET} Remove the following worktrees?"
-for i in "${!NAMES[@]}"; do
-  echo -e "  ${DIM}-${RESET} ${NAMES[$i]} (${PATHS[$i]})"
-done
-echo ""
-read -r -p "Confirm (Y/n): " confirm
-if [ "$confirm" = "n" ] || [ "$confirm" = "N" ]; then
-  echo -e "${YELLOW}⚠${RESET} Cancelled"
-  exit 0
+if [ "$SKIP_CONFIRMATION" != "true" ]; then
+  echo ""
+  echo -e "${YELLOW}⚠${RESET} Remove the following worktrees?"
+  for i in "${!NAMES[@]}"; do
+    echo -e "  ${DIM}-${RESET} ${NAMES[$i]} (${PATHS[$i]})"
+  done
+  echo ""
+  read -r -p "Confirm (Y/n): " confirm
+  if [ "$confirm" = "n" ] || [ "$confirm" = "N" ]; then
+    echo -e "${YELLOW}⚠${RESET} Cancelled"
+    exit 0
+  fi
 fi
 
 # Remove each worktree
