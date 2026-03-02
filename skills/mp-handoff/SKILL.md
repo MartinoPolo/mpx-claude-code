@@ -11,7 +11,7 @@ metadata:
 
 # Session Handoff
 
-Creates ephemeral `HANDOFF.md` in the project root that bridges between sessions. Optionally persists decisions to `.mpx/` if the project uses phased workflow.
+Creates ephemeral `HANDOFF.md` in the project root that bridges between sessions. Persists decisions to `.mpx/` only when an existing `.mpx/` folder is present.
 
 ## Purpose
 
@@ -105,10 +105,17 @@ Date: [Today's date]
 
 ### Step 5: Persist Decisions (Conditional)
 
-Only if `.mpx/` structure exists and decisions were made during this session:
+Only if an existing `.mpx/` folder is present and decisions were made during this session:
 
 1. Update `## Decisions` in the active phase's `CHECKLIST.md` (phase-specific decisions)
 2. Update `## Decisions` in `.mpx/ROADMAP.md` (project-level decisions)
+
+If `.mpx/` folder is missing:
+
+- Do not create `.mpx/`
+- Do not create `ROADMAP.md`
+- Do not create or modify any `.mpx/**` files
+- Create or update `HANDOFF.md` only
 
 Decisions are persistent (unlike HANDOFF.md which is ephemeral).
 
@@ -150,8 +157,9 @@ Show the user what was created:
 ## Notes
 
 - HANDOFF.md is ephemeral — it exists only between sessions
-- Decisions are also persisted to `.mpx/` CHECKLIST.md if project uses phased workflow
+- Decisions are persisted to `.mpx/` CHECKLIST.md only when an existing `.mpx/` folder is present
 - Always creates HANDOFF.md in project root regardless of `.mpx/` presence
+- When `.mpx/` folder is absent, writes `HANDOFF.md` only (no `.mpx/` or `ROADMAP.md` creation/updates)
 - Focus on "why" not just "what" — reasoning is crucial
 - Capture implicit knowledge that isn't documented elsewhere
 - If HANDOFF.md already exists, it is read and merged with current session context (update-or-create)

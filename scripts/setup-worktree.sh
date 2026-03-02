@@ -77,6 +77,9 @@ SOURCE_DIR=$(pwd)
 WORKTREE_DIR="$MAIN_REPO/../worktrees"
 WORKTREE_PATH="$WORKTREE_DIR/$NAME"
 
+echo -e "${CYAN}→${RESET} Base repository: ${BOLD}$MAIN_REPO${RESET}"
+echo -e "${CYAN}→${RESET} Checked-out base branch: ${BOLD}$CURRENT_BRANCH${RESET}"
+
 copy_dir() {
   local source="$1"
   local target="$2"
