@@ -1,0 +1,1 @@
+../../../scripts/detect-project-scripts.sh

@@ -1,9 +1,9 @@
 ---
 name: mp-execute
-description: 'Execute checklist tasks in grouped loops with executor/reviewer/checker/resolver agents. Use when: "execute checklist", "run this task list", "complete unchecked tasks"'
+description: 'Execute checklist tasks in grouped loops with executor/reviewer/checker agents and conditional frontend verification. Use when: "execute checklist", "run this task list", "complete unchecked tasks"'
 argument-hint: "<checklist-path | mpx [phase N | task | all]>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), AskUserQuestion, Task, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(bash scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *), AskUserQuestion, Task, Skill
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -76,12 +76,20 @@ For each group:
    - `mp-reviewer-best-practices`
    - `mp-reviewer-spec-alignment` with task spec
    - `mp-checker` agent with detected check commands
-3. If reviewer/checker reports issues, optionally spawn `mp-issue-resolver` agent
+3. If reviewer/checker reports issues, spawn `mp-executor` in fix mode with explicit scoped tasks only:
    - pass findings + failing commands
-   - max 3 iterations per failed check
-4. Mark completed tasks as `[x]`
-5. For unresolved blockers, keep unchecked and append reason in checklist `## Blockers` (or inline unresolved note)
-6. Commit completed work — after marking tasks complete, invoke `/mp-commit` skill
+   - include strict task list derived from findings (one item per issue in a checklist format)
+   - include execution scope summary, affected files etc. as a broader scope description for context
+   - Repeat the review/check + fix issues loop up to 3 times or until clean
+4. Detect changed surface (frontend/backend) from group diff after review/check fix loop:
+   - If backend/API/db changes exist, ask user if API, DB, and dependent services are ready for verification
+   - If frontend changes exist, run frontend verification loop (max 3 iterations): - determine run instructions in this order: 1) explicit guidance from `AGENTS.md` or task context 2) direct detector call: `bash scripts/detect-project-scripts.sh . -c frontend` 3) use skill `/mp-script-discovery`
+     - ensure frontend server is running on target URL/port, start it when needed
+     - run `mp-chrome-devtools-tester` with instruction on what to visually test and where + auth context if available
+     - if tester finds failures, run `mp-executor` in fix mode with explicit scoped tasks from tester failures, then re-run tester. Repeat up to 3 times or until clean
+5. Mark completed tasks as `[x]`
+6. For unresolved blockers, keep unchecked and append reason in checklist `## Blockers` (or inline unresolved note)
+7. Commit completed work — after marking tasks complete, invoke `/mp-commit` skill
    - Scope commit to files changed in this group
    - Commit message reflects the group's tasks (e.g., `feat(scope): implement auth flow`)
    - Skip commit if no tasks were completed in this group
@@ -111,8 +119,9 @@ After all tasks are completed or unresolved, run full gate:
 - `mp-reviewer-error-handling`
 
 2. Spawn `mp-checker` agent
-3. If issues remain, spawn `mp-issue-resolver` agent with all findings and failed checks
-4. If still unresolved, mark affected tasks as unresolved with clear reason and continue
+3. If issues remain, spawn `mp-executor` in fix mode with explicit scoped tasks from findings and failed checks
+4. If frontend changes are in scope and gate reviews/checks pass, run `mp-chrome-devtools-tester` as final frontend verification (same 3-iteration resolver loop)
+5. If still unresolved, mark affected tasks as unresolved with clear reason and continue
 
 ### Step 6: Finalization
 

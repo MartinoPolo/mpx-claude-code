@@ -97,10 +97,11 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mp-review-pr`           | PR review with confidence scoring                |
 | `/mp-review-changes`      | Lightweight review of uncommitted changes        |
 | `/mp-review-design`       | Visual design inspection via chrome-devtools     |
-| `/mp-gh-issue-fix`        | Investigate and fix GitHub issues                |
+| `/mp-gh-issue-execute`    | Execute GitHub issues (bug/task/feature)         |
 | `/mp-update-readme`       | Update README.md                                 |
 | `/mp-update-instructions` | Analyze history, improve CLAUDE.md/AGENTS.md     |
 | `/mp-check-fix`           | Auto-detect and fix build/typecheck/lint errors  |
+| `/mp-script-discovery`    | Discover runnable scripts and dev servers        |
 | `/mp-handoff`             | Create ephemeral HANDOFF.md for session bridging |
 | `/mp-gemini-fetch`        | Fetch blocked sites via Gemini CLI               |
 
@@ -112,7 +113,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | mpx-spec-analyzer         | Sonnet | Analyzes specs and creates phase structure         |
 | mpx-codebase-scanner      | Sonnet | Scans codebase for tech stack, features, structure |
 | mp-chrome-devtools-tester | Sonnet | Browser test automation via Chrome DevTools MCP    |
-| mp-gh-issue-analyzer      | Opus   | Analyzes GitHub issues, creates fix plans          |
+| mp-gh-issue-analyzer      | Opus   | Analyzes GitHub issues, creates execution plans    |
 | mp-context7-docs-fetcher  | Sonnet | Fetches library docs via Context7 MCP              |
 | mp-css-layout-debugger    | Haiku  | CSS layout debugging                               |
 | mp-base-branch-detector   | Haiku  | Detect base branch for PRs and rebases             |
@@ -155,6 +156,7 @@ bash scripts/remove-worktree.sh <name>   # Remove worktree and its branch
 **What `setup-worktree` copies automatically:**
 
 - **IDE configs** — `.vscode/`, `.cursor/`
+- **Local project context** — `.local/`
 - **Claude Code settings** — `.claude/settings.local.json`
 - **`.env` files** — copied from source repo, with `.env.example` fallback for any missing ones
 - **`.mpx/` folder** — copied if gitignored (local-only project data that git won't track to worktrees)

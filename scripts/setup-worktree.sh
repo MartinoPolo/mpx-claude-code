@@ -163,6 +163,7 @@ cd "$WORKTREE_PATH"
 echo -e "${CYAN}→${RESET} Copying IDE configs..."
 copy_dir "$SOURCE_DIR/.vscode" "$PWD/.vscode"
 copy_dir "$SOURCE_DIR/.cursor" "$PWD/.cursor"
+copy_dir "$SOURCE_DIR/.local" "$PWD/.local"
 
 if [ -n "$WORKTREE_COLOR" ]; then
   echo -e "${CYAN}→${RESET} Applying Peacock color to workspace settings..."

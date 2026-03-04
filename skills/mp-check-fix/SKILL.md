@@ -26,7 +26,7 @@ Auto-detect and fix build, typecheck, and lint errors. $ARGUMENTS
 ## Step 1: Detect Available Checks
 
 ```bash
-bash ~/.claude/scripts/detect-check-scripts.sh
+bash scripts/detect-check-scripts.sh
 ```
 
 Parse output key=value pairs. Report findings:
@@ -40,7 +40,7 @@ If `NO_PROJECT=true` → report "No package.json found" and stop.
 If `PM_UNKNOWN=true` → no lock file found. Ask the user which package manager to use (npm, pnpm, yarn, bun). Then re-run with the chosen PM:
 
 ```bash
-bash ~/.claude/scripts/detect-check-scripts.sh . <chosen_pm>
+bash scripts/detect-check-scripts.sh . <chosen_pm>
 ```
 
 ## Step 2: Filter by Arguments

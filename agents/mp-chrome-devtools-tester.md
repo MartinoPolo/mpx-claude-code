@@ -94,6 +94,12 @@ If authentication is required:
 
 ### 6. Execute Tests
 
+When requirements cover multiple pages/routes:
+
+1. Open each target page in a separate browser tab before deep assertions
+2. Keep all opened tabs available for user manual visual verification at the end
+3. Run page-specific test steps in their corresponding tab
+
 For each test requirement:
 
 1. Perform required UI actions (navigate, click, fill, scroll, etc.)
