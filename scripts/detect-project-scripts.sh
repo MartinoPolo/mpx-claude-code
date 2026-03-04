@@ -5,7 +5,7 @@
 # Optional: --category <name> to filter scripts by category.
 # Optional: --json for machine-readable output.
 # Categories: frontend, backend, database, build, typecheck, lint, test, other
-# Usage: bash scripts/detect-project-scripts.sh [project_dir] [--recursive] [--category <name>] [--json]
+# Usage: bash $HOME/.claude/scripts/detect-project-scripts.sh [project_dir] [--recursive] [--category <name>] [--json]
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ CATEGORY_FILTER=""
 VALID_CATEGORIES="frontend backend database build typecheck lint test other"
 
 usage() {
-  echo "Usage: bash scripts/detect-project-scripts.sh [project_dir] [--recursive] [--category <name>] [--json]"
+  echo "Usage: bash $HOME/.claude/scripts/detect-project-scripts.sh [project_dir] [--recursive] [--category <name>] [--json]"
   echo "  --recursive, -r   Scan nested package.json files"
   echo "  --category, -c    Filter by category"
   echo "  --json            Output JSON (for automation)"

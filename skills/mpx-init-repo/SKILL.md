@@ -20,7 +20,7 @@ Initialize a new git repository with a comprehensive .gitignore and Claude Code 
 2. **Run the init script**: Execute the initialization script:
 
    ```bash
-   bash scripts/init-repo.sh
+   bash $HOME/.claude/skills/mpx-init-repo/scripts/init-repo.sh
    ```
 
 3. **Report results**: Show the user what was created:

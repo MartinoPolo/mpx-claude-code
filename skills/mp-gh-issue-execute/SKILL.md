@@ -3,7 +3,7 @@ name: mp-gh-issue-execute
 description: 'Execute GitHub issue scope (bug, task, or feature): investigate, plan, implement, review, run frontend verification when needed, and resolve findings. Use when: "execute issue #N", "implement issue", "work on issue"'
 argument-hint: "<issue-url | issue-number | owner/repo#number>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Skill, Bash(gh issue *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(gh *), Bash(bash scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Skill, Bash(gh issue *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(gh *), Bash(bash $HOME/.claude/skills/mp-gh-issue-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
   version: "0.2"
@@ -155,7 +155,7 @@ After executor finishes, run this sequence:
 
 - Determine run instructions in this order:
   1. explicit project run guidance already present in `AGENTS.md`/issue context
-  2. direct detector call: `bash scripts/detect-project-scripts.sh . -c frontend`
+  2. direct detector call: `bash $HOME/.claude/skills/mp-gh-issue-execute/scripts/detect-project-scripts.sh . -c frontend`
   3. if no usable frontend command found, fallback to `/mp-script-discovery`
 - Ensure frontend server is running on target port (or start it from detected command)
 - Pass URL/port, pages/routes, and auth context (if available) to `mp-chrome-devtools-tester`

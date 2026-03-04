@@ -1,6 +1,6 @@
 #!/bin/bash
 # Initialize a new project with git and Claude Code structure
-# Usage: bash ~/.claude/scripts/init-repo.sh
+# Usage: bash $HOME/.claude/scripts/init-repo.sh
 
 set -e
 

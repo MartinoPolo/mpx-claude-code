@@ -3,7 +3,7 @@ name: mp-script-discovery
 description: 'Discover runnable scripts across package.json files and identify frontend/backend/database run commands. Use when: "find scripts", "how to run app", "detect dev server"'
 argument-hint: "[project-dir]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(bash scripts/detect-project-scripts.sh*), Bash(cat *), Bash(node *)
+allowed-tools: Read, Glob, Grep, Bash(bash $HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh*), Bash(cat *), Bash(node *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -12,7 +12,7 @@ metadata:
 
 # Script Discovery
 
-Wrap `scripts/detect-project-scripts.sh`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
+Wrap `$HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
 
 ## Goal
 
@@ -27,13 +27,14 @@ Wrap `scripts/detect-project-scripts.sh`. Use this skill when agents need a reli
 Script path:
 
 ```bash
-bash scripts/detect-project-scripts.sh
+SCRIPT_DETECTOR="$HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh"
+bash "$SCRIPT_DETECTOR"
 ```
 
 Usage:
 
 ```bash
-bash scripts/detect-project-scripts.sh [project_dir] [--recursive|-r] [--category|-c <name>] [--json]
+bash "$SCRIPT_DETECTOR" [project_dir] [--recursive|-r] [--category|-c <name>] [--json]
 ```
 
 Category options:
@@ -57,7 +58,7 @@ Behavior:
 ## Step 1: Run detector (default wrapper mode)
 
 ```bash
-bash scripts/detect-project-scripts.sh ${ARGUMENTS:-.}
+bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.}
 ```
 
 Default output format:
@@ -71,19 +72,19 @@ If detector returns an error line, report it and stop.
 Recursive scan:
 
 ```bash
-bash scripts/detect-project-scripts.sh ${ARGUMENTS:-.} --recursive
+bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive
 ```
 
 Category filtered scan:
 
 ```bash
-bash scripts/detect-project-scripts.sh ${ARGUMENTS:-.} --category frontend
+bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --category frontend
 ```
 
 JSON scan (automation/debugging):
 
 ```bash
-bash scripts/detect-project-scripts.sh ${ARGUMENTS:-.} --recursive --json
+bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive --json
 ```
 
 ## Example Outputs

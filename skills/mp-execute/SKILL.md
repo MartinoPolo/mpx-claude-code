@@ -3,7 +3,7 @@ name: mp-execute
 description: 'Execute checklist tasks in grouped loops with executor/reviewer/checker agents and conditional frontend verification. Use when: "execute checklist", "run this task list", "complete unchecked tasks"'
 argument-hint: "<checklist-path | mpx [phase N | task | all]>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(bash scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *), AskUserQuestion, Task, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *), AskUserQuestion, Task, Skill
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -83,7 +83,7 @@ For each group:
    - Repeat the review/check + fix issues loop up to 3 times or until clean
 4. Detect changed surface (frontend/backend) from group diff after review/check fix loop:
    - If backend/API/db changes exist, ask user if API, DB, and dependent services are ready for verification
-   - If frontend changes exist, run frontend verification loop (max 3 iterations): - determine run instructions in this order: 1) explicit guidance from `AGENTS.md` or task context 2) direct detector call: `bash scripts/detect-project-scripts.sh . -c frontend` 3) use skill `/mp-script-discovery`
+   - If frontend changes exist, run frontend verification loop (max 3 iterations): - determine run instructions in this order: 1) explicit guidance from `AGENTS.md` or task context 2) direct detector call: `bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh . -c frontend` 3) use skill `/mp-script-discovery`
      - ensure frontend server is running on target URL/port, start it when needed
      - run `mp-chrome-devtools-tester` with instruction on what to visually test and where + auth context if available
      - if tester finds failures, run `mp-executor` in fix mode with explicit scoped tasks from tester failures, then re-run tester. Repeat up to 3 times or until clean

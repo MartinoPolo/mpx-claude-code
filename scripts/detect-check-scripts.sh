@@ -1,7 +1,7 @@
 #!/bin/bash
 # Detect package manager and check scripts from package.json
 # Outputs key=value pairs for use by /mp-check-fix skill
-# Usage: bash ~/.claude/scripts/detect-check-scripts.sh [project_dir]
+# Usage: bash $HOME/.claude/scripts/detect-check-scripts.sh [project_dir]
 
 set -euo pipefail
 
