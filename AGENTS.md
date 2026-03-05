@@ -14,6 +14,11 @@
 - **Verbose Naming**: Full descriptive names. No abbreviations. Clear intent
 - **Docs**: Update when functionality changes. Keep comments minimal
 
+## Git Commands
+
+- **Never use `cd <path> && git`** — Use `git -C <path>` instead. Compound `cd && git` commands trigger approval prompts that cannot be auto-allowed.
+- Same applies to `gh`: use `gh --repo <owner/repo>` or run from the correct directory instead of `cd <path> && gh`.
+
 ## Iron Laws
 
 1. **NO COMPLETION CLAIMS WITHOUT VERIFICATION** — Run command, read output, THEN claim
