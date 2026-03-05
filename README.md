@@ -41,9 +41,6 @@ Auto-detects project state — fresh init, existing codebase, or restructure. Cr
         │
         ▼
 /mpx-execute               ◄── Pick phase, execute tasks (loop)
-        │
-        ▼
-/mpx-show-project-status   ◄── Check progress anytime
 ```
 
 Between sessions, optionally use `/mp-handoff` to save context to `HANDOFF.md` for continuity.
@@ -80,7 +77,6 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mpx-init-repo`           | Initialize git repo                                                             |
 | `/mpx-parse-spec`          | Re-parse SPEC.md via `mpx-spec-analyzer`                                        |
 | `/mpx-execute`             | Select phase, execute tasks (full phase or single)                              |
-| `/mpx-show-project-status` | Show progress                                                                   |
 | `/mpx-add-requirements`    | Primary requirements skill (create/update SPEC + auto-parse)                    |
 | `/mpx-report-issue-or-bug` | Track bugs/issues in .mpx/ phase system                                         |
 
@@ -93,10 +89,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mp-pr`                  | Create or update draft PR from existing commits  |
 | `/mp-commit-push-pr`      | Full workflow — commit, push, create/update PR   |
 | `/mp-rebase`              | Rebase or merge target branch into current       |
-| `/mp-review-branch`       | Multi-agent code review of current branch        |
-| `/mp-review-pr`           | PR review with confidence scoring                |
-| `/mp-review-changes`      | Lightweight review of uncommitted changes        |
-| `/mp-review-design`       | Visual design inspection via chrome-devtools     |
+| `/mp-review-pr`           | Read-only PR review via subagents                |
 | `/mp-gh-issue-execute`    | Execute GitHub issues (bug/task/feature)         |
 | `/mp-update-readme`       | Update README.md                                 |
 | `/mp-update-instructions` | Analyze history, improve CLAUDE.md/AGENTS.md     |
@@ -136,9 +129,9 @@ Configured via `scripts/context-bar.sh`.
 
 ## Review Skills
 
-Review skills (`/mp-review-branch`, `/mp-review-pr`, `/mp-review-changes`, `/mp-review-design`) are **read-only** (except writing review report files) — no commits, no GitHub comments posted.
+Review skill (`/mp-review`) is read-only except writing `REVIEW.md` and does not commit or post GitHub comments/reviews.
 
-**Report files:** `/mp-review-branch` → `REVIEW-BRANCH.md`, `/mp-review-pr` → `REVIEW-PR.md`, `/mp-review-changes` → `REVIEW-CHANGES.md` (project root, actionable checklists).
+**Report file:** `REVIEW.md` (project root, actionable checklist).
 
 **Categories checked:** tech stack best practices, security (OWASP top 10), performance, error handling, code quality.
 

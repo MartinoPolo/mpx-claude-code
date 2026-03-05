@@ -56,7 +56,7 @@ Skipped as Implemented:
       - [requirements marked [x]]
 
 Next:
-      - Run `/mpx-show-project-status`
+      - Review `.mpx/ROADMAP.md` and phase checklists
       - Run `/mp-execute mpx`
 ```
 
