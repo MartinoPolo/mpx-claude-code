@@ -70,12 +70,12 @@ if [ -z "$NAME" ]; then
   exit 1
 fi
 
-CURRENT_BRANCH=$(git branch --show-current)
 GIT_COMMON_DIR=$(git rev-parse --git-common-dir)
 MAIN_REPO=$(dirname "$(cd "$GIT_COMMON_DIR" && pwd)")
 SOURCE_DIR=$(pwd)
 WORKTREE_DIR="$MAIN_REPO/../worktrees"
 WORKTREE_PATH="$WORKTREE_DIR/$NAME"
+CURRENT_BRANCH=$(git branch --show-current)
 
 echo -e "${CYAN}→${RESET} Base repository: ${BOLD}$MAIN_REPO${RESET}"
 echo -e "${CYAN}→${RESET} Checked-out base branch: ${BOLD}$CURRENT_BRANCH${RESET}"
@@ -136,24 +136,29 @@ set_peacock_color() {
 
 mkdir -p "$WORKTREE_DIR"
 
-if [ "$CURRENT_BRANCH" != "dev" ] && [ "$CURRENT_BRANCH" != "develop" ]; then
+while [ "$CURRENT_BRANCH" != "dev" ] && [ "$CURRENT_BRANCH" != "develop" ]; do
   echo -e "${RED}⚠${RESET} Current branch is '${BOLD}$CURRENT_BRANCH${RESET}', not '${BOLD}dev${RESET}' or '${BOLD}develop${RESET}'."
   if [ -t 0 ]; then
-    read -r -p "Base new worktree on '$CURRENT_BRANCH' anyway? [y/N]: " continue_non_dev
-    case "$continue_non_dev" in
+    read -r -p "Switch branches and retry, continue, or abort? [R(etry)/y/n]: " branch_choice
+    case "$branch_choice" in
       y|Y|yes|YES)
         echo -e "${DIM}Continuing with base branch '$CURRENT_BRANCH'.${RESET}"
+        break
         ;;
-      *)
+      n|N|no|NO)
         echo -e "${CYAN}→${RESET} Aborted. Switch to '${BOLD}dev${RESET}' or '${BOLD}develop${RESET}', then run again."
         exit 1
+        ;;
+      *)
+        CURRENT_BRANCH=$(git branch --show-current)
+        echo -e "${CYAN}→${RESET} Re-detected branch: ${BOLD}$CURRENT_BRANCH${RESET}"
         ;;
     esac
   else
     echo -e "${RED}✗${RESET} Non-interactive shell: refusing non-dev/develop base branch '$CURRENT_BRANCH'."
     exit 1
   fi
-fi
+done
 
 echo -e "${CYAN}→${RESET} Creating worktree '${BOLD}$NAME${RESET}' from '${BOLD}$CURRENT_BRANCH${RESET}'..."
 git worktree add -b "$NAME" "$WORKTREE_PATH"
