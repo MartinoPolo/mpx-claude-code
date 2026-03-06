@@ -172,18 +172,79 @@ get_oauth_token() {
             fi
         fi
     fi
+
 }
+
+CACHE_DIR="${TMPDIR:-/tmp}"
+USAGE_CACHE="$CACHE_DIR/claude-usage-cache.json"
+USAGE_CACHE_TTL=120  # seconds — endpoint rate-limits at ~1 req/2min
 
 fetch_usage_json() {
     local token="$1"
     [[ -z "$token" ]] && return 1
 
-    curl -s --max-time 1 "https://api.anthropic.com/api/oauth/usage"         -H "Accept: application/json"         -H "Authorization: Bearer $token"         -H "anthropic-beta: oauth-2025-04-20" 2>/dev/null
+    # Return cached data if fresh enough
+    if [[ -f "$USAGE_CACHE" ]]; then
+        local now cache_mtime age
+        now=$(date +%s)
+        cache_mtime=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
+        if [[ -n "$cache_mtime" ]]; then
+            age=$((now - cache_mtime))
+            if [[ $age -lt $USAGE_CACHE_TTL ]]; then
+                cat "$USAGE_CACHE"
+                return
+            fi
+        fi
+    fi
+
+    # Fetch fresh data
+    local resp
+    resp=$(curl -s --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
+        -H "Accept: application/json" \
+        -H "Authorization: Bearer $token" \
+        -H "anthropic-beta: oauth-2025-04-20" \
+        -H "User-Agent: claude-code/2.1.69" 2>/dev/null)
+
+    # Only cache successful responses (no error field)
+    local err
+    err=$(echo "$resp" | jq -r '.error.type // empty' 2>/dev/null)
+    if [[ -z "$err" && -n "$resp" ]]; then
+        echo "$resp" > "$USAGE_CACHE"
+    elif [[ -f "$USAGE_CACHE" ]]; then
+        # Rate-limited or error — return stale cache instead of nothing
+        cat "$USAGE_CACHE"
+        return
+    fi
+
+    echo "$resp"
 }
 
+CZK_CACHE="$CACHE_DIR/claude-czk-cache.txt"
+CZK_CACHE_TTL=3600  # 1 hour
+
 fetch_usd_czk_rate() {
-    # Frankfurter: latest?base=USD&symbols=CZK
-    curl -s --max-time 1 "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CZK" 2>/dev/null | jq -r '.rates.CZK // empty' 2>/dev/null
+    if [[ -f "$CZK_CACHE" ]]; then
+        local now cache_mtime age
+        now=$(date +%s)
+        cache_mtime=$(stat -c %Y "$CZK_CACHE" 2>/dev/null || stat -f %m "$CZK_CACHE" 2>/dev/null)
+        if [[ -n "$cache_mtime" ]]; then
+            age=$((now - cache_mtime))
+            if [[ $age -lt $CZK_CACHE_TTL ]]; then
+                cat "$CZK_CACHE"
+                return
+            fi
+        fi
+    fi
+
+    local rate
+    rate=$(curl -s --max-time 2 "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CZK" 2>/dev/null | jq -r '.rates.CZK // empty' 2>/dev/null)
+    if [[ -n "$rate" ]]; then
+        echo "$rate" > "$CZK_CACHE"
+    elif [[ -f "$CZK_CACHE" ]]; then
+        cat "$CZK_CACHE"
+        return
+    fi
+    echo "$rate"
 }
 
 # --- Session token + cost (from statusLine JSON) ---
