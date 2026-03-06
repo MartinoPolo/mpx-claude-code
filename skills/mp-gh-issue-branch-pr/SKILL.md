@@ -1,5 +1,5 @@
 ---
-name: mp-gh-create-issue-and-pr
+name: mp-gh-issue-branch-pr
 description: 'Create issue from current work, branch, then commit/push/create PR via existing skills. Use when: "create issue and PR", "log bug and open PR", "issue + branch + PR"'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Task, AskUserQuestion, Bash(git *), Bash(gh *)
@@ -34,6 +34,7 @@ git diff --stat
 git diff --cached --stat
 ```
 
+Add context from the current session.
 Use this context as input for issue drafting.
 
 ### Step 2: Create Issue via Existing Skill
@@ -56,7 +57,7 @@ Input:
 
 Required actions:
 1) Infer issue type (bug/feature/chore/docs).
-2) Draft precise title and acceptance criteria.
+2) Draft precise title, clear description, and acceptance criteria.
 3) Create issue in current repository.
 
 Required output:
@@ -72,11 +73,11 @@ Derive branch name from issue metadata.
 
 Format:
 
-`<type>/<issue-number>-<short-kebab-summary>`
+`<issue-number>-<short-kebab-summary>`
 
 Example:
 
-`fix/123-dashboard-filter-crash`
+`123-dashboard-filter-crash`
 
 Create and switch:
 
