@@ -3,7 +3,7 @@ name: mp-gh-issue-execute
 description: 'Execute GitHub issue scope (bug, task, or feature): investigate, plan, implement, review, run frontend verification when needed, and resolve findings. Use when: "execute issue #N", "implement issue", "work on issue"'
 argument-hint: "<issue-url | issue-number | owner/repo#number>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Skill, Bash(gh issue *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(gh *), Bash(bash $HOME/.claude/skills/mp-gh-issue-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh issue *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(gh *), Bash(bash $HOME/.claude/skills/mp-gh-issue-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
   version: "0.2"
@@ -156,13 +156,19 @@ After executor finishes, run this sequence:
 - Determine run instructions in this order:
   1. explicit project run guidance already present in `AGENTS.md`/issue context
   2. direct detector call: `bash $HOME/.claude/skills/mp-gh-issue-execute/scripts/detect-project-scripts.sh . -c frontend`
-  3. if no usable frontend command found, fallback to `/mp-script-discovery`
+  3. if no usable frontend command found, check `package.json` scripts manually for dev/start/preview commands
 - Ensure frontend server is running on target port (or start it from detected command)
 - Pass URL/port, pages/routes, and auth context (if available) to `mp-chrome-devtools-tester`
 - If tester reports `FAIL`, run `mp-executor` in fix mode with explicit scoped tasks from tester failures, then re-run tester
 
 5. If unresolved after any loop retries, report blocker with precise reason and keep outcome partial.
-6. Only commit when loops pass (or only non-blocking items remain). Invoke `/mp-commit` with scoped conventional message referencing issue (e.g., `feat(scope): implement X (refs #N)` or `fix(scope): resolve Y (refs #N)`).
+6. Only commit when loops pass (or only non-blocking items remain). Stage and commit inline:
+   - `git status` + `git diff --stat` to review changes
+   - `git log --oneline -5` to match repo commit style
+   - `git add <specific-files>` — prefer specific files, avoid sensitive files (.env, credentials)
+   - `git commit -m "type(scope): description (refs #N)"` — conventional commit referencing issue (e.g., `feat(scope): implement X (refs #N)` or `fix(scope): resolve Y (refs #N)`)
+   - No AI attribution, no `--amend`, imperative mood, subject under 72 chars
+   - Skip if nothing to commit
 
 ### Step 5: Finalize + report
 

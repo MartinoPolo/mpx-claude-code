@@ -3,7 +3,7 @@ name: mp-execute
 description: 'Execute checklist tasks in grouped loops with executor/reviewer/checker agents and conditional frontend verification. Use when: "execute checklist", "run this task list", "complete unchecked tasks"'
 argument-hint: "<checklist-path | mpx [phase N | task | all]>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *), AskUserQuestion, Task, Skill
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *), AskUserQuestion, Task
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -83,16 +83,19 @@ For each group:
    - Repeat the review/check + fix issues loop up to 3 times or until clean
 4. Detect changed surface (frontend/backend) from group diff after review/check fix loop:
    - If backend/API/db changes exist, ask user if API, DB, and dependent services are ready for verification
-   - If frontend changes exist, run frontend verification loop (max 3 iterations): - determine run instructions in this order: 1) explicit guidance from `AGENTS.md` or task context 2) direct detector call: `bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh . -c frontend` 3) use skill `/mp-script-discovery`
+   - If frontend changes exist, run frontend verification loop (max 3 iterations): - determine run instructions in this order: 1) explicit guidance from `AGENTS.md` or task context 2) direct detector call: `bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh . -c frontend`
      - ensure frontend server is running on target URL/port, start it when needed
      - run `mp-chrome-devtools-tester` with instruction on what to visually test and where + auth context if available
      - if tester finds failures, run `mp-executor` in fix mode with explicit scoped tasks from tester failures, then re-run tester. Repeat up to 3 times or until clean
 5. Mark completed tasks as `[x]`
 6. For unresolved blockers, keep unchecked and append reason in checklist `## Blockers` (or inline unresolved note)
-7. Commit completed work — after marking tasks complete, invoke `/mp-commit` skill
-   - Scope commit to files changed in this group
-   - Commit message reflects the group's tasks (e.g., `feat(scope): implement auth flow`)
-   - Skip commit if no tasks were completed in this group
+7. Commit completed work — after marking tasks complete, stage and commit inline:
+   - Skip if no tasks were completed in this group
+   - `git status` + `git diff --stat` to review changes
+   - `git log --oneline -5` to match repo commit style
+   - `git add <specific-files>` — prefer specific files, avoid sensitive files (.env, credentials)
+   - `git commit -m "type(scope): description"` — conventional commit, scoped to this group's tasks (e.g., `feat(scope): implement auth flow`)
+   - No AI attribution, no `--amend`, imperative mood, subject under 72 chars
 
 In MPX mode, update phase `CHECKLIST.md` and roadmap phase status where relevant.
 
@@ -129,7 +132,13 @@ After all tasks are completed or unresolved, run full gate:
   - Checklist mode: target checklist (`[x]`, unresolved notes, blockers)
   - MPX mode: phase checklists + roadmap phase progress
 - In MPX mode, if a phase changed to complete during execution, collapse its roadmap record to one concise line and prune redundant references
-- Final commit — invoke `/mp-commit` for any remaining uncommitted changes (checklist updates, roadmap status, docs)
+- Final commit — stage and commit any remaining uncommitted changes (checklist updates, roadmap status, docs) inline:
+  - `git status` + `git diff --stat` to review changes
+  - `git log --oneline -5` to match repo commit style
+  - `git add <specific-files>` — prefer specific files, avoid sensitive files
+  - `git commit -m "type(scope): description"` — conventional commit
+  - No AI attribution, no `--amend`, imperative mood, subject under 72 chars
+  - Skip if nothing to commit
 - Summarize completed/skipped/unresolved tasks
 - Spawn `mp-docs-updater` agent with list of changes to update docs
 
