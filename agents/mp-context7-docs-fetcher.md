@@ -1,9 +1,7 @@
 ---
 name: mp-context7-docs-fetcher
 description: Fetches up-to-date library documentation via Context7 MCP. Use for library API questions, framework best practices, package-specific patterns.
-tools: Read
-mcpServers:
-  - "plugin:context7:context7"
+tools: Read, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
 model: haiku
 ---
 
