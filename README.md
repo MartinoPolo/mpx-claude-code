@@ -88,7 +88,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mp-commit-push`         | Commit and push (no PR)                          |
 | `/mp-pr`                  | Create or update draft PR from existing commits  |
 | `/mp-commit-push-pr`      | Full workflow — commit, push, create/update PR   |
-| `/mp-rebase`              | Rebase or merge target branch into current       |
+| `/mp-sync-base`           | Merge target branch into current branch          |
 | `/mp-review`              | Unified code review (scope: PR, branch, changes) |
 | `/mp-gh-issue-execute`    | Execute GitHub issues (bug/task/feature)         |
 | `/mp-update-docs`         | Update README and documentation                  |
@@ -128,7 +128,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | mp-reviewer-security         | Sonnet | Security reviewer (OWASP-focused)                  |
 | mp-reviewer-spec-alignment   | Sonnet | Spec compliance and scope reviewer                 |
 | mp-ux-designer               | Opus   | UX research and design artifacts                   |
-| mp-base-branch-detector      | Haiku  | Detect base branch for PRs and rebases             |
+| mp-base-branch-detector      | Haiku  | Detect most likely base branch for current branch  |
 | mp-bash-script-colorizer     | Haiku  | Bash script coloring guidelines                    |
 
 Agents are auto-spawned based on rules in `AGENTS.md` — no manual invocation needed.

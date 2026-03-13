@@ -76,10 +76,10 @@ Use `ToolSearch` to load deferred tools only when needed.
 - User asks to commit and push
 - "Commit and push", "Push my changes", "Ship it"
 
-**Use `/mp-rebase` skill when:**
+**Use `/mp-sync-base` skill when:**
 
-- User asks to rebase or merge upstream changes
-- "Rebase...", "Merge ... into ..."
+- User asks to sync, merge, or update from upstream
+- "Sync with main", "Merge dev here", "Sync with dev"
 
 **Use `/mp-check-fix` skill when:**
 
