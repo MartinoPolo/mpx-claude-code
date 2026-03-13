@@ -77,12 +77,12 @@ Rules:
 - Only append new requirements or update incomplete ones.
 - Do not delete or modify existing requirements without explicit instruction.
 - Don't touch the completed `[x]` requirements
-- Keep requirements as checkbox list items only
+- Keep requirements as checkbox list items
 - Preserve all requirement information from user input
 - Normalize wording for precision without dropping details
 - Avoid implementation instructions unless user explicitly gives them as constraints
 
-### Step 5: Re-Parse by Agent (Always)
+### Step 5: Parse into phase CHECKLISTs by Agent (Always)
 
 Always spawn `mpx-spec-analyzer` after `SPEC.md` changes:
 

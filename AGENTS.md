@@ -165,5 +165,6 @@ Rules:
 Conventional commits: `type(scope): description`
 
 **Types**: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
+**Scope**: package in a monorepo, or general area (e.g., "auth", "api", "ui")
 
 - **No AI attribution**: Never include "Co-authored-by: Claude" or similar
