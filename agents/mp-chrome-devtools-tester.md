@@ -55,15 +55,19 @@ ToolSearch("chrome-devtools")
 2. Normalize testing requirements into executable test steps
 3. If requirements are ambiguous, use the simplest safe interpretation and note assumptions in report
 
-### 3. Open App and Capture Baseline
+### 3. Open App and Detect Auth Walls
 
 1. Open or navigate to target URL
-2. Verify page load state
-3. Capture baseline screenshot
+2. Capture baseline screenshot
+3. **Auth-wall detection** — check if the page is a login/sign-in/sign-up screen:
+   - Look for: `input[type="password"]`, text containing "sign in", "log in", "sign up", "forgot password", login/auth forms
+   - Also detect OAuth/SSO redirects (URL changed to `/oauth`, `/login`, `/auth`, `/sso`, or a different domain)
+   - If **any** login indicator is found → proceed to step 4 (Credential Discovery)
+   - If no login indicator → skip to step 6 (Execute Tests)
 
-### 4. Credential Discovery (If Authentication Is Required)
+### 4. Credential Discovery
 
-If authentication is required:
+Triggered when a login/sign-up page is detected at step 3.
 
 1. Use parent-provided auth context when available
 2. If auth context is missing, discover credentials from these sources in order:
@@ -81,14 +85,21 @@ If authentication is required:
 - Secret keys: `password`, `pass`, `secret`, `token`
 - Supported formats: `key: value`, `key=value`, `KEY="value"`, markdown table rows, and bullet entries
 
-4. If still unavailable, ask user for credentials via `AskUserQuestion`
+4. **Use values exactly as found** — copy the credential values verbatim. Do NOT rearrange, reformat, or swap parts of usernames/emails. Example: if file says `username: superadmin@atc.com`, use exactly `superadmin@atc.com`, not `atc@superadmin.com`.
+5. If still unavailable, ask user for credentials via `AskUserQuestion`
 
 ### 5. Handle Authentication
 
-1. Use discovered or provided auth context only for test execution
-2. Attempt login flow and capture evidence
-3. If credentials are missing/invalid, mark relevant tests as `BLOCKED` and continue non-auth tests when possible
-4. Never include raw credential values in output; use placeholders such as `[provided]`
+1. Identify the login form inputs (common selectors: `input[type="email"]`, `input[type="text"][name*="user"]`, `input[type="password"]`, `button[type="submit"]`)
+2. Fill username/email field with the **exact** discovered value
+3. Fill password field with the **exact** discovered value
+4. Submit the form
+5. **Post-login verification**: after submit, wait for navigation/redirect, then:
+   - Take screenshot to confirm login succeeded
+   - If the page still shows a login form or "sign in" text, the login failed — mark tests `BLOCKED`
+   - **If the target page doesn't load after login** (e.g. shows blank or still "please sign in"), perform a hard reload of the original target URL — OAuth/SPA apps often need this after token exchange
+6. If credentials are missing/invalid, mark relevant tests as `BLOCKED` and continue non-auth tests when possible
+7. Never include raw credential values in output; use placeholders such as `[provided]`
 
 ### 6. Execute Tests
 
