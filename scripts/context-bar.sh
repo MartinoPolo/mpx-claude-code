@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Color theme: gray, orange, blue, teal, green, lavender, rose, gold, slate, cyan
-# Preview colors with: bash scripts/color-preview.sh
 COLOR="blue"
 
 # Color codes

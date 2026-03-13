@@ -103,6 +103,11 @@ Use `ToolSearch` to load deferred tools only when needed.
 - "Update docs", "Refresh documentation", "Sync docs"
 - "Update README", "Update instructions", "Fix tracking"
 
+**Use `/mp-execute` skill when:**
+
+- User asks to execute tasks, run a phase, or process a checklist
+- "Execute tasks", "Run phase", "Execute checklist"
+
 **Use `/mp-brainstorm` skill when:**
 
 - User wants to explore/design before coding

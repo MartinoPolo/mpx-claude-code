@@ -40,7 +40,7 @@ Auto-detects project state — fresh init, existing codebase, or restructure. Cr
 /mpx-parse-spec            ◄── Spawn mpx-spec-analyzer → ROADMAP.md + phase folders
         │
         ▼
-/mpx-execute               ◄── Pick phase, execute tasks (loop)
+/mp-execute                ◄── Pick phase, execute tasks (loop)
 ```
 
 Between sessions, optionally use `/mp-handoff` to save context to `HANDOFF.md` for continuity.
@@ -76,7 +76,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mpx-setup`               | Unified project setup (auto-detects: fresh init, convert existing, restructure) |
 | `/mpx-init-repo`           | Initialize git repo                                                             |
 | `/mpx-parse-spec`          | Re-parse SPEC.md via `mpx-spec-analyzer`                                        |
-| `/mpx-execute`             | Select phase, execute tasks (full phase or single)                              |
+| `/mp-execute`              | Select phase, execute tasks (full phase or single)                              |
 | `/mpx-add-requirements`    | Primary requirements skill (create/update SPEC + auto-parse)                    |
 | `/mpx-report-issue-or-bug` | Track bugs/issues in .mpx/ phase system                                         |
 
@@ -89,29 +89,47 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mp-pr`                  | Create or update draft PR from existing commits  |
 | `/mp-commit-push-pr`      | Full workflow — commit, push, create/update PR   |
 | `/mp-rebase`              | Rebase or merge target branch into current       |
-| `/mp-review-pr`           | Read-only PR review via subagents                |
+| `/mp-review`              | Unified code review (scope: PR, branch, changes) |
 | `/mp-gh-issue-execute`    | Execute GitHub issues (bug/task/feature)         |
-| `/mp-update-readme`       | Update README.md                                 |
-| `/mp-update-instructions` | Analyze history, improve CLAUDE.md/AGENTS.md     |
+| `/mp-update-docs`         | Update README and documentation                  |
 | `/mp-check-fix`           | Auto-detect and fix build/typecheck/lint errors  |
 | `/mp-script-discovery`    | Discover runnable scripts and dev servers        |
 | `/mp-handoff`             | Create ephemeral HANDOFF.md for session bridging |
+| `/mp-execute`             | Execute task checklists via executor/reviewer agents |
+| `/mp-decompose`           | Break down large files into logical modules      |
+| `/mp-code-clean`          | Dead code removal and deduplication              |
+| `/mp-gh-issue-branch-pr`  | Issue → branch → commit → push → PR             |
+| `/mp-brainstorm`          | Exploration and design before implementation     |
+| `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory |
 | `/mp-gemini-fetch`        | Fetch blocked sites via Gemini CLI               |
 
 ## Agents
 
-| Agent                     | Model  | Description                                        |
-| ------------------------- | ------ | -------------------------------------------------- |
-| mpx-executor              | Opus   | Executes tasks with fresh context                  |
-| mpx-spec-analyzer         | Sonnet | Analyzes specs and creates phase structure         |
-| mpx-codebase-scanner      | Sonnet | Scans codebase for tech stack, features, structure |
-| mp-chrome-devtools-tester | Sonnet | Browser test automation via Chrome DevTools MCP    |
-| mp-gh-issue-analyzer      | Opus   | Analyzes GitHub issues, creates execution plans    |
-| mp-context7-docs-fetcher  | Sonnet | Fetches library docs via Context7 MCP              |
-| mp-css-layout-debugger    | Haiku  | CSS layout debugging                               |
-| mp-base-branch-detector   | Haiku  | Detect base branch for PRs and rebases             |
-| mp-bash-script-colorizer  | Haiku  | Bash script coloring guidelines                    |
-| mp-ux-designer            | Sonnet | UX research and design artifacts                   |
+| Agent                        | Model  | Description                                        |
+| ---------------------------- | ------ | -------------------------------------------------- |
+| mp-executor                  | Opus   | Executes grouped task chunks                       |
+| mpx-spec-analyzer            | Opus   | Analyzes specs and creates phase structure         |
+| mpx-codebase-scanner         | Haiku  | Scans codebase for tech stack, features, structure |
+| mpx-phase-reviewer           | Sonnet | Reviews completed phase diffs and quality          |
+| mp-chrome-devtools-tester    | Sonnet | Browser test automation via Chrome DevTools MCP    |
+| mp-gh-issue-analyzer         | Opus   | Analyzes GitHub issues, creates execution plans    |
+| mp-gh-issue-finder           | Haiku  | Finds GitHub issue matching a PR branch            |
+| mp-context7-docs-fetcher     | Haiku  | Fetches library docs via Context7 MCP              |
+| mp-css-layout-debugger       | Opus   | CSS layout debugging                               |
+| mp-checker                   | Haiku  | Runs check commands and reports failures           |
+| mp-checks-detector           | Haiku  | Detects available check scripts                    |
+| mp-docs-updater              | Sonnet | Updates docs after workflow/system changes         |
+| mp-reviewer-full             | Opus   | Thorough multi-dimension code reviewer             |
+| mp-reviewer-min              | Sonnet | Lightweight code reviewer                          |
+| mp-reviewer-best-practices   | Sonnet | Best practices and conventions reviewer            |
+| mp-reviewer-code-quality     | Sonnet | DRY, naming, maintainability reviewer              |
+| mp-reviewer-error-handling   | Sonnet | Error handling and resilience reviewer             |
+| mp-reviewer-performance      | Sonnet | Performance reviewer                               |
+| mp-reviewer-security         | Sonnet | Security reviewer (OWASP-focused)                  |
+| mp-reviewer-spec-alignment   | Sonnet | Spec compliance and scope reviewer                 |
+| mp-ux-designer               | Opus   | UX research and design artifacts                   |
+| mp-base-branch-detector      | Haiku  | Detect base branch for PRs and rebases             |
+| mp-bash-script-colorizer     | Haiku  | Bash script coloring guidelines                    |
 
 Agents are auto-spawned based on rules in `AGENTS.md` — no manual invocation needed.
 
