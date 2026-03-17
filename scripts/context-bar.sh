@@ -318,35 +318,39 @@ else
     fi
 fi
 
-# --- Build 3-line status output ---
-line1="${C_ACCENT}${model}${C_GRAY} | 📁${dir}"
-[[ -n "$branch" ]] && line1+=" | 🔀${branch}"
-line1+="${C_RESET}"
+# --- Build 4-line status output ---
+line1="${C_ACCENT}${model}${C_RESET}"
 
-line2="${C_GRAY}🔥 ${ctx_bar} ${pct_prefix}${pct}% of ${max_k}k tokens"
-if [[ -n "$usd_disp" ]]; then
-    line2+=" | \$${usd_disp}"
-    [[ -n "$czk_disp" ]] && line2+=" | ${czk_disp}"
-fi
+line2="${C_GRAY}📁${dir}"
+[[ -n "$branch" ]] && line2+=" | 🔀${branch}"
 line2+="${C_RESET}"
 
-line3=""
+line3="${C_GRAY}🔥 ${ctx_bar} ${pct_prefix}${pct}% of ${max_k}k tokens"
+if [[ -n "$usd_disp" ]]; then
+    line3+=" | \$${usd_disp}"
+    [[ -n "$czk_disp" ]] && line3+=" | ${czk_disp}"
+fi
+line3+="${C_RESET}"
+
+line4=""
 if [[ -n "$quota_line" ]]; then
-    line3="$quota_line"
+    line4="$quota_line"
 fi
 
 printf '%b
 ' "$line1"
 printf '%b
 ' "$line2"
-[[ -n "$line3" ]] && printf '%b
+printf '%b
 ' "$line3"
+[[ -n "$line4" ]] && printf '%b
+' "$line4"
 
 # --- Last user message (text only) ---
 if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
-    plain_line1="${model} | ${dir}"
-    [[ -n "$branch" ]] && plain_line1+=" | ${branch}"
-    max_len=${#plain_line1}
+    plain_line2="${dir}"
+    [[ -n "$branch" ]] && plain_line2+=" | ${branch}"
+    max_len=${#plain_line2}
 
     last_user_msg=$(jq -rs '
         def is_unhelpful:
