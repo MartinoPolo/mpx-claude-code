@@ -1,6 +1,4 @@
 # Sensitive - never commit
-settings.json
-settings.local.json
 credentials.json
 .credentials.json
 *.pem
@@ -40,6 +38,7 @@ paste-cache/
 
 # Platform-specific setup (not shared)
 WINDOWS-SETUP.md
+.vscode/
 
 # OS files
 .DS_Store
