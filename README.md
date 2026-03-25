@@ -100,6 +100,7 @@ All mpx projects use phase-based organization inside `.mpx/`:
 | `/mp-code-clean`          | Dead code removal and deduplication              |
 | `/mp-gh-issue-branch-pr`  | Issue → branch → commit → push → PR             |
 | `/mp-brainstorm`          | Exploration and design before implementation     |
+| `/mp-grill-me`            | Stress-test a plan or design via relentless Q&A  |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory |
 | `/mp-gemini-fetch`        | Fetch blocked sites via Gemini CLI               |
 
@@ -137,13 +138,32 @@ Agents are auto-spawned based on rules in `AGENTS.md` — no manual invocation n
 
 ![Status Line](assets/status-line.png)
 
-3-line status bar showing:
+4-line status bar showing:
 
-- **Line 1**: Model, directory, git branch
-- **Line 2**: Context usage bar (█/░), % tokens, session cost (USD/CZK)
-- **Line 3**: 5-hour & 7-day quota utilization with reset countdowns
+- **Line 1**: Model name (colored)
+- **Line 2**: Folder + git branch
+- **Line 3**: Context usage bar (█/░), % tokens, session cost (USD/CZK)
+- **Line 4**: 5-hour & 7-day quota utilization with reset countdowns
 
 Configured via `scripts/context-bar.sh`.
+
+## Hooks
+
+Hook scripts in `hooks/` run automatically during Claude Code lifecycle events. Configured via `settings.json`.
+
+| Hook | Event | Description |
+| ---- | ----- | ----------- |
+| `enforce-pkg-mgr.js` | PreToolUse (Bash) | Blocks wrong package manager commands (detects from lockfile) |
+| `pre-commit-gate.js` | PreToolUse (Bash) | Runs typecheck before git commits |
+| `format-lint-file.js` | PostToolUse (Edit/Write) | Auto-formats and lints edited files (Prettier/ESLint/Biome/Ruff) |
+| `notify-flash-beep.ps1` | Stop, Notification | Flashes taskbar + plays notification sound (Windows) |
+| `compact-context.js` | SessionStart (compact) | Re-injects project context after context compaction |
+
+**Custom notification sound:** place a `.wav` file at `~/.claude/sounds/notify.wav` — falls back to a two-note console beep if missing.
+
+## Settings
+
+`settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
 
 ## Review Skills
 
