@@ -47,6 +47,32 @@ function getRunner(projectRoot) {
   return pm ? (RUNNER_MAP[pm] ?? "npx") : "npx";
 }
 
+/**
+ * Detect the project's toolchain: 'vite-plus' | 'biome' | 'classic'
+ * - vite-plus: Vite Plus unified toolchain (oxfmt + oxlint + tsgolint)
+ * - biome: Biome formatter + linter
+ * - classic: Prettier + ESLint (or manual setup)
+ */
+function detectToolchain(projectRoot) {
+  if (!projectRoot) return "classic";
+  const vpBin = path.join(projectRoot, "node_modules", ".bin", "vp");
+  // Windows: .bin/vp.cmd or .bin/vp.ps1
+  if (
+    fs.existsSync(vpBin) ||
+    fs.existsSync(vpBin + ".cmd") ||
+    fs.existsSync(vpBin + ".ps1")
+  ) {
+    return "vite-plus";
+  }
+  if (
+    fs.existsSync(path.join(projectRoot, "biome.json")) ||
+    fs.existsSync(path.join(projectRoot, "biome.jsonc"))
+  ) {
+    return "biome";
+  }
+  return "classic";
+}
+
 function readStdin() {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -67,6 +93,7 @@ module.exports = {
   LOCKFILE_MAP,
   RUNNER_MAP,
   detectPackageManager,
+  detectToolchain,
   findPackageManager,
   findProjectRoot,
   getRunner,

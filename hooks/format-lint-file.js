@@ -8,7 +8,12 @@
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const { readStdin, getRunner, findProjectRoot } = require("./shared");
+const {
+  readStdin,
+  getRunner,
+  findProjectRoot,
+  detectToolchain,
+} = require("./shared");
 
 const PRETTIER_CONFIGS = [
   ".prettierrc",
@@ -69,8 +74,15 @@ function run(cmd, cwd, silent = false) {
   }
 }
 
-function handleJavaScriptTypeScript(filePath, projectRoot, runner) {
-  if (hasBiome(projectRoot)) {
+function handleJavaScriptTypeScript(filePath, projectRoot, runner, toolchain) {
+  if (toolchain === "vite-plus") {
+    run(`${runner} vp fmt "${filePath}"`, projectRoot, true);
+    run(`${runner} vp lint --fix "${filePath}"`, projectRoot);
+    // ESLint for gap rules (naming-convention, strict-boolean-expressions, etc.)
+    if (hasConfig(projectRoot, ESLINT_CONFIGS)) {
+      run(`${runner} eslint --fix "${filePath}"`, projectRoot);
+    }
+  } else if (toolchain === "biome") {
     run(`${runner} biome format --write "${filePath}"`, projectRoot, true);
     run(`${runner} biome lint --fix "${filePath}"`, projectRoot);
   } else {
@@ -119,22 +131,27 @@ async function main() {
 
   const ext = path.extname(filePath).slice(1);
   const runner = getRunner(projectRoot);
+  const toolchain = detectToolchain(projectRoot);
 
   if (JS_EXTENSIONS.has(ext)) {
-    handleJavaScriptTypeScript(filePath, projectRoot, runner);
+    handleJavaScriptTypeScript(filePath, projectRoot, runner, toolchain);
   } else if (ext === "py") {
     handlePython(filePath, projectRoot);
   } else if (ext === "json" || ext === "jsonc") {
-    if (hasBiome(projectRoot)) {
+    if (toolchain === "vite-plus") {
+      run(`${runner} vp fmt "${filePath}"`, projectRoot, true);
+    } else if (toolchain === "biome") {
       run(`${runner} biome format --write "${filePath}"`, projectRoot, true);
     } else if (hasConfig(projectRoot, PRETTIER_CONFIGS)) {
       run(`${runner} prettier --write "${filePath}"`, projectRoot, true);
     }
   } else if (PRETTIER_ONLY_EXTENSIONS.has(ext)) {
-    if (hasConfig(projectRoot, PRETTIER_CONFIGS)) {
+    if (toolchain === "vite-plus") {
+      run(`${runner} vp fmt "${filePath}"`, projectRoot, true);
+    } else if (hasConfig(projectRoot, PRETTIER_CONFIGS)) {
       run(`${runner} prettier --write "${filePath}"`, projectRoot, true);
     }
-    if (ext === "css" && hasBiome(projectRoot)) {
+    if (ext === "css" && toolchain === "biome") {
       run(`${runner} biome format --write "${filePath}"`, projectRoot, true);
     }
   }

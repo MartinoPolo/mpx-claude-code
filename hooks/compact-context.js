@@ -6,7 +6,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { readStdin, findPackageManager } = require("./shared");
+const { readStdin, findPackageManager, detectToolchain } = require("./shared");
 
 async function main() {
   const input = await readStdin();
@@ -21,7 +21,17 @@ async function main() {
     lines.push(
       `Do NOT use npm/npx/yarn/bun unless '${pm}' is that tool.`
     );
-    lines.push(`Run '${pm} run typecheck' before committing.`);
+  }
+
+  const toolchain = detectToolchain(dir);
+  if (toolchain === "vite-plus") {
+    lines.push("Toolchain: Vite Plus. Use 'vp check' (format+lint+typecheck), 'vp fmt', 'vp lint', 'vp test'.");
+    lines.push("Run 'check:all' script before committing (vp check + eslint + stylelint + knip).");
+  } else if (toolchain === "biome") {
+    lines.push("Formatter/Linter: Biome.");
+    if (pm) lines.push(`Run '${pm} run typecheck' before committing.`);
+  } else {
+    if (pm) lines.push(`Run '${pm} run typecheck' before committing.`);
   }
 
   if (
@@ -29,21 +39,17 @@ async function main() {
     fs.existsSync(path.join(dir, "svelte.config.ts"))
   ) {
     lines.push(
-      "Framework: Svelte/SvelteKit. Use svelte-check for type checking."
+      "Framework: Svelte/SvelteKit. Use svelte-check for Svelte diagnostics."
     );
+    if (toolchain !== "vite-plus") {
+      lines.push("Use svelte-check for type checking.");
+    }
   } else if (
     fs.existsSync(path.join(dir, "next.config.js")) ||
     fs.existsSync(path.join(dir, "next.config.mjs")) ||
     fs.existsSync(path.join(dir, "next.config.ts"))
   ) {
     lines.push("Framework: Next.js.");
-  }
-
-  if (
-    fs.existsSync(path.join(dir, "biome.json")) ||
-    fs.existsSync(path.join(dir, "biome.jsonc"))
-  ) {
-    lines.push("Formatter/Linter: Biome.");
   }
 
   if (fs.existsSync(path.join(dir, "pyproject.toml"))) {

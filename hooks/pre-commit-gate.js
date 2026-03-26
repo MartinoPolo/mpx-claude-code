@@ -1,14 +1,22 @@
 /**
  * PreToolUse hook (matcher: Bash)
- * Intercepts git commit commands and runs typecheck before allowing.
- * Exit 0 = allow, Exit 2 = block (typecheck failed)
+ * Intercepts git commit commands and runs checks before allowing.
+ * Vite Plus projects: runs check:all (format + lint + typecheck + more)
+ * Classic projects: falls back to typecheck script detection
+ * Exit 0 = allow, Exit 2 = block (checks failed)
  */
 
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const { readStdin, findProjectRoot, detectPackageManager } = require("./shared");
+const {
+  readStdin,
+  findProjectRoot,
+  detectPackageManager,
+  detectToolchain,
+} = require("./shared");
 
+const CHECK_ALL_SCRIPTS = ["check:all", "check-all"];
 const TYPECHECK_SCRIPTS = [
   "typecheck", "type-check", "check", "check:types", "tsc",
 ];
@@ -23,8 +31,17 @@ function hasScript(packageJsonPath, scriptName) {
   }
 }
 
-function findTypecheckScript(projectRoot) {
+function findCheckScript(projectRoot, toolchain) {
   const packageJsonPath = path.join(projectRoot, "package.json");
+
+  // Vite Plus: prefer check:all which runs vp check + eslint + stylelint + knip
+  if (toolchain === "vite-plus") {
+    for (const name of CHECK_ALL_SCRIPTS) {
+      if (hasScript(packageJsonPath, name)) return name;
+    }
+  }
+
+  // Fallback: detect typecheck script
   const isSvelte =
     fs.existsSync(path.join(projectRoot, "svelte.config.js")) ||
     fs.existsSync(path.join(projectRoot, "svelte.config.ts"));
@@ -49,23 +66,25 @@ async function main() {
   if (!projectRoot) process.exit(0);
 
   const pm = detectPackageManager(projectRoot) ?? "npm";
-  const typecheckScript = findTypecheckScript(projectRoot);
-  if (!typecheckScript) process.exit(0);
+  const toolchain = detectToolchain(projectRoot);
+  const checkScript = findCheckScript(projectRoot, toolchain);
+  if (!checkScript) process.exit(0);
 
+  const label = toolchain === "vite-plus" ? "checks" : "typecheck";
   process.stderr.write(
-    `Running typecheck (${pm} run ${typecheckScript}) before commit...\n`
+    `Running ${label} (${pm} run ${checkScript}) before commit...\n`
   );
 
   try {
-    execSync(`${pm} run ${typecheckScript}`, {
+    execSync(`${pm} run ${checkScript}`, {
       cwd: projectRoot,
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: 60000,
+      timeout: 120000,
     });
     process.exit(0);
   } catch (err) {
     process.stderr.write(
-      "Typecheck failed. Fix type errors before committing:\n\n"
+      `Pre-commit ${label} failed. Fix errors before committing:\n\n`
     );
     const output = (
       err.stdout?.toString() ||
