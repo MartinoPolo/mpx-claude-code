@@ -11,7 +11,7 @@ metadata:
 
 # Session Handoff
 
-Creates ephemeral `HANDOFF.md` in the project root that bridges between sessions. Persists decisions to `.mpx/` only when an existing `.mpx/` folder is present.
+Creates ephemeral `HANDOFF.md` in the project root that bridges between sessions. Persists decisions to `.mpx/` when present (REQUIREMENTS.md, LESSONS_LEARNED.md, decisions/).
 
 ## Purpose
 
@@ -38,12 +38,13 @@ Use `TaskList` to see current task status:
 - In-progress tasks
 - Pending tasks
 
-### Step 3: Identify Active Phase (Optional)
+### Step 3: Identify Project Context (Optional)
 
-1. Check if `.mpx/phases/` exists
-2. If yes, identify the current active phase from `.mpx/ROADMAP.md`
-3. Read the active phase's `CHECKLIST.md` for current state
-4. This context enriches the handoff but is not required
+1. Check if `.mpx/` exists
+2. If yes, read `.mpx/REQUIREMENTS.md` for current requirements
+3. Read `.mpx/LESSONS_LEARNED.md` for architectural knowledge
+4. Check `.mpx/decisions/` for ADR-style decision records
+5. This context enriches the handoff but is not required
 
 ### Step 4: Create or Update HANDOFF.md
 
@@ -107,24 +108,33 @@ Date: [Today's date]
 
 Only if an existing `.mpx/` folder is present and decisions were made during this session:
 
-1. Update `## Decisions` in the active phase's `CHECKLIST.md` (phase-specific decisions)
-2. Update `## Decisions` in `.mpx/ROADMAP.md` (project-level decisions)
+1. Append architectural lessons to `.mpx/LESSONS_LEARNED.md`
+2. Create ADR files in `.mpx/decisions/` for significant decisions (e.g., `001-chose-drizzle.md`)
 
 If `.mpx/` folder is missing:
 
 - Do not create `.mpx/`
-- Do not create `ROADMAP.md`
-- Do not create or modify any `.mpx/**` files
+- Do not create any `.mpx/**` files
 - Create or update `HANDOFF.md` only
 
 Decisions are persistent (unlike HANDOFF.md which is ephemeral).
 
-Format:
+ADR format:
 
 ```markdown
-## Decisions
+# [Decision Title]
 
-- [Date]: [Decision description] — [reasoning]
+**Date:** [Date]
+**Status:** Accepted
+
+## Context
+[What prompted this decision]
+
+## Decision
+[What was decided]
+
+## Reasoning
+[Why this choice over alternatives]
 ```
 
 ### Step 6: Confirm
@@ -135,8 +145,8 @@ Show the user what was created:
 >
 > - `HANDOFF.md` (project root, ephemeral)
 >   [If .mpx/ exists:]
-> - Updated Decisions in `.mpx/phases/02-feature/CHECKLIST.md`
-> - Updated Decisions in `.mpx/ROADMAP.md` (project-level)
+> - Updated `.mpx/LESSONS_LEARNED.md`
+> - Created `.mpx/decisions/NNN-decision-name.md`
 >
 > Captured:
 >
@@ -150,16 +160,16 @@ Show the user what was created:
 ## HANDOFF.md Lifecycle
 
 1. `/mp-handoff` **creates** HANDOFF.md (project root)
-2. `/mp-execute` **reads** HANDOFF.md at start (both checklist and mpx modes), passes context to executor
+2. `/mp-execute` **reads** HANDOFF.md at start, passes context to executor
 3. `/mp-execute` **deletes** HANDOFF.md after processing
 4. Purpose: bridge between sessions only — not a permanent record
 
 ## Notes
 
 - HANDOFF.md is ephemeral — it exists only between sessions
-- Decisions are persisted to `.mpx/` CHECKLIST.md only when an existing `.mpx/` folder is present
+- Decisions are persisted to `.mpx/LESSONS_LEARNED.md` and `.mpx/decisions/` when `.mpx/` exists
 - Always creates HANDOFF.md in project root regardless of `.mpx/` presence
-- When `.mpx/` folder is absent, writes `HANDOFF.md` only (no `.mpx/` or `ROADMAP.md` creation/updates)
+- When `.mpx/` folder is absent, writes `HANDOFF.md` only
 - Focus on "why" not just "what" — reasoning is crucial
 - Capture implicit knowledge that isn't documented elsewhere
 - If HANDOFF.md already exists, it is read and merged with current session context (update-or-create)
