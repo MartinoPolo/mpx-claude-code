@@ -33,6 +33,8 @@ Use `ToolSearch` to load deferred tools only when needed.
 | Docs            | `context7`        | Web search |
 | GitHub          | `github`          | `gh` CLI   |
 | Browser testing | `chrome-devtools` | Manual     |
+| Database        | `postgres-mcp`    | Raw SQL    |
+| Svelte          | `svelte-mcp`      | Guessing   |
 
 ## Agent Auto-Spawn Rules
 
@@ -42,11 +44,6 @@ Use `ToolSearch` to load deferred tools only when needed.
 - Questions mention: React, Svelte, Typescript, Next.js, Tailwind, etc.
 - Question mentions context7 or library documentation
 - "Use [library] best practices", "How do I use [library]?", "What's the best way to [library task]?"
-
-**Spawn `mpx-spec-analyzer` agent when:**
-
-- Parsing `.mpx/SPEC.md` into roadmap/phases
-- User asks to "parse spec", "regenerate roadmap", or "rebuild phase checklists"
 
 **Spawn `mp-base-branch-detector` agent when:**
 
@@ -85,14 +82,22 @@ Use `ToolSearch` to load deferred tools only when needed.
 
 - "Fix lint errors", "Fix type errors", "Check and fix", "Run checks"
 
-**Use `/mpx-report-issue-or-bug` skill when:**
+**Use `/mp-grill-requirements` skill when:**
 
-- "Track this bug", "Add issue to project", "Log this bug"
+- User provides raw requirements or says "add requirements"
+- "Grill requirements", "Parse raw requirements", "Add requirements"
 
-**Use `/mpx-add-requirements` skill when:**
+**Use `/mp-write-prd` skill when:**
 
-- User asks to create spec, add requirements, or update spec
-- User provides requirement text that should become entries in `.mpx/SPEC.md`
+- "Create PRD", "Write PRD", "Requirements to issue"
+
+**Use `/mp-prd-to-issues` skill when:**
+
+- "Break down PRD", "Create sub-issues", "PRD to issues"
+
+**Use `/mp-gh-issue-create` skill when:**
+
+- "Track this bug", "Create github issue", "Open github issue", "Log this bug"
 
 **Use `/mp-release` skill when:**
 
@@ -105,13 +110,16 @@ Use `ToolSearch` to load deferred tools only when needed.
 
 **Use `/mp-execute` skill when:**
 
-- User asks to execute tasks, run a phase, or process a checklist
-- "Execute tasks", "Run phase", "Execute checklist"
+- User asks to execute tasks, implement issues, or work on issues
+- "Execute issue #42", "Implement issue", "Work on issue", "Execute tasks"
 
-**Use `/mp-brainstorm` skill when:**
+**Use `/mp-setup-sveltekit` skill when:**
 
-- User wants to explore/design before coding
-- "Brainstorm", "Design a..."
+- "Setup Svelte project", "New Svelte project", "Create SvelteKit app"
+
+**Use `/mp-setup-react-native` skill when:**
+
+- "Setup React Native project", "New mobile project", "Create React Native monorepo"
 
 ## Self-Improvement Protocol
 
