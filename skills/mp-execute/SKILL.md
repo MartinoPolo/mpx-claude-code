@@ -1,7 +1,7 @@
 ---
 name: mp-execute
 description: 'Unified task execution with TDD: accepts GitHub issues, milestones, or inline tasks. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
-argument-hint: "<#issue | #42 #43 | milestone:\"Epic 1\" | \"inline task description\">"
+argument-hint: '<#issue | #42 #43 | milestone:"Epic 1" | "inline task description">'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
@@ -29,12 +29,6 @@ Unified execution skill with TDD methodology. Accepts GitHub issues, milestones,
 - Default: run automatically end-to-end
 - Ask user only when scope is unclear, conflicting, risky, or blocked
 - TDD is the default execution method for all work
-
-## Step 0: Consume HANDOFF.md
-
-1. Check project root for `HANDOFF.md`
-2. If present: read and store as session context, then delete it (ephemeral lifecycle)
-3. If absent: continue normally
 
 ## Step 1: Resolve Input
 
@@ -105,6 +99,7 @@ For each issue/task, execute using **red-green-refactor**:
 ### 4a. Confirm Behaviors to Test
 
 From the analyzer output (or inline task description), list the behaviors that need tests:
+
 - Each acceptance criterion becomes one or more test cases
 - Ask user to confirm if the list seems incomplete
 
@@ -146,6 +141,7 @@ Parallel agents:
 ```
 
 If `--hard-gate` flag is set, also spawn:
+
 ```
   - mp-reviewer-security
   - mp-reviewer-performance
@@ -166,6 +162,7 @@ If still failing after 3 iterations → report remaining issues as blockers.
 ## Step 6: Frontend Verification (conditional)
 
 Detect if changes include frontend/UI modifications:
+
 - `.svelte`, `.tsx`, `.jsx`, `.vue`, `.css` files changed
 - Component or page files modified
 
@@ -185,6 +182,7 @@ git commit -m "type(scope): description (refs #N)"
 ```
 
 Rules:
+
 - Reference GitHub issue in commit message: `refs #N` or `fixes #N`
 - For inline tasks (no issue): no refs suffix
 - Prefer specific files over `git add -A`
@@ -226,8 +224,8 @@ After all issues are done:
 
 ## Flags
 
-| Flag | Effect |
-|------|--------|
-| `--hard-gate` | Add security, performance, and error-handling reviewers (6 total) |
-| `--no-tdd` | Skip TDD loop, implement directly (for trivial changes like config updates) |
-| `--dry-run` | Analyze and plan only, don't implement |
+| Flag          | Effect                                                                      |
+| ------------- | --------------------------------------------------------------------------- |
+| `--hard-gate` | Add security, performance, and error-handling reviewers (6 total)           |
+| `--no-tdd`    | Skip TDD loop, implement directly (for trivial changes like config updates) |
+| `--dry-run`   | Analyze and plan only, don't implement                                      |

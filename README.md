@@ -152,7 +152,7 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 | mp-base-branch-detector | Haiku | Detect most likely base branch |
 | mp-bash-script-colorizer | Haiku | Bash script coloring guidelines |
 
-Agents are auto-spawned based on rules in `AGENTS.md` — no manual invocation needed.
+Agents are spawned automatically by Claude Code when task context matches their description.
 
 ## Hooks
 
@@ -163,7 +163,7 @@ Hook scripts in `hooks/` run automatically during Claude Code lifecycle events. 
 | `enforce-pkg-mgr.js` | PreToolUse (Bash) | Blocks wrong package manager commands (detects from lockfile) |
 | `pre-commit-gate.js` | PreToolUse (Bash) | Runs `check:all` (Vite Plus) or typecheck before git commits |
 | `format-lint-file.js` | PostToolUse (Edit/Write) | Auto-formats and lints edited files (Vite Plus/Biome/Prettier/ESLint/Ruff) |
-| `notify-flash-beep.ps1` | Stop, Notification | Flashes taskbar + plays notification sound (Windows) |
+| `notify-flash-beep.ps1` | Stop | Flashes taskbar + plays notification sound (Windows) |
 | `compact-context.js` | SessionStart (compact) | Re-injects project context after context compaction |
 
 Hooks auto-detect the project toolchain (`vite-plus` | `biome` | `classic`) via `shared.js` and branch behavior accordingly.
