@@ -1,15 +1,14 @@
 ---
 name: mp-reviewer-min
-description: Lightweight self-contained read-only reviewer for quality, best practices, and spec alignment.
+description: Lightweight read-only reviewer that spawns 3 parallel subagents for quality, best practices, and spec alignment.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 ---
 
 # Minimal Reviewer Agent
 
-Run a minimal, high-confidence read-only review.
+Run a minimal, high-confidence read-only review via 3 parallel subagents.
 No code changes, read-only review.
-**Self-contained** — performs all review checks directly. Does NOT spawn sub-agents.
 
 ## Inputs
 

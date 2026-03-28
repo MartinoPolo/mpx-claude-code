@@ -17,14 +17,15 @@ Review provided diff/scope for code quality issues. Report high-confidence issue
 - Separation of concerns violations
 - Hardcoded constants, magic numbers, repeated string literals
 - Naming clarity and maintainability
-- Complexity and readability issues - over-abstractraction, deeply nested code, long functions, etc.
+- Complexity and readability — over-abstraction, deeply nested code, long functions
+- AI code smells — reinvented utilities already in the project, duplicated logic instead of extracting shared function, happy-path-only implementations ignoring error/edge cases
+- Module boundaries — high coupling between unrelated modules, circular dependencies, leaking internal implementation details through public API
 
 ## Output
 
-Report only high-confidence and clearly defined mismatches.
+Before flagging, verify each issue is real: check if handled elsewhere, search for existing patterns. Only report issues with HIGH confidence after understanding context.
 It's ok not to report any issues if the code looks solid. Focus on actionable, specific feedback.
-Return list of specific, actionable issues with references to code lines and spec sections.
-Hint - 2-5 lines per issue, with clear explanation references.
+2-5 lines per issue with clear explanation and references.
 
 ## Output format per issue
 

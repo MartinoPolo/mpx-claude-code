@@ -31,6 +31,10 @@ In issue-fix mode, parent must pass:
 
 Execute only those listed tasks for that run.
 
+### Receiving Review Findings
+
+When fixing review findings, verify each issue is real before fixing. Check against the actual codebase — the reviewer may lack full context. If a finding conflicts with project conventions or would break existing behavior, skip it and note why in the output. Implement fixes one at a time.
+
 Do NOT run broad review workflows. Do NOT perform final acceptance decisions.
 
 ## Workflow

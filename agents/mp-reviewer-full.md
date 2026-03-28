@@ -18,6 +18,10 @@ Deduplicate issues found across sections — prioritize the most specific, actio
 - Original task/spec text
 - Tech stack context
 
+## Verification Principle
+
+Before flagging any issue, verify it is real: check if handled elsewhere in the code, search for existing patterns, read surrounding context. Only report issues with HIGH confidence after understanding context.
+
 ## Review Checklist
 
 Read the diff and changed files. Evaluate ALL checkpoints below sequentially.
@@ -32,15 +36,16 @@ Only report high-confidence, clearly actionable issues. Skip sections with no fi
 - Hardcoded constants, magic numbers, repeated string literals
 - Naming clarity and maintainability
 - Complexity and readability — over-abstraction, deeply nested code, long functions
+- AI code smells — reinvented utilities already in the project, duplicated logic instead of extracting shared function, happy-path-only implementations ignoring error/edge cases
+- Module boundaries — high coupling between unrelated modules, circular dependencies, leaking internal implementation details through public API
 
 ### 2. Best Practices
 
-- TypeScript/JavaScript, React, Svelte, Node, Python... best practices
 - CLAUDE/AGENTS convention compliance where applicable
 - Avoid over-engineering and non-idiomatic patterns
-- Hooks rules, key props, effect cleanup, memoization (React)
-- Async patterns, error propagation (Node.js)
-- Type hints, PEP 8 (Python)
+- Type design — do types make invalid states unrepresentable? Prefer discriminated unions over boolean flags for mutually exclusive states
+- Side effects — unintended behavioral changes affecting other components
+- Framework-specific: detect frameworks from file extensions. Read relevant guide(s) from `agents/references/` (typescript-review.md, react-review.md, svelte-review.md, python-review.md, rust-review.md). Apply judgment-based patterns from the guide
 
 ### 3. Spec Alignment
 
@@ -49,13 +54,20 @@ Only report high-confidence, clearly actionable issues. Skip sections with no fi
 - Requirement misinterpretation — solved the right problem?
 - Missing edge cases from spec
 - Compliance with AGENTS.md and README.md
+- Test quality — do tests verify behavior (not implementation details)? Do assertions cover critical paths and boundary conditions? Are tests meaningful (not just "doesn't throw")?
+- Comment alignment — do existing comments/docstrings still match the code? Are TODOs still relevant?
 
 ### 4. Security
 
-- Injection vectors (SQL/NoSQL/command)
-- XSS/CSRF/authz/authn gaps
-- Secret exposure and sensitive logging
-- Input validation and unsafe trust boundaries
+Report only HIGH confidence findings with confirmed attacker-controlled input.
+Do NOT flag: test files, server-controlled values, framework auto-escaped output (React JSX, Svelte expressions, Vue templates), ORM parameterized queries.
+
+- Injection vectors (SQL/NoSQL/command) — only with attacker-controlled input
+- XSS — only via unsafe rendering APIs (`dangerouslySetInnerHTML`, `{@html}`, `v-html`), not auto-escaped interpolation
+- AuthZ/AuthN gaps — missing access control on protected operations
+- Secret exposure — hardcoded credentials, sensitive data in logs
+- Input validation — unsafe trust boundaries at system edges
+- SSRF — only if URL comes from user input, not config/settings
 
 ### 5. Performance
 
@@ -64,6 +76,8 @@ Only report high-confidence, clearly actionable issues. Skip sections with no fi
 - Hot-path inefficiencies
 - Memory leak patterns
 - Inefficient algorithms
+- Bundle impact — large dependency imports where tree-shakeable or dynamic import alternatives exist
+- Unbounded operations — O(n²) in user-facing paths, missing pagination, unthrottled event handlers
 
 ### 6. Error Handling
 
@@ -71,6 +85,8 @@ Only report high-confidence, clearly actionable issues. Skip sections with no fi
 - Retry/timeout/cancellation handling
 - Graceful degradation and user-safe failure behavior
 - Race-condition-prone flow and unhandled async failures
+- Silent failures — catch blocks that swallow errors, functions that silently return null/undefined on failure, error paths that lose context
+- Over-defensive handling — unnecessary try/catch around internal code that can't fail, validation of structurally impossible conditions. Only validate at system boundaries
 
 ## Output
 
@@ -103,7 +119,7 @@ Spec Alignment:
 
 Security:
 
-[same format]
+[same format, include Confidence: HIGH | Needs verification]
 
 Performance:
 

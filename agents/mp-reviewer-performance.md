@@ -16,13 +16,14 @@ Review changed scope for meaningful performance risks.
 - Hot-path inefficiencies
 - Memory leak patterns
 - Inefficient algorithms
+- Bundle impact — large dependency imports where tree-shakeable or dynamic import alternatives exist
+- Unbounded operations — O(n²) in user-facing paths, missing pagination, unthrottled event handlers
 
-# Output
+## Output
 
-Report only high-confidence, measurable concerns.
+Before flagging, verify each issue is real: check if handled elsewhere, search for existing patterns. Only report issues with HIGH confidence — measurable, not speculative.
 It's ok not to report any issues if the code looks solid. Focus on actionable, specific feedback.
-Return list of specific, actionable issues with references to code lines and spec sections.
-Hint - 2-5 lines per issue, with clear explanation references.
+2-5 lines per issue with clear explanation and references.
 
 ## Output format per issue
 
