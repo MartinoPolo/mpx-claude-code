@@ -1,12 +1,11 @@
 param(
-    [uint32]$FlashCount = 3,
-    [switch]$Force
+    [uint32]$FlashCount = 3
 )
 
 # FlashWindowEx + sound notification for Claude Code hooks.
 # Flashes the parent terminal/editor window's taskbar icon orange and plays a sound.
 # Works in Windows Terminal, VS Code, standalone PowerShell/cmd.
-# Auto-suppressed when the window is already focused (bypass with -Force).
+# Always notifies (sound + flash) regardless of window focus.
 # Uses NtQueryInformationProcess for fast parent PID walk (no WMI).
 
 # --- Sound configuration ---
@@ -16,20 +15,6 @@ $SoundFile = Join-Path $env:USERPROFILE '.claude\sounds\notify.wav'
 
 # Fallback beep: gentle two-note chime (C5 → E5)
 $FallbackBeep = @(@(523, 180), @(659, 220))
-
-# --- Play sound (before flash, non-blocking) ---
-
-if (Test-Path $SoundFile) {
-    try {
-        $player = New-Object System.Media.SoundPlayer $SoundFile
-        $player.PlaySync()
-    } catch {}
-} else {
-    foreach ($tone in $FallbackBeep) {
-        [Console]::Beep($tone[0], $tone[1])
-        Start-Sleep -Milliseconds 60
-    }
-}
 
 # --- Win32 P/Invoke for taskbar flash ---
 
@@ -61,9 +46,6 @@ public static class NativeFlash {
     public static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
 
     [DllImport("user32.dll")]
-    public static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hwnd);
 
     [DllImport("ntdll.dll")]
@@ -72,9 +54,7 @@ public static class NativeFlash {
         ref PROCESS_BASIC_INFORMATION processInformation,
         int processInformationLength, out int returnLength);
 
-    public static void Flash(IntPtr hwnd, uint count, bool force) {
-        if (!force && hwnd == GetForegroundWindow()) return;
-
+    public static void Flash(IntPtr hwnd, uint count) {
         FLASHWINFO fw = new FLASHWINFO();
         fw.cbSize = (uint)Marshal.SizeOf(typeof(FLASHWINFO));
         fw.hwnd = hwnd;
@@ -102,7 +82,8 @@ public static class NativeFlash {
 }
 "@ -ErrorAction SilentlyContinue
 
-# Walk process tree upward to find nearest ancestor with a visible window
+# --- Find ancestor window ---
+
 $hwnd = [IntPtr]::Zero
 $id = $PID
 
@@ -120,6 +101,22 @@ for ($i = 0; $i -lt 20; $i++) {
     } catch { break }
 }
 
+# --- Play sound ---
+
+if (Test-Path $SoundFile) {
+    try {
+        $player = New-Object System.Media.SoundPlayer $SoundFile
+        $player.PlaySync()
+    } catch {}
+} else {
+    foreach ($tone in $FallbackBeep) {
+        [Console]::Beep($tone[0], $tone[1])
+        Start-Sleep -Milliseconds 60
+    }
+}
+
+# --- Flash taskbar ---
+
 if ($hwnd -ne [IntPtr]::Zero) {
-    [NativeFlash]::Flash($hwnd, $FlashCount, $Force.IsPresent)
+    [NativeFlash]::Flash($hwnd, $FlashCount)
 }
