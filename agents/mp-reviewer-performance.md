@@ -3,6 +3,7 @@ name: mp-reviewer-performance
 description: Read-only performance reviewer for changed code.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Performance

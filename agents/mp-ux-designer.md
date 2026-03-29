@@ -3,6 +3,7 @@ name: mp-ux-designer
 description: UX research and design artifacts - JTBD analysis, user journey mapping, flow specs. Use for new feature design, user flow planning.
 tools: Read, Write, AskUserQuestion
 model: opus
+color: white
 ---
 
 # UX/UI Designer Agent

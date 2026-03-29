@@ -3,6 +3,7 @@ name: mp-executor
 description: Executes a small grouped task chunk with clear scope. Implementation only; no review role.
 tools: Read, Write, Edit, Bash, Grep, Glob, Task
 model: opus
+color: green
 ---
 
 # Executor Agent

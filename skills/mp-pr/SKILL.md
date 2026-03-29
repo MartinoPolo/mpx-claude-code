@@ -1,7 +1,7 @@
 ---
 name: mp-pr
 description: 'Create or update draft PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
-allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Task, Bash(git *), Bash(gh *)
+allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Task, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -18,10 +18,11 @@ GitHub MCP allowed for this skill.
 
 ### Step 1: Detect Base Branch
 
-Spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-branch-detector`, model haiku) with:
+```bash
+node $HOME/.claude/scripts/detect-base-branch.js
+```
 
-- Explicit base branch from `$ARGUMENTS` (if provided)
-- Remote branches: output of `git branch -r`
+Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-detects from remote branches.
 
 **Based on result:**
 
@@ -38,12 +39,9 @@ git diff origin/<base>..HEAD --stat
 
 ### Step 3: Find Linked Issue
 
-Spawn `mp-gh-issue-finder` agent (via Task tool, subagent_type `mp-gh-issue-finder`, model haiku) with:
+**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-gh-issue-finder` agent if no number extracted.
 
-- Repo: detect from `git remote get-url origin`
-- Branch name: current branch
-- Commit messages: from commit log output
-- Diff summary: from diff stat output
+If agent fallback needed, spawn `mp-gh-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
 
 **Based on result:**
 
@@ -125,8 +123,7 @@ Closes #42
 
 ### Critical
 
-- **Always draft** on create (`--draft` flag)
-- **No AI attribution**: Never include AI co-authorship
+> Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
 
 ## Output
 

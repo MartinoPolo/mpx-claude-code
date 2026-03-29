@@ -3,6 +3,7 @@ name: mp-reviewer-code-quality
 description: Read-only reviewer for DRY, SoC, dead code, duplication, naming, constants, and maintainability.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Code Quality

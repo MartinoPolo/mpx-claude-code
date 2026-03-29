@@ -52,10 +52,9 @@ EOF
 
 ## Commit Rules
 
-### Critical
+> Git conventions validated by hooks (pre-commit-gate, dangerous-command-guard).
 
-- **No AI attribution**: Never include "Co-authored-by: Claude" or similar
-- **No --amend** unless explicitly requested
+- Prefer new commits over --amend
 
 ### Format
 

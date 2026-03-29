@@ -58,6 +58,14 @@ async function main() {
     );
   }
 
+  // Convention reminders (survive compaction so Claude doesn't waste turns)
+  lines.push("");
+  lines.push("Git workflow: conventional commits (type(scope): desc), PRs auto-created as draft (hook).");
+  lines.push("Utility scripts: detect-base-branch.js, extract-branch-issue.js, detect-check-scripts.sh");
+  lines.push("Code quality: auto-format on save (hook). Fix types/lint properly — avoid suppressions.");
+  lines.push("Safety: dangerous commands blocked by hook (rm -rf broad paths, DROP TABLE, force-push main, etc.).");
+  lines.push("Tool preference: Grep > bash grep, Read > cat, Glob > find.");
+
   if (lines.length) process.stdout.write(lines.join("\n") + "\n");
   process.exit(0);
 }

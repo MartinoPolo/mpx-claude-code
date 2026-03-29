@@ -1,7 +1,7 @@
 ---
 name: mp-commit-push-pr
 description: 'Full workflow - commit, push, and create or update draft PR. Use when: "commit push and PR", "full workflow", "ship with PR"'
-allowed-tools: Task, Bash(git *), Bash(gh *)
+allowed-tools: Task, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -50,12 +50,11 @@ EOF
 )"
 ```
 
-**Commit Rules:**
+**Commit Rules:** (see `/mp-commit` for full format reference)
 
 - Conventional commit format: `type(scope): description`
 - Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
-- No AI attribution (no "Co-authored-by: Claude" or similar)
-- No `--amend` unless explicitly requested
+- Prefer new commits over `--amend`
 - Focus on "why" over "what"
 - Keep subject line under 72 characters
 - Imperative mood: "Add feature" not "Added feature"
@@ -70,10 +69,11 @@ If nothing to push (local and remote in sync) → skip to Step 5.
 
 ### Step 5: Detect Base Branch
 
-Spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-branch-detector`, model haiku) with:
+```bash
+node $HOME/.claude/scripts/detect-base-branch.js
+```
 
-- Explicit base branch from `$ARGUMENTS` (if provided)
-- Remote branches: output of `git branch -r`
+Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-detects from remote branches.
 
 **Based on result:**
 
@@ -83,12 +83,9 @@ Spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-bra
 
 ### Step 6: Find Linked Issue
 
-Spawn `mp-gh-issue-finder` agent (via Task tool, subagent_type `mp-gh-issue-finder`, model haiku) with:
+**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-gh-issue-finder` agent if no number extracted.
 
-- Repo: detect from `git remote get-url origin`
-- Branch name: current branch
-- Commit messages: from commit log output
-- Diff summary: from diff stat output
+If agent fallback needed, spawn `mp-gh-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
 
 **Based on result:**
 
@@ -170,8 +167,7 @@ Closes #42
 
 ### Critical
 
-- **Always draft** on create (`--draft` flag)
-- **No AI attribution**: Never include AI co-authorship
+> Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
 
 ## Troubleshooting
 

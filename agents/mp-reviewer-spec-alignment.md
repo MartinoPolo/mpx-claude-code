@@ -3,6 +3,7 @@ name: mp-reviewer-spec-alignment
 description: Read-only reviewer for task/spec compliance and scope control.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Spec Alignment

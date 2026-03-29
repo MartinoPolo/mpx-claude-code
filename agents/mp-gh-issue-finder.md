@@ -3,6 +3,7 @@ name: mp-gh-issue-finder
 description: Finds the GitHub issue that a PR branch closes. Given branch diff/commits, searches repo issues and returns the best match.
 tools: Bash, Read, Grep, Glob, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__search_issues
 model: haiku
+color: cyan
 ---
 
 # Issue Finder Agent

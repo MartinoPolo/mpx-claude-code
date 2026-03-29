@@ -1,6 +1,8 @@
 {
   "env": {
-    "ENABLE_TOOL_SEARCH": "auto:1"
+    "ENABLE_TOOL_SEARCH": "auto:1",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75",
+    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1"
   },
   "attribution": {
     "commit": "",
@@ -30,6 +32,16 @@
             "type": "command",
             "command": "node $HOME/.claude/hooks/pre-commit-gate.js",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dangerous-command-guard.js",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/gh-transform.js",
+            "timeout": 5
           }
         ]
       }
@@ -44,9 +56,31 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/post-bash-context.js",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
       {
         "matcher": "",
         "hooks": [

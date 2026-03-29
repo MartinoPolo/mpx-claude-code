@@ -3,7 +3,7 @@ name: mp-execute
 description: 'Unified task execution with TDD: accepts GitHub issues, milestones, or inline tasks. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
 argument-hint: '<#issue | #42 #43 | milestone:"Epic 1" | "inline task description">'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
   version: "1.0"
@@ -83,14 +83,11 @@ If analyzer identifies external library uncertainty → spawn `mp-context7-docs-
 
 ## Step 3: Detect Available Checks
 
-Spawn `mp-checks-detector` to discover available scripts:
-
-```
-Agent tool:
-  subagent_type: "mp-checks-detector"
+```bash
+bash $HOME/.claude/scripts/detect-check-scripts.sh
 ```
 
-Store detected check commands for use in review loop.
+Parse output key=value pairs. Store detected check commands for use in review loop.
 
 ## Step 4: TDD Execution Loop
 
@@ -186,8 +183,7 @@ Rules:
 - Reference GitHub issue in commit message: `refs #N` or `fixes #N`
 - For inline tasks (no issue): no refs suffix
 - Prefer specific files over `git add -A`
-- Never `--amend` unless explicitly requested
-- Never add AI attribution
+- Prefer new commits over `--amend`
 
 ## Step 8: Next Issue (if multiple)
 
@@ -212,11 +208,11 @@ After all issues are done:
 
 ## Rules
 
+> Code quality and git conventions enforced by hooks.
+
 - **TDD is not optional** — every behavior gets a test before implementation
 - **Never modify tests to make them pass** — fix the implementation
-- **Never disable lint rules** — fix the actual code
-- **Never add `@ts-ignore`** — fix the type error
-- **No AI attribution** in commits
+- **Avoid suppressions** (`@ts-ignore`, `eslint-disable`) — fix the underlying issue when possible
 - **One behavior, one test** — keep tests focused
 - **Red before green** — verify the test fails before implementing
 - **Minimal green** — write only enough code to pass the test

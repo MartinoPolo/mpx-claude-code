@@ -3,6 +3,7 @@ name: mp-reviewer-best-practices
 description: Read-only reviewer for language/framework best practices and conventions.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Best Practices

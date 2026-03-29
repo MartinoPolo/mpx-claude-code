@@ -3,6 +3,7 @@ name: mp-reviewer-error-handling
 description: Read-only reviewer for error handling, reliability, and resilience.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Error Handling

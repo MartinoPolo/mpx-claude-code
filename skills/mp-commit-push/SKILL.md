@@ -50,15 +50,10 @@ EOF
 )"
 ```
 
-**Commit Rules:**
+Commit format: conventional (see /mp-commit). Validated by pre-commit hook.
 
-- Conventional commit format: `type(scope): description`
-- Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
-- No AI attribution (no "Co-authored-by: Claude" or similar)
-- No `--amend` unless explicitly requested
+- Prefer new commits over --amend
 - Focus on "why" over "what"
-- Keep subject line under 72 characters
-- Imperative mood: "Add feature" not "Added feature"
 
 ### Step 4: Push
 

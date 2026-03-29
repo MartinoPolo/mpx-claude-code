@@ -3,6 +3,7 @@ name: mp-reviewer-full
 description: Thorough self-contained read-only reviewer across six review dimensions.
 tools: Read, Grep, Glob, Bash
 model: opus
+color: magenta
 ---
 
 # Full Reviewer Agent

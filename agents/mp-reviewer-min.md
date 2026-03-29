@@ -3,6 +3,7 @@ name: mp-reviewer-min
 description: Lightweight read-only reviewer that spawns 3 parallel subagents for quality, best practices, and spec alignment.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Minimal Reviewer Agent

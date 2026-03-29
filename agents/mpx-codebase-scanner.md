@@ -3,6 +3,7 @@ name: mpx-codebase-scanner
 description: Scans existing codebase to detect tech stack, features, structure, dependencies.
 tools: Read, Glob, Grep, Bash
 model: haiku
+color: cyan
 ---
 
 # Codebase Scanner Agent

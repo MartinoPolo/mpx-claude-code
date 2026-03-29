@@ -3,6 +3,7 @@ name: mp-docs-updater
 description: Updates README and instruction files after workflow/system changes.
 tools: Read, Write, Edit, Glob, Grep
 model: sonnet
+color: white
 ---
 
 # Docs Updater Agent

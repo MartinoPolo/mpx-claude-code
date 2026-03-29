@@ -3,6 +3,7 @@ name: mp-checker
 description: Executes provided check commands and reports failures. No fixing.
 tools: Bash, Read, Grep, Glob, AskUserQuestion
 model: haiku
+color: yellow
 ---
 
 # Checker Agent

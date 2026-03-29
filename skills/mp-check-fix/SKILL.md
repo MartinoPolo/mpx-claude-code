@@ -25,14 +25,8 @@ Auto-detect and fix build, typecheck, and lint errors. $ARGUMENTS
 
 ## Step 1: Detect Available Checks
 
-Skill script path used below:
-
 ```bash
-CHECK_SCRIPT="$HOME/.claude/skills/mp-check-fix/scripts/detect-check-scripts.sh"
-```
-
-```bash
-bash "$CHECK_SCRIPT"
+bash $HOME/.claude/scripts/detect-check-scripts.sh
 ```
 
 Parse output key=value pairs. Report findings:
@@ -52,7 +46,7 @@ If `NO_PROJECT=true` → report "No package.json found" and stop.
 If `PM_UNKNOWN=true` → no lock file found. Ask the user which package manager to use (npm, pnpm, yarn, bun). Then re-run with the chosen PM:
 
 ```bash
-bash "$CHECK_SCRIPT" . <chosen_pm>
+bash $HOME/.claude/scripts/detect-check-scripts.sh . <chosen_pm>
 ```
 
 ## Step 2: Filter by Arguments
@@ -116,8 +110,9 @@ Lint:      [status]
 
 ## Rules
 
+> Code quality conventions enforced by hooks.
+
 - Never modify test files to make checks pass (unless the test itself has a bug)
-- Never disable lint rules to suppress errors — fix the actual code
-- Never add `@ts-ignore` or `// eslint-disable` comments
+- Avoid suppressions (`@ts-ignore`, `eslint-disable`) — fix the underlying issue when possible
 - If a fix requires architectural changes → report it, don't attempt
 - For monorepo: report which package had issues

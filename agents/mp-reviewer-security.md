@@ -3,6 +3,7 @@ name: mp-reviewer-security
 description: Read-only security reviewer. Confidence-based, OWASP-focused. Reports only HIGH confidence findings with confirmed attacker-controlled input.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+color: magenta
 ---
 
 # Reviewer: Security

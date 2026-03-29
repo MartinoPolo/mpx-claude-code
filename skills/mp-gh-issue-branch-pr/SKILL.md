@@ -2,7 +2,7 @@
 name: mp-gh-issue-branch-pr
 description: 'Create issue from current work, branch, then commit/push/create PR. Use when: "create issue and PR", "log bug and open PR", "issue + branch + PR"'
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Task, AskUserQuestion, Bash(git *), Bash(gh *)
+allowed-tools: Read, Glob, Grep, Task, AskUserQuestion, Bash(git *), Bash(gh *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*), Bash(node $HOME/.claude/scripts/extract-branch-issue.js*)
 metadata:
   author: MartinoPolo
   version: "0.2"
@@ -193,8 +193,7 @@ EOF
 
 - Conventional commit format: `type(scope): description`
 - Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
-- No AI attribution (no "Co-authored-by: Claude" or similar)
-- No `--amend` unless explicitly requested
+- Prefer new commits over `--amend`
 - Focus on "why" over "what"
 - Keep subject line under 72 characters
 - Imperative mood: "Add feature" not "Added feature"
@@ -209,10 +208,9 @@ If nothing to push (local and remote in sync) → skip to Step 6.
 
 ### Step 6: Detect Base Branch
 
-Spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-branch-detector`, model haiku) with:
-
-- Explicit base branch from `$ARGUMENTS` (if provided)
-- Remote branches: output of `git branch -r`
+```bash
+node $HOME/.claude/scripts/detect-base-branch.js
+```
 
 **Based on result:**
 
@@ -224,7 +222,13 @@ Spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-bra
 
 Use the issue created in Step 2. Add `Closes #<issue_number>` to the PR body.
 
-Do NOT spawn `mp-gh-issue-finder` — the linked issue is already known.
+**Fast-path:** If the issue number is embedded in the branch name, extract it directly:
+
+```bash
+node $HOME/.claude/scripts/extract-branch-issue.js
+```
+
+Otherwise use the issue number captured from Step 2e.
 
 ### Step 8: Create or Update PR
 
@@ -276,8 +280,6 @@ EOF
 - `## Description` → 1-6 concise bullets summarizing full scope
 - `## Resolves` → `Closes #<issue_number>` (always present — issue created in Step 2)
 - `## Testing (Optional)` → include only when tests/manual checks were run
-- **Always draft** on create (`--draft` flag)
-- **No AI attribution**
 
 ### Step 9: Final Summary
 
@@ -291,11 +293,12 @@ Return:
 
 ## Rules
 
+> Code quality and git conventions enforced by hooks.
+
 - Always create the issue before branch/PR workflow
 - Always branch from current HEAD unless user specifies otherwise
 - Prefer existing branch if it already matches the issue
 - Keep commit and PR titles in conventional format
-- Never add AI attribution
 
 ## Failure Handling
 

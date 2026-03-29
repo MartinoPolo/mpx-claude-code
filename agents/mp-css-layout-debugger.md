@@ -3,6 +3,7 @@ name: mp-css-layout-debugger
 description: CSS layout debugging, flexbox/grid issues, responsive design problems. Use for layout fixes, overflow, centering, z-index.
 tools: Read, Glob, Grep
 model: opus
+color: blue
 ---
 
 # CSS Layout & Debugging Agent
