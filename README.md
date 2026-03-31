@@ -113,7 +113,7 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                     ┌───────────▼───────────┐
                     │   6. Frontend Check   │  if .svelte/.tsx/.jsx/.vue/.css
                     │   (conditional)       │  changed → start dev server →
-                    │                       │  mp-chrome-devtools-tester
+                    │                       │  mp-playwright-tester (headless)
                     └───────────┬───────────┘
                                 │
                     ┌───────────▼───────────┐
@@ -233,7 +233,7 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 | mp-issue-analyzer          | Opus   | Analyzes issues and codebase, creates execution plans                      |
 | mp-issue-finder            | Haiku  | Finds issue matching a PR branch                                           |
 | mp-ui-variant-generator    | Opus   | Generates a single UI variant in a specific design style                   |
-| mp-chrome-devtools-tester  | Sonnet | Browser test automation via Chrome DevTools MCP                            |
+| mp-playwright-tester       | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)      |
 | mp-checker                 | Haiku  | Runs check commands and reports failures                                   |
 | mp-context7-docs-fetcher   | Haiku  | Fetches library docs via Context7 MCP                                      |
 | mp-docs-updater            | Sonnet | Updates docs after workflow/system changes                                 |
@@ -303,7 +303,7 @@ Configured via `scripts/context-bar.sh`.
 
 `settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
 
-**MCP plugins:** Context7 (library docs), GitHub, TypeScript LSP, Chrome DevTools.
+**MCP plugins:** Context7 (library docs), GitHub, TypeScript LSP. **MCP servers:** Playwright (browser testing, headless).
 
 ## Review System
 

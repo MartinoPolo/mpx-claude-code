@@ -162,7 +162,7 @@ Detect if changes include frontend/UI modifications:
 If frontend changes detected:
 
 1. Ensure dev server is running — use the dev script detected in Step 3 (e.g., `npm run dev`)
-2. Spawn `mp-chrome-devtools-tester` sub-agent with verification requirements
+2. Spawn `mp-playwright-tester` sub-agent with verification requirements
 3. If issues found → fix and re-verify (up to 3 iterations)
 
 ## Step 7: Commit
