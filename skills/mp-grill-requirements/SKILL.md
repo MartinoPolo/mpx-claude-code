@@ -3,7 +3,7 @@ name: mp-grill-requirements
 description: Grill user on raw requirements, then create structured requirements in REQUIREMENTS.md. Use when "add requirements", "grill requirements", "parse raw requirements".
 argument-hint: "[requirements text or path to RAW_REQUIREMENTS.md]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, AskUserQuestion, Glob, Grep
+allowed-tools: Read, Write, Edit, Glob, Grep
 category: project-management
 ---
 
@@ -25,6 +25,7 @@ Parse raw requirements into individual items, then for EACH requirement:
 4. **Confirm scope** — what's in, what's out?
 
 Rules for grilling:
+
 - Ask ONE question at a time per requirement.
 - Provide a recommended answer with each question.
 - If a question can be answered by exploring the codebase, explore the codebase instead of asking.
@@ -35,7 +36,7 @@ Rules for grilling:
 After grilling all requirements, write to `.mpx/REQUIREMENTS.md`:
 
 - If `.mpx/` doesn't exist, create it.
-- Append to existing REQUIREMENTS.md — never overwrite existing content.
+- Append to existing REQUIREMENTS.md (preserve existing content).
 - Group requirements by functional area.
 - Each requirement gets: clear title, description, acceptance criteria.
 - No checkboxes (GitHub issues track completion).
@@ -45,3 +46,15 @@ If input came from `.mpx/RAW_REQUIREMENTS.md`, remove grilled items from that fi
 ## Report
 
 Summarize what was added: count of requirements, functional areas touched, any items deferred or needing follow-up.
+
+## Glossary Update (if applicable)
+
+If `GLOSSARY.md` exists in the project root:
+
+1. Review the grilling session for new domain terms, renamed concepts, or clarified definitions.
+2. If new or updated terms were identified, present them to the user:
+   - New terms with proposed definitions
+   - Existing terms with updated definitions
+   - Ambiguities or synonym conflicts
+3. Only update `GLOSSARY.md` after user confirms the changes.
+4. If no new terms emerged, skip silently.
