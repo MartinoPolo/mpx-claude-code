@@ -10,6 +10,8 @@ color: cyan
 
 Find the GitHub issue that a PR's changes resolve. Return `Closes #N` or candidates.
 
+**Tool preference:** Use `gh` CLI via Bash tool for all GitHub operations. MCP GitHub tools (`mcp__plugin_github_github__*`) are backup only — use when `gh` is unavailable.
+
 ## Input
 
 You receive:

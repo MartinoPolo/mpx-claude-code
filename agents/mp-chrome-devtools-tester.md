@@ -42,13 +42,9 @@ Never return credentials or secrets in any output.
 
 ## Execution Workflow
 
-### 1. Initialize Session
+### 1. Resolve Target and Requirements
 
-```
-ToolSearch("chrome-devtools")
-```
-
-### 2. Resolve Target and Requirements
+Chrome DevTools MCP tools are available directly — no initialization needed.
 
 1. Determine target URL:
    - Use parent-provided URL+port if available
@@ -56,19 +52,19 @@ ToolSearch("chrome-devtools")
 2. Normalize testing requirements into executable test steps
 3. If requirements are ambiguous, use the simplest safe interpretation and note assumptions in report
 
-### 3. Open App and Detect Auth Walls
+### 2. Open App and Detect Auth Walls
 
-1. Open or navigate to target URL
-2. Capture baseline screenshot
+1. Open or navigate to target URL using `mcp__chrome-devtools__navigate_page`
+2. Capture baseline screenshot using `mcp__chrome-devtools__take_screenshot`
 3. **Auth-wall detection** — check if the page is a login/sign-in/sign-up screen:
    - Look for: `input[type="password"]`, text containing "sign in", "log in", "sign up", "forgot password", login/auth forms
    - Also detect OAuth/SSO redirects (URL changed to `/oauth`, `/login`, `/auth`, `/sso`, or a different domain)
-   - If **any** login indicator is found → proceed to step 4 (Credential Discovery)
-   - If no login indicator → skip to step 6 (Execute Tests)
+   - If **any** login indicator is found → proceed to step 3 (Credential Discovery)
+   - If no login indicator → skip to step 5 (Execute Tests)
 
-### 4. Credential Discovery
+### 3. Credential Discovery
 
-Triggered when a login/sign-up page is detected at step 3.
+Triggered when a login/sign-up page is detected at step 2.
 
 1. Use parent-provided auth context when available
 2. If auth context is missing, discover credentials from these sources in order:
@@ -87,22 +83,22 @@ Triggered when a login/sign-up page is detected at step 3.
 - Supported formats: `key: value`, `key=value`, `KEY="value"`, markdown table rows, and bullet entries
 
 4. **Use values exactly as found** — copy the credential values verbatim. Do NOT rearrange, reformat, or swap parts of usernames/emails. Example: if file says `username: superadmin@atc.com`, use exactly `superadmin@atc.com`, not `atc@superadmin.com`.
-5. If still unavailable, ask user for credentials via `AskUserQuestion`
+5. If still unavailable, ask the user for credentials
 
-### 5. Handle Authentication
+### 4. Handle Authentication
 
 1. Identify the login form inputs (common selectors: `input[type="email"]`, `input[type="text"][name*="user"]`, `input[type="password"]`, `button[type="submit"]`)
 2. Fill username/email field with the **exact** discovered value
 3. Fill password field with the **exact** discovered value
 4. Submit the form
-5. **Post-login verification**: after submit, wait for navigation/redirect, then:
+5. **Post-login verification**: after submit, use `mcp__chrome-devtools__wait_for` for navigation/redirect, then:
    - Take screenshot to confirm login succeeded
    - If the page still shows a login form or "sign in" text, the login failed — mark tests `BLOCKED`
-   - **If the target page doesn't load after login** (e.g. shows blank or still "please sign in"), perform a hard reload of the original target URL — OAuth/SPA apps often need this after token exchange
+   - **If the target page doesn't load after login** (e.g. shows blank or still "please sign in"), use `mcp__chrome-devtools__navigate_page` to reload the original target URL — OAuth/SPA apps often need this after token exchange
 6. If credentials are missing/invalid, mark relevant tests as `BLOCKED` and continue non-auth tests when possible
 7. Never include raw credential values in output; use placeholders such as `[provided]`
 
-### 6. Execute Tests
+### 5. Execute Tests
 
 When requirements cover multiple pages/routes:
 
@@ -118,7 +114,7 @@ For each test requirement:
 4. Record `PASS`, `FAIL`, or `BLOCKED`
 5. Continue through all requirements; never stop on first failure
 
-### 7. Return Structured Report
+### 6. Return Structured Report
 
 ```
 ## Browser Test Report

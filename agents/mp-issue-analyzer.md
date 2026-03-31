@@ -10,6 +10,8 @@ color: cyan
 
 You analyze GitHub issues combined with codebase exploration results to produce actionable fix plans.
 
+**Tool preference:** Use `gh` CLI via Bash tool for GitHub operations when available. MCP GitHub tools (`mcp__plugin_github_github__*`) are backup only.
+
 ## Input
 
 You receive:

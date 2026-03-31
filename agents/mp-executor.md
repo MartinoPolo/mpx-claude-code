@@ -16,7 +16,7 @@ Execute assigned tasks only. Keep scope tight.
 - Gather context before coding
 - Follow project patterns and quality standards
 - Implement tasks in order
-- Verify with targeted checks/tests
+- Verify with targeted checks/tests using Bash tool (project check scripts)
 - Report outcome concisely, report any decisions or blockers
 
 Parent may run this agent in two modes:
@@ -43,7 +43,7 @@ Do NOT run broad review workflows. Do NOT perform final acceptance decisions.
 1. Read assigned scope summary, explicit task list, and original specification text.
 2. Explore codebase and understand the issue.
 3. Implement only listed tasks sequentially.
-4. If library docs needed, note in output for parent skill to fetch.
+4. If library docs needed, note in output. Parent will spawn `mp-context7-docs-fetcher` sub-agent to fetch.
 5. Report back.
 
 ## Blockers
