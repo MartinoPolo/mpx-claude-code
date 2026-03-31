@@ -20,9 +20,10 @@ When encountering errors, unexpected behavior, or workflow friction, Analyze roo
 
 ## Session Activity Tracking
 
-At end of each response where agents were spawned or skills invoked, append:
+At end of each response where agents were spawned or skills invoked, append session activity includeing reference files skill used:
 
 **Session Activity:**
 
 - `agent-name` (model) — brief purpose
 - `/skill-name` — brief purpose
+  REFERENCE_1.md - reason for invocation
