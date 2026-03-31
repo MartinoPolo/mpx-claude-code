@@ -37,7 +37,7 @@ Match repository's commit style.
 git add <specific-files>
 ```
 
-Prefer specific files over `git add -A`. Avoid staging sensitive files (.env, credentials).
+Stage specific files (skip .env, credentials, secrets).
 
 ### Step 4: Commit
 

@@ -18,7 +18,7 @@ Create a React + React Native monorepo from template, configure GitHub repo with
 
 ### Step 1: Collect Inputs
 
-If `$ARGUMENTS` does not contain a project name, ask with `AskUserQuestion`:
+If `$ARGUMENTS` does not contain a project name, ask the user for:
 
 - **Project name** (required)
 - **Visibility**: public or private (default: private)

@@ -2,7 +2,7 @@
 name: mp-code-clean
 description: 'Review and fix code quality issues immediately: deduplicate, remove repetition, remove dead code. Use when: "clean code", "deduplicate this module", "remove dead code"'
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Glob, Grep, Task, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -32,13 +32,13 @@ Parse `$ARGUMENTS` as file/s or folder/s scope, then build meaningful module gro
 
 Rules:
 
-- Always spawn subagents for execution
+- Always spawn sub-agents for execution
 - If scope is a single folder, still create at least one grouped module context
 - If scope is a single file, expand to nearest logical module group (not file-only review)
 
 ### Step 2: Spawn Review Subagents per Group
 
-For each file group, spawn a review subagent.
+For each file group, spawn a review sub-agent.
 
 Use this exact review prompt shape:
 
@@ -68,7 +68,7 @@ Required output:
 
 ### Step 3: Spawn Fix Subagents per Group
 
-For each reviewed group, spawn a fix subagent with approved findings.
+For each reviewed group, spawn a fix sub-agent with approved findings.
 
 Use this exact fix prompt shape:
 

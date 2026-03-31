@@ -1,9 +1,9 @@
 ---
 name: mp-review
-description: 'Unified review skill with parameterized scope, coverage, and autofix. Use when: "review scope branch", "review changes partial", "review pr #123 autofix"'
+description: 'Review code with configurable scope and autofix. Use when: "review scope branch", "review changes", "review pr #123 autofix"'
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Task, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
+allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -25,7 +25,7 @@ GitHub MCP allowed for PR scope.
   - `scope=changes` → review uncommitted changes (`git diff` + `git diff --cached`)
   - `scope=pr` or `scope=pr:<id|#id|url>` → review PR diff
 
-If `scope` missing or invalid, ask user with `AskUserQuestion`.
+If `scope` missing or invalid, ask the user.
 
 ### Optional
 
@@ -64,8 +64,8 @@ Default coverage: `full`
 #### Branch scope
 
 1. Determine current branch (`git branch --show-current`)
-2. Spawn `mp-base-branch-detector` (Task tool, `subagent_type: "mp-base-branch-detector"`, model `haiku`) with remote branches and optional user hint
-3. If detector returns ambiguous/null, ask user using `AskUserQuestion`
+2. Spawn `mp-base-branch-detector` sub-agent with remote branches and optional user hint
+3. If detector returns ambiguous/null, ask the user
 4. Build diff scope: `<base>...HEAD` using `git diff <base>...HEAD`
 
 #### Changes scope
@@ -117,7 +117,7 @@ Compute total issues from merged findings (`Critical + Important + Minor`).
 
 Run only when autofix ON and at least one finding exists.
 
-Spawn `mp-executor` (Task tool) in fix mode with:
+Spawn `mp-executor` sub-agent in fix mode with:
 
 - strict checklist derived from findings (one task per finding)
 - resolved scope summary (branch/changes/pr)

@@ -3,7 +3,7 @@ name: mp-design-ui-3
 description: 'Generate multiple UI variants in different design styles for comparison. Use when: "design ui", "ui variants", "design exploration", "explore designs", "3 styles", "5 styles"'
 argument-hint: '<ComponentOrPageName> [--count 5] [--styles brutalism,cafe,luxury] [--target src/components/MyComponent.svelte]'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(cat *), Bash(mkdir *), Bash(rm -rf */.design-variants*), Bash(mv *), Bash(cp *), AskUserQuestion, Agent, Task
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(cat *), Bash(mkdir *), Bash(rm -rf */.design-variants*), Bash(mv *), Bash(cp *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
   version: "1.0"
@@ -97,7 +97,7 @@ src/.design-variants/
 └── v3-{style-slug}/
 ```
 
-Spawn one `mp-ui-variant-generator` agent per style, **all in parallel**. Each agent receives:
+Spawn one `mp-ui-variant-generator` sub-agent per style, **all in parallel**. Each agent receives:
 
 ```
 Generate a {scope} named "{ComponentName}" in the {framework} framework.
@@ -175,7 +175,7 @@ Inform the user how to view the comparison:
 
 Then ask which variant they prefer:
 
-Use `AskUserQuestion` with options for each variant (by style name) plus "None — regenerate" option.
+Ask user to pick a variant (by style name) or "None — regenerate".
 
 If user picks "None":
 - Ask what they didn't like and what direction to try

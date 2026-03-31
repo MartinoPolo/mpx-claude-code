@@ -1,7 +1,7 @@
 ---
 name: mp-sync-base
 description: 'Merge target branch into current branch. Use when: "sync with main", "merge dev into branch", "update from main"'
-allowed-tools: Bash(git *), Task, Read, Edit, Bash(gh *)
+allowed-tools: Bash(git *), Agent, Read, Edit, Bash(gh *)
 metadata:
   author: MartinoPolo
   version: "1.0"
@@ -20,7 +20,7 @@ Merge a target branch into the current branch. $ARGUMENTS
 
 If `$ARGUMENTS` provides a branch → use it.
 
-Otherwise, spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `mp-base-branch-detector`, model haiku) with:
+Otherwise, spawn `mp-base-branch-detector` sub-agent:
 
 - Explicit base branch: none
 - Remote branches: output of `git branch -r`
@@ -28,8 +28,8 @@ Otherwise, spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `
 **Based on result:**
 
 - **Branch returned** → use it, display to user
-- **Null with candidates** → ask user with `AskUserQuestion` to pick from candidates
-- **Null without candidates** → ask user with `AskUserQuestion` to specify manually
+- **Null with candidates** → ask user to pick from candidates
+- **Null without candidates** → ask user to specify manually
 
 ### Step 2: Pre-merge Checks
 
@@ -39,7 +39,7 @@ Otherwise, spawn `mp-base-branch-detector` agent (via Task tool, subagent_type `
 git status --porcelain
 ```
 
-If non-empty → AskUserQuestion: "Uncommitted changes detected. Stash before merging?"
+If non-empty → ask user: "Uncommitted changes detected. Stash before merging?"
 
 - "Stash and continue" → `git stash push -m "Auto-stash before merge"`
 - "Abort"
@@ -60,11 +60,11 @@ git fetch origin <current>
 git rev-list --left-right --count HEAD...origin/<current>
 ```
 
-- **Behind only** → AskUserQuestion: "Current branch is N behind remote. Pull first?"
+- **Behind only** → ask user: "Current branch is N behind remote. Pull first?"
   - "Pull remote changes (Recommended)" → `git pull origin <current>`
   - "Continue anyway"
 - **Ahead only** → inform user, continue
-- **Diverged** → AskUserQuestion: "Branch diverged (N ahead, M behind). Pull first?"
+- **Diverged** → ask user: "Branch diverged (N ahead, M behind). Pull first?"
   - "Pull (Recommended)" → `git pull origin <current>`
   - "Continue anyway"
 - **In sync** → continue
@@ -93,7 +93,7 @@ If conflicts occur:
    a. Read the file (use Read tool)
    b. Analyze conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`)
    c. **Simple conflicts** (non-overlapping, clear intent) → resolve with Edit tool, then `git add <file>`
-   d. **Complex conflicts** (overlapping logic, ambiguous) → show both sides to user, ask with `AskUserQuestion` how to resolve
+   d. **Complex conflicts** (overlapping logic, ambiguous) → show both sides to user, ask how to resolve
 3. After all resolved: `git commit` (accept default merge message)
 4. If new conflicts appear → repeat from step 1
 

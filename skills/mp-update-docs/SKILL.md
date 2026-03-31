@@ -2,7 +2,7 @@
 name: mp-update-docs
 description: 'Documentation updater for README and instruction docs. Use when: "update docs", "refresh README", "update instructions", "sync docs"'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Task, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion
 metadata:
   author: MartinoPolo
   version: "0.2"
@@ -158,7 +158,7 @@ Commit: [hash] docs: update documentation after [context]
 
 ## Notes
 
-- Never modify source code — only documentation files
-- Preserve existing doc structure — update sections, don't rewrite
+- Only modify documentation files
+- Preserve existing doc structure — update sections in place
 - Keep updates minimal and high-signal
 - Conversation history analysis is best-effort — skip if files are too large or missing

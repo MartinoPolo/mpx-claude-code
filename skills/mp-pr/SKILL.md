@@ -1,7 +1,7 @@
 ---
 name: mp-pr
 description: 'Create or update draft PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
-allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Task, Bash(git *), Bash(gh *), Bash(node *)
+allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -27,8 +27,8 @@ Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-dete
 **Based on result:**
 
 - **Branch returned** → use it, display to user
-- **Null with candidates** → ask user with `AskUserQuestion` to pick from candidates
-- **Null without candidates** → ask user with `AskUserQuestion` to specify manually
+- **Null with candidates** → ask user to pick from candidates
+- **Null without candidates** → ask user to specify manually
 
 ### Step 2: Review Changes
 
@@ -39,14 +39,14 @@ git diff origin/<base>..HEAD --stat
 
 ### Step 3: Find Linked Issue
 
-**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-gh-issue-finder` agent if no number extracted.
+**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
 
-If agent fallback needed, spawn `mp-gh-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
+If agent fallback needed, spawn `mp-issue-finder` sub-agent with repo, branch name, commit messages, and diff summary.
 
 **Based on result:**
 
 - **High confidence match** → add `Closes #N` to PR body
-- **Candidates returned** → ask user with `AskUserQuestion` which (if any) to link
+- **Candidates returned** → ask user which (if any) to link
 - **No match** → proceed without linking
 
 ### Step 4: Check Existing PR

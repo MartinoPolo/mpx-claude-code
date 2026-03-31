@@ -1,7 +1,7 @@
 ---
 name: mp-commit-push-pr
 description: 'Full workflow - commit, push, and create or update draft PR. Use when: "commit push and PR", "full workflow", "ship with PR"'
-allowed-tools: Task, Bash(git *), Bash(gh *), Bash(node *)
+allowed-tools: Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -39,7 +39,7 @@ Match repository's commit style.
 git add <specific-files>
 ```
 
-Prefer specific files over `git add -A`. Avoid staging sensitive files (.env, credentials).
+Stage specific files (skip .env, credentials, secrets).
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -78,19 +78,19 @@ Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-dete
 **Based on result:**
 
 - **Branch returned** → use it, display to user
-- **Null with candidates** → ask user with `AskUserQuestion` to pick from candidates
-- **Null without candidates** → ask user with `AskUserQuestion` to specify manually
+- **Null with candidates** → ask user to pick from candidates
+- **Null without candidates** → ask user to specify manually
 
 ### Step 6: Find Linked Issue
 
-**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-issue-finder` agent if no number extracted.
+**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
 
-If agent fallback needed, spawn `mp-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
+If agent fallback needed, spawn `mp-issue-finder` sub-agent with repo, branch name, commit messages, and diff summary.
 
 **Based on result:**
 
 - **High confidence match** → add `Closes #N` to PR body
-- **Candidates returned** → ask user with `AskUserQuestion` which (if any) to link
+- **Candidates returned** → ask user which (if any) to link
 - **No match** → proceed without linking
 
 ### Step 7: Check Existing PR

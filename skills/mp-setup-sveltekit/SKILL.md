@@ -18,7 +18,7 @@ Create a new SvelteKit project from `template-sveltekit` with GitHub repo, branc
 
 ### Step 1: Gather inputs
 
-If `$ARGUMENTS` does not contain a project name, ask with `AskUserQuestion`.
+If `$ARGUMENTS` does not contain a project name, ask the user.
 
 Ask for GitHub visibility: `public` or `private`.
 
@@ -76,7 +76,7 @@ If checks fail, report errors but do NOT abort.
 
 ### Step 6: Optional Svelte MCP setup
 
-Ask user with `AskUserQuestion`: "Do you want to add Svelte MCP support?"
+Ask user: "Do you want to add Svelte MCP support?"
 
 If yes:
 

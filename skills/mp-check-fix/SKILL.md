@@ -112,7 +112,7 @@ Lint:      [status]
 
 > Code quality conventions enforced by hooks.
 
-- Never modify test files to make checks pass (unless the test itself has a bug)
-- Avoid suppressions (`@ts-ignore`, `eslint-disable`) — fix the underlying issue when possible
-- If a fix requires architectural changes → report it, don't attempt
+- Fix underlying issues rather than suppressing (`@ts-ignore`, `eslint-disable`)
+- Keep test files intact (unless the test itself has a bug)
+- If a fix requires architectural changes → report it as a blocker
 - For monorepo: report which package had issues

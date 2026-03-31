@@ -1,6 +1,6 @@
 ---
 name: mp-handoff
-description: Create ephemeral HANDOFF.md capturing session progress, decisions, and working memory for the next session.
+description: 'Create HANDOFF.md capturing session progress for the next session. Use when: "handoff", "save progress", "end of session"'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:

@@ -1,7 +1,7 @@
 ---
 name: mp-publish-obsidian-plugin
 description: 'Publish Obsidian plugin to community directory. Use when: "publish plugin", "submit to community", "add to obsidian plugins"'
-allowed-tools: Bash(npm run *), Bash(gh release *), Bash(gh repo *), Bash(gh pr *), Bash(gh api *), Bash(git *), Read, Grep, Glob, Write, Edit, WebFetch, AskUserQuestion, Task, Bash(gh *)
+allowed-tools: Bash(npm run *), Bash(gh release *), Bash(gh repo *), Bash(gh pr *), Bash(gh api *), Bash(git *), Read, Grep, Glob, Write, Edit, WebFetch, AskUserQuestion, Agent, Bash(gh *)
 metadata:
   author: MartinoPolo
   version: "0.1"
