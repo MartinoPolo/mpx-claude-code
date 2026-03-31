@@ -3,7 +3,7 @@ name: mp-execute
 description: 'Execute tasks with TDD from GitHub issues, milestones, or inline descriptions. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
 argument-hint: '<#issue | #42 #43 | milestone:"Epic 1" | "inline task description">'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
   version: "1.0"
@@ -54,32 +54,27 @@ Sort by blocking relationships. Execute in dependency order.
 
 Parse comma-separated tasks. No GitHub issue — just execute with TDD.
 
-If no `$ARGUMENTS`: ask user what to execute (AskUserQuestion).
+If no `$ARGUMENTS`: ask user what to execute.
 
 ## Step 2: Analyze (GitHub issues only)
 
-Spawn a single sub-agent to explore + analyze + plan:
+Spawn `mp-issue-analyzer` sub-agent to explore + analyze + plan:
 
-```
-Agent tool:
-  subagent_type: "mp-issue-analyzer"
-  prompt: |
-    Issue: [title, body, acceptance criteria]
-    Codebase: [project root]
-
-    1. Explore the codebase to understand relevant areas
-    2. Classify issue type (bug/task/feature) with rationale
-    3. Create execution plan with:
-       - Files to modify/create
-       - Behaviors to test (for TDD)
-       - Acceptance criteria mapped to test cases
-       - Risk areas and open questions
-    4. If external library behavior is uncertain, note it for Context7 lookup
-```
+> Issue: [title, body, acceptance criteria]
+> Codebase: [project root]
+>
+> 1. Explore the codebase to understand relevant areas
+> 2. Classify issue type (bug/task/feature) with rationale
+> 3. Create execution plan with:
+>    - Files to modify/create
+>    - Behaviors to test (for TDD)
+>    - Acceptance criteria mapped to test cases
+>    - Risk areas and open questions
+> 4. If external library behavior is uncertain, note it for Context7 lookup
 
 If analyzer identifies open questions → ask user (clarification gate).
 
-If analyzer identifies external library uncertainty → spawn `mp-context7-docs-fetcher`.
+If analyzer identifies external library uncertainty → spawn `mp-context7-docs-fetcher` sub-agent.
 
 ## Step 3: Detect Available Checks
 
@@ -110,7 +105,7 @@ For each behavior:
 
 2. **GREEN**: Write the minimal code to make the test pass
    - Run the test → verify it PASSES
-   - Do not add functionality beyond what the test requires
+   - Write only enough code to pass the test
 
 3. **REFACTOR**: Look for improvement opportunities
    - Duplication, naming, structure
@@ -133,30 +128,25 @@ For TDD principles, see:
 
 ## Step 5: Review + Check Loop (up to 3 iterations)
 
-After TDD execution, spawn reviewers and checker in parallel:
+After TDD execution, spawn these sub-agents in parallel:
 
-```
-Parallel agents:
-  - mp-reviewer-code-quality
-  - mp-reviewer-best-practices
-  - mp-reviewer-spec-alignment
-  - mp-checker (with detected check commands from Step 3)
-```
+- `mp-reviewer-code-quality`
+- `mp-reviewer-best-practices`
+- `mp-reviewer-spec-alignment`
+- `mp-checker` — with detected check commands from Step 3
 
-If `--hard-gate` flag is set, also spawn:
+If `--hard-gate` flag is set, also spawn in parallel:
 
-```
-  - mp-reviewer-security
-  - mp-reviewer-performance
-  - mp-reviewer-error-handling
-```
+- `mp-reviewer-security`
+- `mp-reviewer-performance`
+- `mp-reviewer-error-handling`
 
 ### Resolve Findings
 
 If reviewers or checker report issues (confidence > 65):
 
 1. Collect all findings into a scoped fix list
-2. Spawn `mp-executor` in fix mode with the findings
+2. Spawn `mp-executor` sub-agent in fix mode with the findings
 3. Re-run ONLY the failed reviewers/checks
 4. Repeat up to 3 iterations total
 
@@ -171,8 +161,8 @@ Detect if changes include frontend/UI modifications:
 
 If frontend changes detected:
 
-1. Ensure dev server is running (start if needed)
-2. Spawn `mp-chrome-devtools-tester` with verification requirements
+1. Ensure dev server is running — use the dev script detected in Step 3 (e.g., `npm run dev`)
+2. Spawn `mp-chrome-devtools-tester` sub-agent with verification requirements
 3. If issues found → fix and re-verify (up to 3 iterations)
 
 ## Step 7: Commit
@@ -204,7 +194,7 @@ If executing multiple issues or a milestone:
 
 After all issues are done:
 
-1. Spawn `mp-docs-updater` if significant changes warrant documentation updates
+1. Spawn `mp-docs-updater` sub-agent if significant changes warrant documentation updates
 2. Report summary:
    - Issues completed
    - Tests added/modified
@@ -218,11 +208,11 @@ After all issues are done:
 
 - **TDD is not optional** — every behavior gets a test before implementation
 - **Never modify tests to make them pass** — fix the implementation
-- **Avoid suppressions** (`@ts-ignore`, `eslint-disable`) — fix the underlying issue when possible
+- **Fix underlying issues** rather than suppressing (`@ts-ignore`, `eslint-disable`)
 - **One behavior, one test** — keep tests focused
 - **Red before green** — verify the test fails before implementing
 - **Minimal green** — write only enough code to pass the test
-- **Commit after each issue** — don't batch multiple issues into one commit
+- **Commit after each issue** — one commit per issue
 
 ## Flags
 
