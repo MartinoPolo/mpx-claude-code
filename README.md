@@ -220,6 +220,7 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 | `/mp-handoff`                 | Create ephemeral HANDOFF.md for session bridging                                            |
 | `/mp-update-docs`             | Update README and documentation                                                             |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, progressive disclosure) |
+| `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                    |
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
