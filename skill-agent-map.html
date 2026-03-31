@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MPX Skill - Agent Dependency Map</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    h1 { text-align: center; font-size: 1.5rem; margin-bottom: 0.25rem; color: #58a6ff; }
+    .subtitle { text-align: center; font-size: 0.85rem; color: #8b949e; margin-bottom: 1.5rem; }
+    .diagram-container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .legend {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 1.25rem 0;
+      font-size: 0.85rem;
+    }
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+    .legend-swatch {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .legend-swatch.circle { border-radius: 50%; }
+    .legend-line { width: 30px; height: 2px; background: #8b949e; }
+    .legend-line.dashed {
+      background: repeating-linear-gradient(90deg, #8b949e 0, #8b949e 4px, transparent 4px, transparent 8px);
+    }
+    .note {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .note strong { color: #58a6ff; }
+    .note code {
+      background: #21262d;
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>MPX Skill / Agent Dependency Map</h1>
+  <p class="subtitle">Rectangles = skills &nbsp;|&nbsp; Circles = agents &nbsp;|&nbsp; Solid arrow = always &nbsp;|&nbsp; Dashed arrow = conditional</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#4a90d9"></div> Skill</div>
+    <div class="legend-item"><div class="legend-swatch circle" style="background:#f5a623"></div> Agent</div>
+    <div class="legend-item"><div class="legend-swatch circle" style="background:#e74c3c"></div> Agent (needs MCP)</div>
+    <div class="legend-item"><div class="legend-swatch circle" style="background:#9b59b6"></div> Generic sub-agent</div>
+    <div class="legend-item"><div class="legend-line"></div> Always spawned</div>
+    <div class="legend-item"><div class="legend-line dashed"></div> Conditionally spawned</div>
+  </div>
+
+  <div class="diagram-container">
+    <pre class="mermaid">
+%%{init: {
+  'theme': 'dark',
+  'flowchart': {
+    'curve': 'basis',
+    'nodeSpacing': 20,
+    'rankSpacing': 55,
+    'padding': 12
+  }
+}}%%
+flowchart TB
+  classDef skill fill:#4a90d9,stroke:#2c5f8a,color:#fff,font-weight:bold
+  classDef agent fill:#f5a623,stroke:#c47d10,color:#fff
+  classDef mcp fill:#e74c3c,stroke:#b33a2a,color:#fff
+  classDef generic fill:#9b59b6,stroke:#7d3c98,color:#fff
+  classDef invisible fill:none,stroke:none,color:none
+
+  %% ═══════════════════════════════════════
+  %% SKILLS (rectangles)
+  %% ═══════════════════════════════════════
+  EXE["/mp-execute"]:::skill
+  REV["/mp-review"]:::skill
+  CPR["/mp-commit-push-pr"]:::skill
+  PR["/mp-pr"]:::skill
+  UI3["/mp-design-ui-3"]:::skill
+  BUG["/mp-bug-report"]:::skill
+  SKC["/mp-skill-create"]:::skill
+  AGC["/mp-agent-create"]:::skill
+  SYN["/mp-sync-base"]:::skill
+  DEC["/mp-decompose"]:::skill
+  CLN["/mp-code-clean"]:::skill
+  ARC["/mp-architecture-review"]:::skill
+
+  %% ═══════════════════════════════════════
+  %% AGENTS grouped in columns via subgraphs
+  %% ═══════════════════════════════════════
+
+  subgraph g1["Analysis &amp; Execution"]
+    direction TB
+    IA(("issue<br/>analyzer")):::agent
+    C7(("context7<br/>docs-fetcher")):::agent
+    CHK(("checker")):::agent
+    EXR(("executor")):::agent
+  end
+
+  subgraph g2["Standard Review"]
+    direction TB
+    RCQ(("reviewer<br/>code-quality")):::agent
+    RBP(("reviewer<br/>best-practices")):::agent
+    RSA(("reviewer<br/>spec-align")):::agent
+  end
+
+  subgraph g3["Extended Review"]
+    direction TB
+    RSE(("reviewer<br/>security")):::agent
+    RPF(("reviewer<br/>performance")):::agent
+    REH(("reviewer<br/>error-handling")):::agent
+  end
+
+  subgraph g4["Specialized"]
+    direction TB
+    CDT(("chrome-devtools<br/>tester")):::mcp
+    DOC(("docs<br/>updater")):::agent
+    IF(("issue<br/>finder")):::agent
+    BBD(("base-branch<br/>detector")):::agent
+    UIG(("ui-variant<br/>generator")):::agent
+    CCG(("claude-code<br/>guide")):::agent
+  end
+
+  subgraph g5["Generic Sub-agents"]
+    direction TB
+    GEXP(("Explore")):::generic
+    GDES(("Design")):::generic
+    GREV(("Review")):::generic
+    GFIX(("Fix")):::generic
+    GDEC(("Decomp")):::generic
+  end
+
+  %% Force subgraphs into a horizontal row
+  g1 ~~~ g2 ~~~ g3 ~~~ g4 ~~~ g5
+
+  %% ═══════════════════════════════════════
+  %% CONNECTIONS: /mp-execute (12 agents)
+  %% ═══════════════════════════════════════
+  EXE ==> IA
+  EXE -.-> C7
+  EXE ==> CHK
+  EXE -.-> EXR
+  EXE ==> RCQ
+  EXE ==> RBP
+  EXE ==> RSA
+  EXE -.->|"--hard-gate"| RSE
+  EXE -.->|"--hard-gate"| RPF
+  EXE -.->|"--hard-gate"| REH
+  EXE -.->|"frontend changes"| CDT
+  EXE -.->|"if significant"| DOC
+
+  %% ═══════════════════════════════════════
+  %% CONNECTIONS: /mp-review (8 agents)
+  %% ═══════════════════════════════════════
+  REV -.-> RCQ
+  REV -.-> RBP
+  REV -.-> RSA
+  REV -.->|"full coverage"| RSE
+  REV -.->|"full coverage"| RPF
+  REV -.->|"full coverage"| REH
+  REV -.->|"if findings"| EXR
+  REV -.-> BBD
+
+  %% ═══════════════════════════════════════
+  %% CONNECTIONS: other skills
+  %% ═══════════════════════════════════════
+  CPR -.-> IF
+  PR -.-> IF
+  UI3 ==> UIG
+  BUG ==> IA
+  SKC ==> CCG
+  AGC ==> CCG
+  SYN -.-> BBD
+  DEC ==> GDEC
+  CLN ==> GREV
+  CLN ==> GFIX
+  ARC ==> GEXP
+  ARC ==> GDES
+    </pre>
+  </div>
+
+  <div class="note">
+    <strong>Skills with NO agent dependencies</strong> (run entirely in main conversation):<br/>
+    <code>mp-check-fix</code>
+    <code>mp-commit</code>
+    <code>mp-commit-push</code>
+    <code>mp-grill-me</code>
+    <code>mp-grill-requirements</code>
+    <code>mp-handoff</code>
+    <code>mp-update-docs</code>
+    <code>mp-setup-sveltekit</code>
+    <code>mp-setup-react-native</code>
+    <code>mp-publish-obsidian-plugin</code>
+    <code>mp-prd-to-issues</code>
+    <code>mp-glossary</code>
+    <code>mp-init-repo</code>
+    <code>mp-issue-create</code>
+    <code>mp-requirements-to-prd</code>
+  </div>
+
+  <div class="note">
+    <strong>MCP dependencies &mdash; remote/scheduled viability:</strong><br/>
+    <span style="color:#e74c3c">&#9679;</span> <code>chrome-devtools-tester</code> &mdash; Chrome DevTools MCP: local-only, needs running Chrome GUI. <strong>Not viable in cloud tasks.</strong><br/>
+    <span style="color:#f5a623">&#9679;</span> <code>context7-docs-fetcher</code> &mdash; Context7 MCP (HTTP/SSE): works in cloud via connector<br/>
+    <span style="color:#f5a623">&#9679;</span> <code>issue-analyzer</code>, <code>issue-finder</code> &mdash; GitHub MCP as backup; primary path uses <code>gh</code> CLI (works everywhere)<br/>
+    <br/>
+    <strong>Alternative for cloud tasks:</strong> Playwright MCP runs headless, works in VMs, cross-browser. Viable replacement for Chrome DevTools in scheduled execution.
+  </div>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true
+      }
+    });
+  </script>
+</body>
+</html>
