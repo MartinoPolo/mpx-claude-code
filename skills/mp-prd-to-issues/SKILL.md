@@ -22,7 +22,7 @@ Break a PRD GitHub issue into independently implementable vertical slices. $ARGU
 - Assign sub-issues to the same milestone as the PRD issue
 - Show full breakdown to user before creating any issues
 - Use `gh` CLI, not the GitHub MCP
-- Label every sub-issue with `task` (create label if it doesn't exist)
+- Label every sub-issue with `task` and either `HITL` or `AFK` (create labels if they don't exist)
 - Reference the PRD issue in each sub-issue body: "Part of #N"
 
 ## Workflow
@@ -61,11 +61,20 @@ For each sub-issue, define:
 4. **Blocking relationships** — which issues must complete first
 5. **Labels** — `task` plus feature-area labels (e.g., `area:api`, `area:ui`, `area:db`)
 
+### Step 3b: Classify Slices — HITL vs AFK
+
+Classify each slice as one of:
+
+- **HITL** (Human In The Loop) — requires human interaction during implementation: architectural decisions, design reviews, API contract approvals, UX decisions, ambiguous requirements needing clarification
+- **AFK** (Away From Keyboard) — can be implemented and merged autonomously without human interaction: well-defined scope, clear acceptance criteria, no open design questions
+
+Default to HITL when uncertain. A slice is AFK only when the path forward is unambiguous.
+
 ### Step 4: Present Breakdown for Approval
 
 Show the user:
 
-- Numbered list of all sub-issues with titles
+- Numbered list of all sub-issues: **Title**, **Type** [HITL or AFK], **Blocked by**, **User stories covered**
 - Dependency graph (which issues block which)
 - Milestone assignment
 - Labels per issue
@@ -78,11 +87,13 @@ Ask for explicit approval before creating anything. Accept feedback and revise i
 gh label list --limit 100
 ```
 
-Check that `task` and any area labels exist. Create missing ones:
+Check that `task`, `HITL`, `AFK`, and any area labels exist. Create missing ones:
 
 ```bash
-gh label create "task" --description "Implementation task" --color "0E8A16"
-gh label create "area:api" --description "API layer" --color "1D76DB"
+gh label create "task" --description "Implementation task" --color "0E8A16" --force
+gh label create "HITL" --description "Requires human interaction" --color "FBCA04" --force
+gh label create "AFK" --description "Can be implemented autonomously" --color "0E8A16" --force
+gh label create "area:api" --description "API layer" --color "1D76DB" --force
 ```
 
 ### Step 6: Create Sub-Issues
@@ -90,8 +101,10 @@ gh label create "area:api" --description "API layer" --color "1D76DB"
 Create each sub-issue via `gh issue create`. Use the PRD's milestone.
 
 ```bash
-gh issue create --title "Short descriptive title" --label "task,area:api" --milestone "Milestone Name" --body "$(cat <<'EOF'
+gh issue create --title "Short descriptive title" --label "task,HITL,area:api" --milestone "Milestone Name" --body "$(cat <<'EOF'
 Part of #<PRD_NUMBER>
+
+**Type:** HITL | AFK
 
 ## Description
 
@@ -113,6 +126,8 @@ Part of #<PRD_NUMBER>
 EOF
 )"
 ```
+
+Use `HITL` or `AFK` label (not both) based on the slice classification from Step 3b.
 
 Capture each created issue number from the output.
 
@@ -137,14 +152,14 @@ Milestone: <name>
 Sub-issues created: <count>
 
 Dependency Graph:
-  #A — Title A
-    -> #B — Title B (blocked by #A)
-    -> #C — Title C (blocked by #A)
-  #B — Title B
-    -> #D — Title D (blocked by #B)
+  #A — Title A [HITL]
+    -> #B — Title B [AFK] (blocked by #A)
+    -> #C — Title C [AFK] (blocked by #A)
+  #B — Title B [AFK]
+    -> #D — Title D [HITL] (blocked by #B)
 
 Issues:
-  - <url> — <title>
-  - <url> — <title>
+  - <url> — <title> [HITL]
+  - <url> — <title> [AFK]
   ...
 ```
