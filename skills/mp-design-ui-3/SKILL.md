@@ -1,6 +1,6 @@
 ---
-name: mp-design-3-styles
-description: 'Generate multiple UI variants in different design styles for comparison. Spawns parallel subagents, each creating a variant in a distinct aesthetic. Use when: "design styles", "style variants", "design exploration", "explore designs", "3 styles", "5 styles"'
+name: mp-design-ui-3
+description: 'Generate multiple UI variants in different design styles for comparison. Use when: "design ui", "ui variants", "design exploration", "explore designs", "3 styles", "5 styles"'
 argument-hint: '<ComponentOrPageName> [--count 5] [--styles brutalism,cafe,luxury] [--target src/components/MyComponent.svelte]'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(cat *), Bash(mkdir *), Bash(rm -rf */.design-variants*), Bash(mv *), Bash(cp *), AskUserQuestion, Agent, Task
@@ -17,10 +17,10 @@ Generate multiple UI variants in different design styles, compare side-by-side, 
 ## Usage
 
 ```
-/mp-design-3-styles LoginForm
-/mp-design-3-styles DashboardPage --count 5
-/mp-design-3-styles Sidebar --styles brutalism,cafe,luxury
-/mp-design-3-styles PricingCard --target src/components/PricingCard.svelte
+/mp-design-ui-3 LoginForm
+/mp-design-ui-3 DashboardPage --count 5
+/mp-design-ui-3 Sidebar --styles brutalism,cafe,luxury
+/mp-design-ui-3 PricingCard --target src/components/PricingCard.svelte
 ```
 
 ## Arguments
@@ -69,7 +69,7 @@ If `--target` not specified, infer from project structure:
 
 ### Step 2: Select Styles
 
-Read the style catalog: `~/.claude/skills/mp-design-3-styles/style-catalog.md`
+Read the style catalog: `~/.claude/skills/mp-design-ui-3/style-catalog.md`
 
 **If `--styles` provided:** Use those exact styles.
 
@@ -97,7 +97,7 @@ src/.design-variants/
 └── v3-{style-slug}/
 ```
 
-Spawn one `mp-style-variant-generator` agent per style, **all in parallel**. Each agent receives:
+Spawn one `mp-ui-variant-generator` agent per style, **all in parallel**. Each agent receives:
 
 ```
 Generate a {scope} named "{ComponentName}" in the {framework} framework.

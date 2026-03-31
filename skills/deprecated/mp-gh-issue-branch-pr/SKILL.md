@@ -1,6 +1,6 @@
 ---
 name: mp-gh-issue-branch-pr
-description: 'Create issue from current work, branch, then commit/push/create PR. Use when: "create issue and PR", "log bug and open PR", "issue + branch + PR"'
+description: 'DEPRECATED: Use /mp-issue-create + /mp-commit-push-pr instead. Create issue from current work, branch, then commit/push/create PR.'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Task, AskUserQuestion, Bash(git *), Bash(gh *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*), Bash(node $HOME/.claude/scripts/extract-branch-issue.js*)
 metadata:

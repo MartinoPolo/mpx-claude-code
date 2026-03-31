@@ -24,10 +24,5 @@ At end of each response where agents were spawned or skills invoked, append:
 
 **Session Activity:**
 
-- `agent-name` (model) — brief purpose [count if >1]
+- `agent-name` (model) — brief purpose
 - `/skill-name` — brief purpose
-
-Rules:
-
-- Omit if no agents/skills used
-- Include model (opus/sonnet/haiku) for agents

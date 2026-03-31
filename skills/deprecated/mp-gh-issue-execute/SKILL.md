@@ -57,7 +57,7 @@ Spawn one sub-agent to keep context intact for discovery + analysis + planning:
 
 ```
 Task tool:
-  subagent_type: "mp-gh-issue-analyzer"
+  subagent_type: "mp-issue-analyzer"
   model: opus
   description: "Explore, analyze, and plan issue #N"
   prompt: |

@@ -83,9 +83,9 @@ Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-dete
 
 ### Step 6: Find Linked Issue
 
-**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-gh-issue-finder` agent if no number extracted.
+**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only spawn `mp-issue-finder` agent if no number extracted.
 
-If agent fallback needed, spawn `mp-gh-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
+If agent fallback needed, spawn `mp-issue-finder` (via Task tool, model haiku) with repo, branch name, commit messages, and diff summary.
 
 **Based on result:**
 

@@ -1,6 +1,6 @@
 ---
 name: mp-execute
-description: 'Unified task execution with TDD: accepts GitHub issues, milestones, or inline tasks. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
+description: 'Execute tasks with TDD from GitHub issues, milestones, or inline descriptions. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
 argument-hint: '<#issue | #42 #43 | milestone:"Epic 1" | "inline task description">'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
@@ -62,7 +62,7 @@ Spawn a single sub-agent to explore + analyze + plan:
 
 ```
 Agent tool:
-  subagent_type: "mp-gh-issue-analyzer"
+  subagent_type: "mp-issue-analyzer"
   prompt: |
     Issue: [title, body, acceptance criteria]
     Codebase: [project root]
@@ -124,6 +124,12 @@ Repeat until all behaviors are covered.
 - **No mocks unless necessary**: Test real behavior, not implementation details
 - **Test at the right boundary**: Unit tests for logic, integration tests for interactions
 - **Each test should test ONE thing**: Clear failure messages
+
+For TDD principles, see:
+- [Good vs bad tests](tests.md)
+- [When to mock](mocking.md)
+- [Deep modules](deep-modules.md)
+- [Interface design for testability](interface-design.md)
 
 ## Step 5: Review + Check Loop (up to 3 iterations)
 
