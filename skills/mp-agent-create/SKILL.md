@@ -125,7 +125,7 @@ color: <color>
 - GitHub CLI: specify exact `gh` command (e.g., `gh pr list`)
 - Bash commands: name exact command/script
 - Omit `model` in spawning instructions when sub-agent defines its own
-- Prefer `gh` CLI over GitHub MCP tools — MCP is backup only
+- Use `gh` CLI for all GitHub operations
 
 ### Step 4: Validate Against Guidelines
 

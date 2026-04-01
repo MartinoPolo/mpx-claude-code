@@ -143,6 +143,6 @@ Display:
 
 - Always read REQUIREMENTS.md first — the PRD must trace back to requirements
 - Show the PRD to the user before creating the issue
-- Use `gh` CLI, not the GitHub MCP
+- Use `gh` CLI for all GitHub operations
 - PRD body must be well-formatted GitHub markdown
 - Never create the issue without user approval

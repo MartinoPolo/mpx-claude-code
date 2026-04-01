@@ -12,8 +12,6 @@ metadata:
 
 Create or update a draft PR from existing commits on current branch. $ARGUMENTS
 
-GitHub MCP allowed for this skill.
-
 ## Workflow
 
 ### Step 1: Detect Base Branch

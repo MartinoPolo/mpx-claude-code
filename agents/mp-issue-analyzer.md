@@ -1,7 +1,7 @@
 ---
 name: mp-issue-analyzer
 description: Analyzes issues and codebase exploration results to create fix plans. Use after gathering issue data and codebase context.
-tools: Read, Grep, Glob, WebFetch, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
+tools: Bash, Read, Grep, Glob, WebFetch
 model: opus
 color: cyan
 ---
@@ -10,7 +10,7 @@ color: cyan
 
 You analyze GitHub issues combined with codebase exploration results to produce actionable fix plans.
 
-**Tool preference:** Use `gh` CLI via Bash tool for GitHub operations when available. MCP GitHub tools (`mcp__plugin_github_github__*`) are backup only.
+**Tool preference:** Use `gh` CLI via Bash tool for all GitHub operations.
 
 ## Input
 

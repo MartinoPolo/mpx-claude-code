@@ -303,7 +303,7 @@ Configured via `scripts/context-bar.sh`.
 
 `settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
 
-**MCP plugins:** Context7 (library docs), GitHub, TypeScript LSP. **MCP servers:** Playwright (browser testing, headless).
+**MCP plugins:** Context7 (library docs), TypeScript LSP. **MCP servers:** Playwright (browser testing, headless).
 
 ## Review System
 

@@ -14,8 +14,6 @@ metadata:
 
 Run review in two phases: review phase then optional fix phase. $ARGUMENTS
 
-GitHub MCP allowed for PR scope.
-
 ## Parameters
 
 ### Required

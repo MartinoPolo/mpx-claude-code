@@ -21,7 +21,7 @@ Break a PRD GitHub issue into independently implementable vertical slices. $ARGU
 - Each issue must have acceptance criteria
 - Assign sub-issues to the same milestone as the PRD issue
 - Show full breakdown to user before creating any issues
-- Use `gh` CLI, not the GitHub MCP
+- Use `gh` CLI for all GitHub operations
 - Label every sub-issue with `task` and either `HITL` or `AFK` (create labels if they don't exist)
 - Reference the PRD issue in each sub-issue body: "Part of #N"
 

@@ -14,7 +14,7 @@
   },
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
-    "github@claude-plugins-official": true,
+    "github@claude-plugins-official": false,
     "typescript-lsp@claude-plugins-official": true,
     "chrome-devtools-mcp@claude-plugins-official": true
   },

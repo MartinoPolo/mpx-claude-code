@@ -12,8 +12,6 @@ metadata:
 
 Create a well-structured GitHub issue with codebase context. $ARGUMENTS
 
-GitHub MCP allowed for this skill.
-
 ## Workflow
 
 ### Step 1: Parse Intent

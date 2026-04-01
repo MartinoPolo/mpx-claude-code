@@ -2,7 +2,6 @@
 name: mp-skill-create
 description: 'Create new Claude Code skills with structured conventions, progressive disclosure, and review checklist. Use when: "create skill", "new skill", "write a skill", "skill create"'
 argument-hint: "[skill name or description]"
-disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
@@ -96,7 +95,7 @@ metadata:
 - GitHub CLI: specify exact `gh` command (e.g., `gh issue create`, `gh pr create --draft`)
 - Bash commands: name the exact command/script
 - Omit `model` when spawning agents that define their own model in frontmatter
-- Prefer `gh` CLI over GitHub MCP tools — MCP is backup only
+- Use `gh` CLI for all GitHub operations
 
 **Size rules:**
 

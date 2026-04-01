@@ -1,7 +1,7 @@
 ---
 name: mp-issue-finder
 description: Finds the issue that a PR branch closes. Given branch diff/commits, searches repo issues and returns the best match.
-tools: Bash, Read, Grep, Glob, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__search_issues
+tools: Bash, Read, Grep, Glob
 model: haiku
 color: cyan
 ---
@@ -10,7 +10,7 @@ color: cyan
 
 Find the GitHub issue that a PR's changes resolve. Return `Closes #N` or candidates.
 
-**Tool preference:** Use `gh` CLI via Bash tool for all GitHub operations. MCP GitHub tools (`mcp__plugin_github_github__*`) are backup only — use when `gh` is unavailable.
+**Tool preference:** Use `gh` CLI via Bash tool for all GitHub operations.
 
 ## Input
 

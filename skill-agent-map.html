@@ -224,7 +224,7 @@ flowchart TB
     <strong>MCP dependencies &mdash; remote/scheduled viability:</strong><br/>
     <span style="color:#e74c3c">&#9679;</span> <code>chrome-devtools-tester</code> &mdash; Chrome DevTools MCP: local-only, needs running Chrome GUI. <strong>Not viable in cloud tasks.</strong><br/>
     <span style="color:#f5a623">&#9679;</span> <code>context7-docs-fetcher</code> &mdash; Context7 MCP (HTTP/SSE): works in cloud via connector<br/>
-    <span style="color:#f5a623">&#9679;</span> <code>issue-analyzer</code>, <code>issue-finder</code> &mdash; GitHub MCP as backup; primary path uses <code>gh</code> CLI (works everywhere)<br/>
+    <span style="color:#2ecc71">&#9679;</span> <code>issue-analyzer</code>, <code>issue-finder</code> &mdash; <code>gh</code> CLI only (works everywhere)<br/>
     <br/>
     <strong>Alternative for cloud tasks:</strong> Playwright MCP runs headless, works in VMs, cross-browser. Viable replacement for Chrome DevTools in scheduled execution.
   </div>
