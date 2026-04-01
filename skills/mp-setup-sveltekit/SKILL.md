@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: setup
 ---
 
@@ -95,7 +95,23 @@ Persistent project requirements. Updated via `/mp-grill-requirements`.
 GitHub issues track execution state; this file tracks the full requirement set.
 ```
 
-### Step 8: Commit and push
+### Step 8: Verify Framework Rules
+
+Svelte rules are loaded from user-level `~/.claude/rules/svelte.md` (symlinked from mpx-claude-code). No per-project rule setup is needed.
+
+Verify the user-level rules are in place:
+
+```bash
+ls -la ~/.claude/rules/svelte.md
+```
+
+If missing, inform the user:
+
+> Svelte rules not found at `~/.claude/rules/`. Ensure `~/.claude/rules/` is symlinked to your mpx-claude-code `rules/` directory. See `WINDOWS-SETUP.md` for Windows symlink instructions.
+
+Do NOT abort — this is informational only.
+
+### Step 9: Commit and push
 
 ```bash
 git -C <path> add -A
@@ -103,7 +119,7 @@ git -C <path> commit -m "chore: initial project setup"
 git -C <path> push
 ```
 
-### Step 9: Report
+### Step 10: Report
 
 Output summary:
 
@@ -113,6 +129,7 @@ Default branch: dev
 Branch protection: [applied | failed (reason)]
 Template checks: [passing | failing (details)]
 Svelte MCP: [added | skipped]
+Svelte rules: [found at ~/.claude/rules/ | missing — see instructions above]
 ```
 
 ## Rules

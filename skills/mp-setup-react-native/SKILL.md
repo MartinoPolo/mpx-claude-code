@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: setup
 ---
 
@@ -101,7 +101,55 @@ Persistent project requirements. Updated via `/mp-grill-requirements`.
 GitHub issues track execution state; this file tracks the full requirement set.
 ```
 
-### Step 7: Commit and Push
+### Step 7: Link Framework Rules
+
+Set up `.claude/rules/` in the new project with the React rule file from the central mpx-claude-code repo. This gives Claude framework-specific guidance when editing `.tsx`/`.jsx` files.
+
+**Source:** `<mpx-claude-code-repo>/rules-per-project/react.md`
+**Destination:** `<project-path>/.claude/rules/react.md`
+
+```bash
+mkdir -p <project-path>/.claude/rules
+```
+
+#### Symlink by platform
+
+Detect the OS and create the appropriate link:
+
+**Linux / macOS:**
+```bash
+ln -s /path/to/mpx-claude-code/rules-per-project/react.md <project-path>/.claude/rules/react.md
+```
+
+**Windows:**
+Symlinks require Administrator privileges (or Developer Mode enabled). Claude Code must be running in an **elevated Git Bash** or **elevated cmd.exe** terminal.
+
+- See `WINDOWS-SETUP.md` in the mpx-claude-code repo for full Windows symlink reference.
+- Git Bash `ln -s` does NOT create real Windows symlinks. Use `cmd.exe`:
+
+```bash
+cmd.exe //c "mklink <project-path>\.claude\rules\react.md <mpx-claude-code-repo>\rules-per-project\react.md"
+```
+
+If the current terminal is **not elevated**, inform the user:
+
+> Cannot create symlink — Administrator privileges required.
+> Run this command in an elevated Git Bash or cmd.exe (Run as Administrator):
+> ```
+> mklink "<project-path>\.claude\rules\react.md" "<mpx-claude-code-repo>\rules-per-project\react.md"
+> ```
+> Alternatively, enable Windows Developer Mode to allow symlinks without admin.
+
+Do NOT abort setup if symlinking fails — report the manual command and continue.
+
+#### Detect mpx-claude-code repo location
+
+Check in order:
+1. `$HOME/.claude/rules/` exists and is a symlink → resolve its target to find the repo root
+2. Common locations: `/c/_MP_projects/mpx-claude-code`, `~/mpx-claude-code`
+3. If not found, ask the user for the path
+
+### Step 8: Commit and Push
 
 Stage any new or modified files (e.g., lockfile, `.mpx/`):
 
@@ -114,7 +162,7 @@ EOF
 git -C <project-path> push -u origin dev
 ```
 
-### Step 8: Report
+### Step 9: Report
 
 Display:
 
@@ -123,6 +171,7 @@ Display:
 - **Branch protection status** for main and dev
 - **Monorepo structure overview** (see below)
 - **Check results** (pass/fail summary)
+- **Rules**: linked / manual command provided
 
 ## Monorepo Structure
 

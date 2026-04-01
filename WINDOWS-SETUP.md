@@ -35,6 +35,7 @@ mklink /J "%DEST%\agents"       "%REPO%\agents"
 mklink /J "%DEST%\assets"       "%REPO%\assets"
 mklink /J "%DEST%\hooks"        "%REPO%\hooks"
 mklink /J "%DEST%\instructions" "%REPO%\instructions"
+mklink /J "%DEST%\rules"        "%REPO%\rules"
 mklink /J "%DEST%\scripts"      "%REPO%\scripts"
 mklink /J "%DEST%\skills"       "%REPO%\skills"
 mklink /J "%DEST%\sounds"       "%REPO%\sounds"
@@ -43,6 +44,29 @@ mklink /J "%DEST%\sounds"       "%REPO%\sounds"
 mklink "%DEST%\AGENTS.md"      "%REPO%\instructions\AGENTS.md"
 mklink "%DEST%\CLAUDE.md"      "%REPO%\instructions\CLAUDE.md"
 mklink "%DEST%\settings.json"  "%REPO%\settings.json"
+```
+
+## Per-Project Framework Rules (React/Solid)
+
+User-level rules (svelte, python, rust, css, typescript) auto-load via the `rules` junction above. For frameworks that share `.tsx`/`.jsx` extensions (React, Solid), link the rule into the specific project's `.claude/rules/`.
+
+From an **Administrator cmd.exe** (or Git Bash with admin if paths have no spaces):
+
+```cmd
+:: In a React project
+mkdir <project-path>\.claude\rules
+mklink "<project-path>\.claude\rules\react.md" "%REPO%\rules-per-project\react.md"
+
+:: In a Solid project
+mkdir <project-path>\.claude\rules
+mklink "<project-path>\.claude\rules\solid.md" "%REPO%\rules-per-project\solid.md"
+```
+
+From **elevated Git Bash** (paths without spaces):
+
+```bash
+mkdir -p <project-path>/.claude/rules
+cmd.exe //c "mklink <project-path>\.claude\rules\react.md <repo>\rules-per-project\react.md"
 ```
 
 ## Removing Links
