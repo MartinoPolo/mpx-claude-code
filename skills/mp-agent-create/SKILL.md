@@ -3,7 +3,7 @@ name: mp-agent-create
 description: 'Create new Claude Code custom agents with structured conventions and review checklist. Use when: "create agent", "new agent", "write an agent", "agent create"'
 argument-hint: "[agent name or description]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), AskUserQuestion, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -29,15 +29,15 @@ Store the returned guidelines for use in Step 4.
 
 ### Step 2: Gather Requirements
 
-Ask the user about:
+Ask all of the following in a single numbered list (one round-trip):
 
-- **Purpose**: What task does this agent handle? What problem does it solve?
-- **Tools needed**: Which tools should it access? (Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, WebFetch, WebSearch, MCP tools)
-- **Model**: haiku (fast/cheap), sonnet (balanced), opus (complex reasoning), or inherit (parent's model)?
-- **Read-only or read-write?**: Does it modify files or only analyze?
-- **Color**: Status line color (red, green, yellow, blue, magenta, cyan, white)
+1. **Purpose**: What task does this agent handle? What problem does it solve?
+2. **Tools needed**: Which tools should it access? (Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, WebFetch, WebSearch, MCP tools)
+3. **Model**: haiku (fast/cheap), sonnet (balanced), opus (complex reasoning), or inherit (parent's model)?
+4. **Read-only or read-write?**: Does it modify files or only analyze?
+5. **Color**: Status line color (red, green, yellow, blue, magenta, cyan, white)
 
-If $ARGUMENTS provided, use as initial agent name/description and ask remaining questions.
+If $ARGUMENTS provided, use as initial agent name/description and ask only the unanswered questions.
 
 ### Step 3: Draft the Agent
 

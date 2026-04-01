@@ -74,13 +74,11 @@ For each HITL issue, in priority order:
 2. Cross-reference against the PRD's `## Implementation Decisions` section — remove anything already decided
 3. Spawn an `Explore` agent to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
 
-#### 5b: Grill One Question at a Time
+#### 5b: Grill Decision Points
 
-For each unresolved decision point:
-- Ask ONE question
-- Provide a recommended answer backed by codebase evidence or PRD context
-- Wait for user response
-- Move to next decision
+Group the issue's decision points into thematic batches. Present each batch as a numbered list in one round. For each question, provide a recommended answer backed by codebase evidence or PRD context.
+
+Only split into a follow-up round when earlier answers would change later questions.
 
 Follow the `mp-grill-me` pattern: if a question can be answered by exploring the codebase, explore instead of asking.
 

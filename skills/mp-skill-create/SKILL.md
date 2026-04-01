@@ -2,7 +2,7 @@
 name: mp-skill-create
 description: 'Create new Claude Code skills with structured conventions, progressive disclosure, and review checklist. Use when: "create skill", "new skill", "write a skill", "skill create"'
 argument-hint: "[skill name or description]"
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), AskUserQuestion, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
   version: "0.1"
@@ -29,14 +29,14 @@ Store the returned guidelines for use in Step 4.
 
 ### Step 2: Gather Requirements
 
-Ask the user about:
+Ask all of the following in a single numbered list (one round-trip):
 
-- **Task/domain**: What does this skill do? What problem does it solve?
-- **Use cases**: When would someone invoke this? What are the trigger phrases?
-- **Scripts needed**: Are there deterministic operations that should be shell scripts?
-- **Reference materials**: Are there large docs, API specs, or examples to bundle?
+1. **Task/domain**: What does this skill do? What problem does it solve?
+2. **Use cases**: When would someone invoke this? What are the trigger phrases?
+3. **Scripts needed**: Are there deterministic operations that should be shell scripts?
+4. **Reference materials**: Are there large docs, API specs, or examples to bundle?
 
-If $ARGUMENTS provided, use as initial skill name/description and ask remaining questions.
+If $ARGUMENTS provided, use as initial skill name/description and ask only the unanswered questions.
 
 ### Step 3: Draft the Skill
 

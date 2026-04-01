@@ -26,7 +26,8 @@ Parse raw requirements into individual items, then for EACH requirement:
 
 Rules for grilling:
 
-- Ask ONE question at a time per requirement.
+- Batch all questions for a requirement into a single numbered list. Present together in one round.
+- Only split into a follow-up round when answers would materially change subsequent questions.
 - Provide a recommended answer with each question.
 - If a question can be answered by exploring the codebase, explore the codebase instead of asking.
 - Never skip the grilling step — every requirement must be clarified.
