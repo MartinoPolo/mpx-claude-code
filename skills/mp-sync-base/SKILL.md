@@ -4,7 +4,7 @@ description: 'Merge target branch into current branch. Use when: "sync with main
 allowed-tools: Bash(git *), Agent, Read, Edit, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "1.0"
+  version: "1.1"
   category: git-workflow
 ---
 
@@ -96,6 +96,12 @@ If conflicts occur:
    d. **Complex conflicts** (overlapping logic, ambiguous) → show both sides to user, ask how to resolve
 3. After all resolved: `git commit` (accept default merge message)
 4. If new conflicts appear → repeat from step 1
+
+### Step 6: Push
+
+If `origin/<current>` exists (determined in Step 2b) → `git push origin <current>`
+
+If no remote tracking branch → skip push, inform user.
 
 ## Output
 
