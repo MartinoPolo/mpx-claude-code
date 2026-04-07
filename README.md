@@ -176,13 +176,13 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 ### Code Quality Skills
 
-| Skill                     | Description                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `/mp-check-fix`           | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise build/typecheck/lint |
-| `/mp-review`              | Unified code review (scope: PR, branch, changes)                                                  |
-| `/mp-architecture-review` | Explore codebase for shallow modules → parallel interface design → refactor GitHub issue          |
-| `/mp-decompose`           | Break down large files into logical modules                                                       |
-| `/mp-code-clean`          | Dead code removal and deduplication                                                               |
+| Skill                     | Description                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `/mp-check-fix`           | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise typecheck/lint/format/build |
+| `/mp-review`              | Unified code review (scope: PR, branch, changes)                                                         |
+| `/mp-architecture-review` | Explore codebase for shallow modules → parallel interface design → refactor GitHub issue                 |
+| `/mp-decompose`           | Break down large files into logical modules                                                              |
+| `/mp-code-clean`          | Dead code removal and deduplication                                                                      |
 
 ### Design Skills
 
