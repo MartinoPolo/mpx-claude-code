@@ -54,7 +54,7 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
 
 ### Execution Pipeline (`/mp-execute`)
 
-`/mp-execute` is the core execution orchestrator — it takes GitHub issue(s), milestones, or inline tasks and runs the full implementation lifecycle with sub-agents.
+`/mp-execute` is the core execution orchestrator — it executes one GitHub issue per run (or one inline task/checklist), while still accepting milestone input to select a single issue.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -62,7 +62,7 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
 └─────────────────────────────────┬────────────────────────────────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 1) Resolve Input        │  #issue(s), milestone, inline
+                        │ 1) Resolve Input        │  #issue, milestone, inline
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
@@ -112,21 +112,14 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 10) Next Issue          │  if batch execution,
-                        │                         │  go to next unblocked
-                        └────────────┬────────────┘
-                                      │
-                        more issues? yes -> repeat 2-9
-                                      │
-                        ┌────────────▼────────────┐
-                        │ 11) Finalization        │  optional --docs ->
+                        │ 10) Finalization        │  optional --docs ->
                         │                         │  mp-docs-updater
                         └─────────────────────────┘
 ```
 
 Pipeline summary:
 
-1. Resolve input (`#issue`, multiple issues, milestone, or inline task)
+1. Resolve input (`#issue`, milestone, or inline task/checklist)
 2. Analyze issue context via `mp-issue-analyzer` (issues only)
 3. Detect checks via `detect-check-scripts.sh` (supports `CHECK_ALL` fallback logic)
 4. Execute TDD via `mp-tdd-executor` (unless `--no-tdd`)
@@ -134,8 +127,7 @@ Pipeline summary:
 6. Run conditional frontend verification with `mp-playwright-tester`
 7. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
 8. Commit, then push and create/update PR (issues only)
-9. Continue with next unblocked issue for batch runs (Step 10)
-10. Finalize and optionally run docs sync with `--docs` (Step 11)
+9. Finalize and optionally run docs sync with `--docs` (Step 10)
 
 **Flags:** `--no-tdd` skips TDD for trivial work, `--hard-gate` adds security/performance/error-handling reviewers (6 total), `--dry-run` analyzes without implementing, `--docs` runs docs sync during finalization.
 
