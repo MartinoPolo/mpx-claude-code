@@ -1,18 +1,27 @@
 ---
 name: mp-hitl
 description: 'Resolve HITL issues into AFK-ready by grilling human decisions. Use when: "resolve HITL", "make issues AFK", "grill HITL issues", "prep for overnight run"'
-argument-hint: "[PRD issue URL or number]"
+argument-hint: "[PRD issue URL or number] [lowest|most-blocking]"
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: project-management
 ---
 
 # HITL to AFK — Resolve Human Decisions
 
 Grill the user on open decisions in HITL-labeled GitHub issues, then flip resolved issues to AFK for autonomous execution. $ARGUMENTS
+
+## Parameters
+
+- PRD issue URL or number (optional) — target PRD. If omitted, auto-detect.
+- Ordering mode (optional):
+  - `lowest` → process unblocked HITL issues by lowest issue number first
+  - `most-blocking` → process by transitive unblock count (highest-impact first)
+
+Default ordering: `lowest`
 
 ## Workflow
 
@@ -52,11 +61,24 @@ Filter to only HITL-labeled issues that meet this criteria. If zero found:
 - "All HITL resolved" → exit
 - "N HITL issues exist but all blocked by other HITL issues" → show which ones and their blockers, exit
 
-### Step 4: Prioritize by Blocking Impact
+### Step 4: Order the Queue
 
-Sort unblocked HITL issues by **transitive unblock count** — how many downstream issues (direct + indirect) each one unblocks. Process the highest-impact issue first.
+Sort unblocked HITL issues based on the ordering parameter:
 
-Present the queue to the user:
+- `lowest` (default) → ascending by issue number
+- `most-blocking` → descending by **transitive unblock count** (how many downstream issues, direct + indirect, each one unblocks)
+
+Present the queue to the user.
+
+For `lowest`:
+
+```
+HITL issues to resolve (ordered by issue number):
+1. #3 — Dashboard + issue CRUD
+2. #6 — Session spawning
+```
+
+For `most-blocking`:
 
 ```
 HITL issues to resolve (ordered by blocking impact):
