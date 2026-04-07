@@ -1,16 +1,18 @@
 ---
 name: mp-commit-push-pr
-description: 'Full workflow - commit, push, and create or update draft PR. Use when: "commit push and PR", "full workflow", "ship with PR"'
+description: 'Full workflow - commit, push, and create or update PR. Use when: "commit push and PR", "full workflow", "ship with PR"'
 allowed-tools: Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: git-workflow
 ---
 
 # Commit, Push, and Create/Update PR
 
-Full workflow: stage → commit → push → detect base → create or update draft PR. $ARGUMENTS
+Full workflow: stage → commit → push → detect base → create or update PR. $ARGUMENTS
+
+Pass `draft` as argument to create a draft PR instead of a normal PR.
 
 ## Workflow
 
@@ -103,7 +105,7 @@ gh pr view --json number,title,body,url,state 2>/dev/null
 ### Step 8a: Update Existing PR
 
 ```bash
-gh pr edit --title "type(scope): Description" --body "$(cat <<'EOF'
+gh pr edit --title "#N type(scope): Description" --body "$(cat <<'EOF'
 ## Description
 - Summary bullet 1
 - Summary bullet 2
@@ -118,10 +120,10 @@ EOF
 )"
 ```
 
-### Step 8b: Create Draft PR
+### Step 8b: Create PR
 
 ```bash
-gh pr create --draft --base <base> --title "type(scope): Description" --body "$(cat <<'EOF'
+gh pr create --base <base> --title "#N type(scope): Description" --body "$(cat <<'EOF'
 ## Description
 - Summary bullet 1
 - Summary bullet 2
@@ -135,12 +137,14 @@ Closes #123
 EOF
 )"
 ```
+
+If `draft` is in `$ARGUMENTS`, add `--draft` flag to `gh pr create`.
 
 ## PR Rules
 
 ### Title
 
-`type(scope): Description` — conventional commit format
+`#N type(scope): Description` — when a linked issue exists, prefix with `#N`. Without linked issue: `type(scope): Description`.
 
 ### Description
 
@@ -174,7 +178,7 @@ Closes #42
 | "PR creation fails"       | Check `gh auth status`, verify remote exists with `git remote -v` |
 | "No commits to push"      | Ensure working tree has staged/unstaged changes                   |
 | "Base branch not found"   | Specify base explicitly: `/mp-commit-push-pr main`                |
-| "Draft PR already exists" | Existing PR is updated automatically — this is expected           |
+| "PR already exists"       | Existing PR is updated automatically — this is expected           |
 
 ## Output
 
