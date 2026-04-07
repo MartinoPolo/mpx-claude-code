@@ -24,6 +24,8 @@ detect_package_manager() {
     echo "yarn"
   elif [ -f "pnpm-lock.yaml" ]; then
     echo "pnpm"
+  elif [ -f "package-lock.json" ] || [ -f "npm-shrinkwrap.json" ]; then
+    echo "npm"
   else
     echo ""
   fi
@@ -88,16 +90,26 @@ scan_package() {
   local dir
   dir=$(dirname "$pkg_json")
 
-  local build_script lint_script typecheck_script
+  local build_script check_all_script lint_script typecheck_script format_script
   local key_prefix=""
   [ -n "$prefix" ] && key_prefix="${prefix}_"
 
-  # Build detection
+  # Build detection (always independent)
   build_script=$(find_script "$pkg_json" "build") || true
   if [ -n "$build_script" ]; then
     echo "${key_prefix}BUILD=${pm} run ${build_script}"
     echo "${key_prefix}BUILD_DIR=${dir}"
   fi
+
+  # Parent check detection — covers lint + typecheck + more
+  check_all_script=$(find_script "$pkg_json" "check:all" "check-all") || true
+  if [ -n "$check_all_script" ]; then
+    echo "${key_prefix}CHECK_ALL=${pm} run ${check_all_script}"
+    echo "${key_prefix}CHECK_ALL_DIR=${dir}"
+    return
+  fi
+
+  # Individual detection (fallback when no parent check found)
 
   # Typecheck detection
   typecheck_script=$(find_script "$pkg_json" "check" "typecheck" "type-check" "tsc" "check:types") || true
@@ -107,10 +119,17 @@ scan_package() {
   fi
 
   # Lint detection
-  lint_script=$(find_script "$pkg_json" "lint" "eslint" "lint:check") || true
+  lint_script=$(find_script "$pkg_json" "lint" "eslint" "lint:eslint" "lint:check") || true
   if [ -n "$lint_script" ]; then
     echo "${key_prefix}LINT=${pm} run ${lint_script}"
     echo "${key_prefix}LINT_DIR=${dir}"
+  fi
+
+  # Format detection
+  format_script=$(find_script "$pkg_json" "format" "fmt" "format:check" "prettier") || true
+  if [ -n "$format_script" ]; then
+    echo "${key_prefix}FORMAT=${pm} run ${format_script}"
+    echo "${key_prefix}FORMAT_DIR=${dir}"
   fi
 }
 
