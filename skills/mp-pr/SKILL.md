@@ -1,16 +1,18 @@
 ---
 name: mp-pr
-description: 'Create or update draft PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
+description: 'Create or update PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
 allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: git-workflow
 ---
 
 # Create or Update Pull Request
 
-Create or update a draft PR from existing commits on current branch. $ARGUMENTS
+Create or update a PR from existing commits on current branch. $ARGUMENTS
+
+Pass `draft` as argument to create a draft PR instead of a normal PR.
 
 ## Workflow
 
@@ -59,7 +61,7 @@ gh pr view --json number,title,body,url,state 2>/dev/null
 ### Step 5a: Update Existing PR
 
 ```bash
-gh pr edit --title "type(scope): Description" --body "$(cat <<'EOF'
+gh pr edit --title "#N type(scope): Description" --body "$(cat <<'EOF'
 ## Description
 - Summary bullet 1
 - Summary bullet 2
@@ -74,10 +76,10 @@ EOF
 )"
 ```
 
-### Step 5b: Create Draft PR
+### Step 5b: Create PR
 
 ```bash
-gh pr create --draft --base <base> --title "type(scope): Description" --body "$(cat <<'EOF'
+gh pr create --base <base> --title "#N type(scope): Description" --body "$(cat <<'EOF'
 ## Description
 - Summary bullet 1
 - Summary bullet 2
@@ -91,12 +93,14 @@ Closes #123
 EOF
 )"
 ```
+
+If `draft` is in `$ARGUMENTS`, add `--draft` flag to `gh pr create`.
 
 ## PR Rules
 
 ### Title
 
-`type(scope): Description` — conventional commit format
+`#N type(scope): Description` — when a linked issue exists, prefix with `#N`. Without linked issue: `type(scope): Description`.
 
 ### Description
 

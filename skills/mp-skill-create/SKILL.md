@@ -92,7 +92,7 @@ metadata:
 
 - `allowed-tools` must include `Agent` if the skill spawns sub-agents
 - Agent spawning: name the exact type (e.g., "Spawn `mp-issue-analyzer` sub-agent")
-- GitHub CLI: specify exact `gh` command (e.g., `gh issue create`, `gh pr create --draft`)
+- GitHub CLI: specify exact `gh` command (e.g., `gh issue create`, `gh pr create`)
 - Bash commands: name the exact command/script
 - Omit `model` when spawning agents that define their own model in frontmatter
 - Use `gh` CLI for all GitHub operations
