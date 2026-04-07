@@ -40,11 +40,11 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 /mp-prd-to-issues          ◄── PRD → vertical-slice sub-issues (HITL/AFK classified)
         │
         ▼
-/mp-execute                ◄── Implement with TDD, run reviews and checks, commit
-        │
-        ▼
-/mp-commit-push-pr         ◄── Commit, push, create/update PR
+/mp-execute                ◄── Orchestrate TDD, checks, review, unresolved triage,
+                            commit, push, and PR creation for issue-driven work
 ```
+
+`/mp-commit-push-pr` and `/mp-pr` remain available as standalone Git workflows when implementation is already done and you only want to prepare or update a PR.
 
 **For bugs:** `/mp-bug-report` investigates root cause, designs TDD fix plan, creates labeled issue.
 
@@ -54,84 +54,92 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
 
 ### Execution Pipeline (`/mp-execute`)
 
-`/mp-execute` is the core skill — it takes a GitHub issue (or inline task) and drives it through TDD implementation, parallel code review, automated checks, optional frontend verification, and commit. The full internal pipeline:
+`/mp-execute` is the core execution orchestrator — it takes GitHub issue(s), milestones, or inline tasks and runs the full implementation lifecycle with sub-agents.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        /mp-execute #42                                  │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │   1. Resolve Input    │  GitHub issue(s), milestone,
-                    │                       │  or inline task description
-                    └───────────┬───────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │   2. Analyze          │  mp-issue-analyzer explores
-                    │   (issues only)       │  codebase, classifies type,
-                    │                       │  creates execution plan
-                    └───────────┬───────────┘
-                                │
-                       open questions? ──yes──► ask user (clarification gate)
-                       library gaps?   ──yes──► mp-context7-docs-fetcher
-                                │
-                    ┌───────────▼───────────┐
-                    │   3. Detect Checks    │  detect-check-scripts.sh finds
-                    │                       │  available build/lint/type cmds
-                    └───────────┬───────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │   4. TDD Loop         │  red-green-refactor per behavior
-                    │                       │
-                    │   for each behavior:  │
-                    │     RED   → write test, verify it FAILS
-                    │     GREEN → minimal code to PASS
-                    │     REFACTOR → clean up, tests still pass
-                    └───────────┬───────────┘
-                                │
-                    ┌───────────▼───────────────────────────────────────┐
-                    │   5. Review + Check Loop  (up to 3 iterations)   │
-                    │                                                   │
-                    │   parallel:                                       │
-                    │   ┌─────────────────┐  ┌───────────────────────┐  │
-                    │   │ mp-checker      │  │ mp-reviewer-code-     │  │
-                    │   │ (build/lint/    │  │   quality              │  │
-                    │   │  typecheck)     │  │ mp-reviewer-best-     │  │
-                    │   │                 │  │   practices            │  │
-                    │   │                 │  │ mp-reviewer-spec-     │  │
-                    │   │                 │  │   alignment            │  │
-                    │   └─────────────────┘  └───────────────────────┘  │
-                    │                                                   │
-                    │   with --hard-gate, also:                         │
-                    │   mp-reviewer-security, -performance,             │
-                    │   -error-handling (6 reviewers total)             │
-                    │                                                   │
-                    │   findings (confidence > 65)?                     │
-                    │     → mp-executor fixes → re-run failed checks   │
-                    └───────────┬───────────────────────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │   6. Frontend Check   │  if .svelte/.tsx/.jsx/.vue/.css
-                    │   (conditional)       │  changed → start dev server →
-                    │                       │  mp-playwright-tester (headless)
-                    └───────────┬───────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │   7. Commit           │  conventional commit format
-                    │                       │  refs #N / fixes #N
-                    └───────────┬───────────┘
-                                │
-                         more issues? ──yes──► next unblocked issue (repeat 2–7)
-                                │
-                    ┌───────────▼───────────┐
-                    │   8. Finalization      │  mp-docs-updater (if needed),
-                    │                       │  summary report
-                    └───────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           /mp-execute #42                                │
+└─────────────────────────────────┬────────────────────────────────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 1) Resolve Input        │  #issue(s), milestone, inline
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 2) Analyze (issues)     │  mp-issue-analyzer
+                        └────────────┬────────────┘
+                                      │
+                      open questions? yes -> ask user
+                      library gaps?  yes -> mp-context7-docs-fetcher
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 3) Detect Checks        │  detect-check-scripts.sh
+                        │                         │  (CHECK_ALL-aware)
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 4) TDD Execution        │  mp-tdd-executor handles
+                        │                         │  red-green-refactor loop
+                        └────────────┬────────────┘
+                                      │
+                              --no-tdd? yes -> skip to 5
+                                      │
+         ┌─────────────────────────▼──────────────────────────────────────┐
+         │ 5) Review + Check Loop (up to 3 iterations)                   │
+         │   parallel: mp-checker + 3 reviewers                           │
+         │   --hard-gate adds: security + performance + error-handling    │
+         │   findings/confidence > 65 -> mp-executor fixes -> re-run      │
+         └─────────────────────────┬──────────────────────────────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 6) Frontend Verify      │  if UI files changed ->
+                        │    (conditional)        │  mp-playwright-tester
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 7) Unresolved Triage    │  issues only,
+                        │    (conditional)        │  mp-unresolved-issue-tracker
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 8) Commit               │  conventional commit
+                        │                         │  refs/fixes #N
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 9) Push + PR            │  issues only,
+                        │                         │  create or update PR
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 10) Next Issue          │  if batch execution,
+                        │                         │  go to next unblocked
+                        └────────────┬────────────┘
+                                      │
+                        more issues? yes -> repeat 2-9
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 11) Finalization        │  optional --docs ->
+                        │                         │  mp-docs-updater
+                        └─────────────────────────┘
 ```
 
-**Flags:** `--no-tdd` skips the TDD loop (trivial changes), `--hard-gate` adds 3 extra reviewers (security, performance, error handling), `--dry-run` analyzes and plans without implementing.
+Pipeline summary:
 
-**TDD principles:** tests are not optional — every behavior gets a test before implementation. Never modify tests to make them pass; fix the implementation. See `skills/mp-execute/` for detailed guides on [test quality](skills/mp-execute/tests.md), [mocking strategy](skills/mp-execute/mocking.md), [deep modules](skills/mp-execute/deep-modules.md), and [interface design](skills/mp-execute/interface-design.md).
+1. Resolve input (`#issue`, multiple issues, milestone, or inline task)
+2. Analyze issue context via `mp-issue-analyzer` (issues only)
+3. Detect checks via `detect-check-scripts.sh` (supports `CHECK_ALL` fallback logic)
+4. Execute TDD via `mp-tdd-executor` (unless `--no-tdd`)
+5. Run review + check loop with `mp-checker` and reviewers (up to 3 iterations)
+6. Run conditional frontend verification with `mp-playwright-tester`
+7. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
+8. Commit, then push and create/update PR (issues only)
+9. Continue with next unblocked issue for batch runs (Step 10)
+10. Finalize and optionally run docs sync with `--docs` (Step 11)
+
+**Flags:** `--no-tdd` skips TDD for trivial work, `--hard-gate` adds security/performance/error-handling reviewers (6 total), `--dry-run` analyzes without implementing, `--docs` runs docs sync during finalization.
+
+**TDD principles:** tests are still mandatory by default. `mp-execute` now delegates TDD execution to `mp-tdd-executor`, which enforces red-before-green and minimal implementation. See `skills/mp-execute/` for [test quality](skills/mp-execute/tests.md), [mocking strategy](skills/mp-execute/mocking.md), [deep modules](skills/mp-execute/deep-modules.md), and [interface design](skills/mp-execute/interface-design.md).
 
 ## Planning System (Hybrid)
 
@@ -157,53 +165,54 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 ### Planning Skills
 
-| Skill                     | Description                                                                                 |
-| ------------------------- | ------------------------------------------------------------------------------------------- |
-| `/mp-grill-me`            | Stress-test a plan or design via relentless Q&A                                             |
-| `/mp-grill-requirements`  | Raw requirements → grill user → structured REQUIREMENTS.md (updates GLOSSARY.md if present) |
-| `/mp-requirements-to-prd` | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)   |
-| `/mp-prd-to-issues`       | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking          |
-| `/mp-glossary`            | Create/update GLOSSARY.md — canonical domain terms, aliases, relationships                  |
-| `/mp-issue-create`        | Create well-structured GitHub issues (feature, chore, docs) with codebase context           |
-| `/mp-bug-report`          | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs   |
+| Skill                     | Description                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| `/mp-grill-me`            | Stress-test a plan or design via relentless Q&A                                              |
+| `/mp-grill-requirements`  | Raw requirements → grill user → structured REQUIREMENTS.md (updates GLOSSARY.md if present)  |
+| `/mp-requirements-to-prd` | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)    |
+| `/mp-prd-to-issues`       | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking           |
+| `/mp-hitl`                | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order) |
+| `/mp-glossary`            | Create/update GLOSSARY.md — canonical domain terms, aliases, relationships                   |
+| `/mp-issue-create`        | Create well-structured GitHub issues (feature, chore, docs) with codebase context            |
+| `/mp-bug-report`          | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs    |
 
 ### Execution Skills
 
-| Skill         | Description                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `/mp-execute` | Implement issues with TDD, parallel code review (up to 6 reviewers), run all checks, commit per issue. `--no-tdd` to skip tests |
+| Skill         | Description                                                                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/mp-execute` | Orchestrate issue execution: TDD via `mp-tdd-executor`, reviewers/checks, unresolved triage, commit, push, and PR creation. `--no-tdd` to skip tests |
 
 ### Code Quality Skills
 
-| Skill                     | Description                                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| `/mp-check-fix`           | Auto-detect and fix build/typecheck/lint errors                                          |
-| `/mp-review`              | Unified code review (scope: PR, branch, changes)                                         |
-| `/mp-architecture-review` | Explore codebase for shallow modules → parallel interface design → refactor GitHub issue |
-| `/mp-decompose`           | Break down large files into logical modules                                              |
-| `/mp-code-clean`          | Dead code removal and deduplication                                                      |
+| Skill                     | Description                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/mp-check-fix`           | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise build/typecheck/lint |
+| `/mp-review`              | Unified code review (scope: PR, branch, changes)                                                  |
+| `/mp-architecture-review` | Explore codebase for shallow modules → parallel interface design → refactor GitHub issue          |
+| `/mp-decompose`           | Break down large files into logical modules                                                       |
+| `/mp-code-clean`          | Dead code removal and deduplication                                                               |
 
 ### Design Skills
 
-| Skill                 | Description                                                                        |
-| --------------------- | ---------------------------------------------------------------------------------- |
+| Skill             | Description                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------- |
 | `/mp-design-ui-3` | Generate multiple UI variants in different visual styles using parallel sub-agents |
 
 ### Git Skills
 
-| Skill                | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| `/mp-commit`         | Stage and commit with conventional format       |
-| `/mp-commit-push`    | Commit and push (no PR)                         |
-| `/mp-pr`             | Create or update draft PR from existing commits |
-| `/mp-commit-push-pr` | Full workflow — commit, push, create/update PR  |
-| `/mp-sync-base`      | Merge target branch into current branch         |
+| Skill                | Description                                                           |
+| -------------------- | --------------------------------------------------------------------- |
+| `/mp-commit`         | Stage and commit with conventional format                             |
+| `/mp-commit-push`    | Commit and push (no PR)                                               |
+| `/mp-pr`             | Create or update PR from existing commits (`draft` arg optional)      |
+| `/mp-commit-push-pr` | Full workflow — commit, push, create/update PR (`draft` arg optional) |
+| `/mp-sync-base`      | Merge target branch into current branch                               |
 
 ### Deprecated Skills
 
-| Skill         | Description                          |
-| ------------- | ------------------------------------ |
-| `/mp-release` | Bump version, push tag, verify CI    |
+| Skill         | Description                       |
+| ------------- | --------------------------------- |
+| `/mp-release` | Bump version, push tag, verify CI |
 
 ### Setup Skills
 
@@ -220,29 +229,31 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 | `/mp-handoff`                 | Create ephemeral HANDOFF.md for session bridging                                            |
 | `/mp-update-docs`             | Update README and documentation                                                             |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, progressive disclosure) |
-| `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                    |
+| `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 
 ## Agents
 
-| Agent                      | Model  | Description                                                                |
-| -------------------------- | ------ | -------------------------------------------------------------------------- |
-| mp-executor                | Opus   | Executes grouped task chunks                                               |
-| mp-issue-analyzer          | Opus   | Analyzes issues and codebase, creates execution plans                      |
-| mp-issue-finder            | Haiku  | Finds issue matching a PR branch                                           |
-| mp-ui-variant-generator    | Opus   | Generates a single UI variant in a specific design style                   |
-| mp-playwright-tester       | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)      |
-| mp-checker                 | Haiku  | Runs check commands and reports failures                                   |
-| mp-context7-docs-fetcher   | Haiku  | Fetches library docs via Context7 MCP                                      |
-| mp-docs-updater            | Sonnet | Updates docs after workflow/system changes                                 |
-| mp-reviewer-best-practices | Sonnet | Best practices and conventions reviewer (with language-specific references)|
-| mp-reviewer-code-quality   | Sonnet | DRY, naming, maintainability reviewer                                      |
-| mp-reviewer-error-handling | Sonnet | Error handling and resilience reviewer                                     |
-| mp-reviewer-performance    | Sonnet | Performance reviewer                                                       |
-| mp-reviewer-security       | Sonnet | Security reviewer (OWASP-focused)                                          |
-| mp-reviewer-spec-alignment | Sonnet | Spec compliance and scope reviewer                                         |
+| Agent                       | Model  | Description                                                                 |
+| --------------------------- | ------ | --------------------------------------------------------------------------- |
+| mp-executor                 | Opus   | Executes grouped task chunks                                                |
+| mp-issue-analyzer           | Opus   | Analyzes issues and codebase, creates execution plans                       |
+| mp-issue-finder             | Haiku  | Finds issue matching a PR branch                                            |
+| mp-tdd-executor             | Opus   | Executes strict TDD red-green-refactor loops for behaviors                  |
+| mp-ui-variant-generator     | Opus   | Generates a single UI variant in a specific design style                    |
+| mp-playwright-tester        | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)       |
+| mp-checker                  | Haiku  | Runs check commands and reports failures                                    |
+| mp-context7-docs-fetcher    | Haiku  | Fetches library docs via Context7 MCP                                       |
+| mp-docs-updater             | Sonnet | Updates docs after workflow/system changes                                  |
+| mp-unresolved-issue-tracker | Sonnet | Routes unresolved implementation items to sibling issues or tracking issue  |
+| mp-reviewer-best-practices  | Sonnet | Best practices and conventions reviewer (with language-specific references) |
+| mp-reviewer-code-quality    | Sonnet | DRY, naming, maintainability reviewer                                       |
+| mp-reviewer-error-handling  | Sonnet | Error handling and resilience reviewer                                      |
+| mp-reviewer-performance     | Sonnet | Performance reviewer                                                        |
+| mp-reviewer-security        | Sonnet | Security reviewer (OWASP-focused)                                           |
+| mp-reviewer-spec-alignment  | Sonnet | Spec compliance and scope reviewer                                          |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
 
