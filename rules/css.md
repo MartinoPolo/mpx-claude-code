@@ -3,6 +3,7 @@ paths:
   - "**/*.css"
   - "**/*.scss"
   - "**/*.pcss"
+applyTo: "**/*.css,**/*.scss,**/*.pcss"
 ---
 
 # CSS & Styling

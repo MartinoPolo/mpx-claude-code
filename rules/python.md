@@ -1,6 +1,7 @@
 ---
 paths:
   - "**/*.py"
+applyTo: "**/*.py"
 ---
 
 # Python

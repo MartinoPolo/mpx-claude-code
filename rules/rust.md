@@ -1,6 +1,7 @@
 ---
 paths:
   - "**/*.rs"
+applyTo: "**/*.rs"
 ---
 
 # Rust

@@ -2,6 +2,7 @@
 paths:
   - "**/*.ts"
   - "**/*.tsx"
+applyTo: "**/*.ts,**/*.tsx"
 ---
 
 # TypeScript

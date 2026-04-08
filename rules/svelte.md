@@ -3,6 +3,7 @@ paths:
   - "**/*.svelte"
   - "**/*.svelte.ts"
   - "**/*.svelte.js"
+applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js"
 ---
 
 # Svelte 5

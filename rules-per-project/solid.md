@@ -2,6 +2,7 @@
 paths:
   - "**/*.tsx"
   - "**/*.jsx"
+applyTo: "**/*.tsx,**/*.jsx"
 ---
 
 # SolidJS
