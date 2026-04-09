@@ -208,7 +208,7 @@ CSS variables in `:root` (light) and `.dark` (dark), using OKLCH format.
 | `--chart-1` through `--chart-5`          | Charts                    |
 | `--radius`                               | Border radius             |
 
-Dark mode uses class-based toggle (`.dark` on `<html>`). This project has a custom dark mode context in `$lib/context/dark_mode.context.svelte.ts` — use `useDarkMode()` instead of third-party packages.
+Dark mode uses class-based toggle (`.dark` on `<html>`) via `mode-watcher` — the shadcn-svelte recommended package. Use `setMode()`, `toggleMode()`, `resetMode()`, and the reactive `mode` state from `mode-watcher`.
 
 ### Adding Custom Colors
 

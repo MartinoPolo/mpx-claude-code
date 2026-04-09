@@ -76,8 +76,16 @@ const theme = new Persisted({
 });
 ```
 
-## Reference: Dark Mode (working example)
+## Reference: Dark Mode
 
-- Context: `src/lib/context/dark_mode.context.svelte.ts`
+Dark mode uses `mode-watcher` (shadcn-svelte recommended). No Svelte context needed.
+
+- `<ModeWatcher />` in `src/routes/+layout.svelte`
+- Toggle: `src/lib/components/DarkModeToggle.svelte` (uses `mode`, `setMode` from `mode-watcher`)
+
+## Reference: Showcase Form (example context using all reactivity classes)
+
+- Context: `src/lib/context/showcase_form.context.svelte.ts`
 - Set in: `src/routes/+layout.svelte`
-- Consumed by: `src/lib/components/DarkModeToggle.svelte`
+- Consumed by: `src/routes/+page.svelte`
+- Uses: `Persisted` (selects), `StateRaw` (checkboxes), `Derived` (selection count)
