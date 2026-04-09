@@ -1,12 +1,12 @@
 ---
 name: mp-design-ui-3
 description: 'Generate multiple UI variants in different design styles for comparison. Use when: "design ui", "ui variants", "design exploration", "explore designs", "3 styles", "5 styles"'
-argument-hint: '<ComponentOrPageName> [--count 5] [--styles brutalism,cafe,luxury] [--target src/components/MyComponent.svelte]'
+argument-hint: "<ComponentOrPageName> [--count 5] [--styles brutalism,cafe,luxury] [--target src/components/MyComponent.svelte]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(cat *), Bash(mkdir *), Bash(rm -rf */.design-variants*), Bash(mv *), Bash(cp *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "1.0"
+  version: "1.1"
   category: design
 ---
 
@@ -44,12 +44,12 @@ $ARGUMENTS
 
 Read `package.json` in the project root. Determine framework:
 
-| Dependency | Framework | File extension |
-|---|---|---|
-| `svelte` | Svelte | `.svelte` |
-| `react` or `next` | React | `.tsx` |
-| `vue` or `nuxt` | Vue | `.vue` |
-| None of the above | HTML | `.html` |
+| Dependency        | Framework | File extension |
+| ----------------- | --------- | -------------- |
+| `svelte`          | Svelte    | `.svelte`      |
+| `react` or `next` | React     | `.tsx`         |
+| `vue` or `nuxt`   | Vue       | `.vue`         |
+| None of the above | HTML      | `.html`        |
 
 #### Detect scope
 
@@ -120,6 +120,15 @@ Scope: {scope}
 - NEVER use centered 3-column equal card grids unless the style demands it
 - Use the style's exact fonts and colors — no substitutions
 - Use realistic example data, not "Lorem ipsum" or "John Doe"
+
+## UX Quality
+- Buttons: 4 states minimum — default, hover, active/pressed, disabled
+- Secondary CTAs beside a primary: ghost button style (transparent until hover)
+- Every interaction triggers visible feedback (focus ring, spinner, or micro-animation)
+- Header text: letter-spacing -2% to -3%, line-height 110–120%
+- Text over images: linear-gradient overlay or progressive blur — not flat semi-transparent
+- Dark mode depth: elevated cards lighter than background surface; avoid heavy shadows
+- Spacing: 8-point grid; group related elements tightly, ≥32px between distinct sections
 ```
 
 ### Step 4: Generate Comparison Page
@@ -135,6 +144,7 @@ Generate a page/component that imports all N variants and renders them in a resp
 - Each cell renders the variant component with the same props/data
 
 **Svelte example structure:**
+
 ```svelte
 <script>
   import V1 from './v1-brutalism/{ComponentName}.svelte';
@@ -178,6 +188,7 @@ Then ask which variant they prefer:
 Ask user to pick a variant (by style name) or "None — regenerate".
 
 If user picks "None":
+
 - Ask what they didn't like and what direction to try
 - Go back to Step 2 with adjusted style selection
 
@@ -199,25 +210,30 @@ Create a `design-tokens.md` file alongside the target component:
 Extracted from {ComponentName} variant.
 
 ## Typography
+
 - Display: {font}
 - Body: {font}
 - Mono: {font}
 
 ## Colors
+
 - Primary: {hex}
 - Secondary: {hex}
 - Surface: {hex}
 - Text: {hex}
 
 ## Spacing
+
 - Density: {level}
 - Base unit: {value}
 
 ## Motion
+
 - Approach: {description}
 - Duration: {values used}
 
 ## CSS Custom Properties
+
 {extract all --custom-properties defined in the component}
 ```
 

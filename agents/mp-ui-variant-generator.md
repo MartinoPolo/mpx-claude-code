@@ -59,6 +59,37 @@ Write framework-appropriate files to the output folder:
 - WCAG AA contrast ratios minimum
 - Use semantic HTML elements
 
+#### UX Quality Rules:
+
+(src: https://www.youtube.com/watch?v=EcbgbKtOELY)
+
+**Visual Hierarchy & Spacing:**
+
+- Critical elements come first, are larger, and bolder than secondary details
+- Use 8-point grid spacing (multiples of 8px); separate distinct sections with ≥32px whitespace
+- Group related elements with tighter spacing than unrelated ones
+
+**Typography:**
+
+- Large header text (h1–h2): letter-spacing -2% to -3%; line-height 110–120%
+- Landing pages: use max 3 distinct font sizes; data-dense UIs: cap text sizes at 24px
+- Icons: set height equal to the line-height of adjacent text (e.g., 24px line-height → 24px icon)
+
+**Buttons:**
+
+- Every button must have at least 4 states: default, hover, active/pressed, disabled
+- Secondary CTAs beside a primary CTA: use ghost button style (transparent background, border only; fills on hover)
+
+**Feedback & Interactions:**
+
+- Every user interaction must trigger a visible response: focus rings on inputs, loading spinners for async, micro-animations for confirmations
+- Text over images: use a linear-gradient overlay fading to a solid color, or a progressive blur — never a flat semi-transparent overlay
+
+**Shadows & Depth:**
+
+- Light mode: low-opacity, high-blur shadows for cards; stronger (higher elevation) shadows for popovers/dropdowns
+- Dark mode: create depth by making elevated cards lighter than the background surface — avoid heavy drop shadows
+
 ### 4. Anti-AI-Slop Rules
 
 **NEVER use:**
@@ -85,15 +116,18 @@ After generating the component, create a `VARIANT.md` in the output folder:
 # Variant: {style-name}
 
 ## Style Applied
+
 - Typography: {fonts used}
 - Colors: {palette summary}
 - Layout: {approach}
 - Density: {level}
 
 ## Files
+
 - {list of files created}
 
 ## Design Decisions
+
 - {2-3 notable design choices and why they fit the style}
 ```
 
@@ -118,3 +152,8 @@ Before finishing, verify:
 - [ ] All interactive states present
 - [ ] Realistic example data
 - [ ] VARIANT.md written
+- [ ] Every button has 4 states: default, hover, active/pressed, disabled
+- [ ] Secondary CTAs use ghost button style
+- [ ] Header text has tight letter-spacing (-2% to -3%) and line-height (110–120%)
+- [ ] All interactive elements trigger visible feedback
+- [ ] Text-over-image uses gradient/blur overlay, not flat semi-transparent
