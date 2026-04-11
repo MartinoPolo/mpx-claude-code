@@ -8,16 +8,6 @@
     "commit": "",
     "pr": ""
   },
-  "statusLine": {
-    "type": "command",
-    "command": "$HOME/.claude/scripts/context-bar.sh"
-  },
-  "enabledPlugins": {
-    "context7@claude-plugins-official": true,
-    "github@claude-plugins-official": false,
-    "typescript-lsp@claude-plugins-official": true,
-    "chrome-devtools-mcp@claude-plugins-official": true
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -105,7 +95,17 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "$HOME/.claude/scripts/context-bar.sh"
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "github@claude-plugins-official": false,
+    "typescript-lsp@claude-plugins-official": true,
+    "chrome-devtools-mcp@claude-plugins-official": true
+  },
   "effortLevel": "high",
-  "autoUpdatesChannel": "latest",
+  "autoUpdatesChannel": "stable",
   "skipDangerousModePermissionPrompt": true
 }
