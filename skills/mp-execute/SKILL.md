@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.4"
+  version: "1.5"
   category: project-management
 ---
 
@@ -82,7 +82,9 @@ If analyzer identifies external library uncertainty → spawn `mp-context7-docs-
 bash $HOME/.claude/scripts/detect-check-scripts.sh
 ```
 
-Parse output key=value pairs. Store detected check commands for use in review loop.
+Parse output key=value pairs. Store all detected commands — both check-style (`CHECK_ALL`, `TYPECHECK`, `LINT`, `FORMAT`, `BUILD`) and test-style (`TEST`, `TEST_UNIT`, `TEST_E2E`) — for use in Step 5 and Step 6.
+
+**Treat test commands as first-class checks.** They are the CI parity gate: if CI runs them, this skill must run them locally before push.
 
 ## Step 4: TDD Execution Loop
 
@@ -105,14 +107,14 @@ Spawn `mp-tdd-executor` sub-agent with:
 
 The executor handles the full red-green-refactor cycle for each behavior.
 
-## Step 5: Review + Check Loop (up to 3 iterations)
+## Step 5: Review + Static Check Loop (up to 3 iterations)
 
 After TDD execution, spawn these sub-agents in parallel:
 
 - `mp-reviewer-code-quality`
 - `mp-reviewer-best-practices`
 - `mp-reviewer-spec-alignment`
-- `mp-checker` — with detected check commands from Step 3
+- `mp-checker` — with detected **static** check commands from Step 3 (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`)
 
 If `--hard-gate` flag is set, also spawn in parallel:
 
@@ -131,19 +133,33 @@ If reviewers or checker report issues (confidence > 65):
 
 If still failing after 3 iterations → collect remaining issues as **unresolved items** for triage in Step 7.
 
-## Step 6: Frontend Verification (conditional)
+## Step 6: Test Execution Gate (mandatory — CI parity)
 
-Detect if changes include frontend/UI modifications:
+**This step runs the project's own test suites exactly as CI does.** This is the mandatory CI-parity gate and must pass before commit/push.
 
-- `.svelte`, `.tsx`, `.jsx`, `.vue`, `.css` files changed
-- Component or page files modified
+### 6a. Run All Detected Test Commands
 
-If frontend changes detected:
+Using the test commands detected in Step 3 (`TEST`, `TEST_UNIT`, `TEST_E2E`), spawn `mp-checker` with:
 
-1. Ensure dev server is running — use the dev script detected in Step 3 (e.g., `npm run dev`)
-2. Spawn `mp-playwright-tester` sub-agent with verification requirements
-3. If issues found → fix and re-verify (up to 3 iterations)
-4. If issues persist after 3 iterations → collect as **unresolved items** for triage in Step 7
+- `TEST` or `TEST_UNIT` (unit tests — fast, always run)
+- `TEST_E2E` (e2e/browser tests — run when any of the following changed: source files, route files, component files, e2e spec files, build config, or dependencies)
+
+If no test commands were detected → skip to Step 6c.
+
+### 6b. Fix Loop (up to 3 iterations)
+
+If any test command fails:
+
+1. Collect failures with file:line, error message, and failing test name
+2. Spawn `mp-executor` sub-agent in fix mode. The fix scope is **either** the implementation **or** the test — whichever is incorrect relative to the issue's acceptance criteria. Never change a test just to make it pass (see Rules).
+3. Re-run ONLY the failed test commands
+4. Repeat up to 3 iterations
+
+If tests still fail after 3 iterations → **do not push**. Report failures to user and stop. This is a hard blocker, not an unresolved item.
+
+### 6c. Interactive Manual Verification (optional, frontend only)
+
+When changes are UI-heavy and e2e tests don't cover the specific interaction, optionally spawn `mp-playwright-tester` sub-agent for exploratory browser-based verification. This is in addition to `TEST_E2E`, never a replacement for it.
 
 ## Step 7: Unresolved Triage (GitHub issues only)
 
@@ -224,9 +240,46 @@ Closes #N
 
 For inline tasks (no GitHub issue): skip PR creation.
 
-## Step 10: Finalization
+## Step 10: CI Green Gate (mandatory — completion gate)
 
-After execution is done:
+**The skill is not done until CI is green.** Local Step 6 is not a substitute — CI environment differences (OS, headless browsers, timing, secrets, build flags) can still produce divergent results.
+
+### 10a. Watch CI
+
+After push, watch checks until they complete:
+
+```bash
+gh pr checks <pr_number> --watch
+```
+
+### 10b. Fix Loop (up to 3 iterations)
+
+If any CI check fails:
+
+1. Pull the failed run logs:
+   ```bash
+   gh run view <run_id> --log-failed
+   ```
+2. Diagnose root cause from logs (file:line, error, failing test name)
+3. Apply fix (source code, test, or config — whichever is wrong)
+4. Re-run Step 5 (static checks) + Step 6 (tests) locally to verify
+5. Commit + push + watch CI again
+6. Repeat up to 3 iterations
+
+If CI still fails after 3 iterations → escalate to user with full log summary. **Do not declare completion.**
+
+### 10c. Completion Criteria
+
+The skill is done **only when all of these are true**:
+
+- All pushed commits are on the remote branch
+- The PR is open (or merged, if `--auto-merge` is passed)
+- `gh pr checks <pr>` shows **all checks passed**
+- No uncommitted changes remain
+
+## Step 11: Finalization
+
+After CI is green:
 
 1. Spawn `mp-docs-updater` sub-agent if significant changes warrant documentation updates
 2. Report summary:
@@ -235,6 +288,7 @@ After execution is done:
 - Tests added/modified
 - Files changed
 - PR URL(s) created
+- CI run URL (green)
 - Any remaining blockers
 - Unresolved items triaged (routed to sibling issues or tracking issue)
 - Review findings summary
@@ -244,12 +298,13 @@ After execution is done:
 > Code quality and git conventions enforced by hooks.
 
 - **TDD is not optional** — every behavior gets a test before implementation
-- **Never modify tests to make them pass** — fix the implementation
+- **Never weaken a correct test to make it pass.** A test may be fixed only when its assertion/selector/setup is demonstrably wrong relative to the acceptance criteria (e.g. invalid CSS selector, stale API contract, wrong role). Document the reason in the commit message.
 - **Fix underlying issues** rather than suppressing (`@ts-ignore`, `eslint-disable`)
 - **One behavior, one test** — keep tests focused
 - **Red before green** — verify the test fails before implementing
 - **Minimal green** — write only enough code to pass the test
 - **Commit after each issue** — one commit per issue
+- **CI is the completion gate** — a run ends when `gh pr checks` shows green, not when local checks pass
 
 ## Flags
 

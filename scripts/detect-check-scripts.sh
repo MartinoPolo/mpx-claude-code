@@ -91,6 +91,7 @@ scan_package() {
   dir=$(dirname "$pkg_json")
 
   local build_script check_all_script lint_script typecheck_script format_script
+  local test_script test_unit_script test_e2e_script
   local key_prefix=""
   [ -n "$prefix" ] && key_prefix="${prefix}_"
 
@@ -106,30 +107,52 @@ scan_package() {
   if [ -n "$check_all_script" ]; then
     echo "${key_prefix}CHECK_ALL=${pm} run ${check_all_script}"
     echo "${key_prefix}CHECK_ALL_DIR=${dir}"
-    return
+  else
+    # Individual detection (fallback when no parent check found)
+
+    # Typecheck detection
+    typecheck_script=$(find_script "$pkg_json" "check" "typecheck" "type-check" "tsc" "check:types") || true
+    if [ -n "$typecheck_script" ]; then
+      echo "${key_prefix}TYPECHECK=${pm} run ${typecheck_script}"
+      echo "${key_prefix}TYPECHECK_DIR=${dir}"
+    fi
+
+    # Lint detection
+    lint_script=$(find_script "$pkg_json" "lint" "eslint" "lint:eslint" "lint:check") || true
+    if [ -n "$lint_script" ]; then
+      echo "${key_prefix}LINT=${pm} run ${lint_script}"
+      echo "${key_prefix}LINT_DIR=${dir}"
+    fi
+
+    # Format detection
+    format_script=$(find_script "$pkg_json" "format" "fmt" "format:check" "prettier") || true
+    if [ -n "$format_script" ]; then
+      echo "${key_prefix}FORMAT=${pm} run ${format_script}"
+      echo "${key_prefix}FORMAT_DIR=${dir}"
+    fi
   fi
 
-  # Individual detection (fallback when no parent check found)
+  # Test detection (always independent of check:all — tests are critical CI parity)
 
-  # Typecheck detection
-  typecheck_script=$(find_script "$pkg_json" "check" "typecheck" "type-check" "tsc" "check:types") || true
-  if [ -n "$typecheck_script" ]; then
-    echo "${key_prefix}TYPECHECK=${pm} run ${typecheck_script}"
-    echo "${key_prefix}TYPECHECK_DIR=${dir}"
+  # Unit test detection — prefer explicit unit script, fall back to `test`
+  test_unit_script=$(find_script "$pkg_json" "test:unit" "test-unit" "unit-test" "unit:test") || true
+  if [ -n "$test_unit_script" ]; then
+    echo "${key_prefix}TEST_UNIT=${pm} run ${test_unit_script}"
+    echo "${key_prefix}TEST_UNIT_DIR=${dir}"
+  else
+    # Only use `test` as unit if no e2e/integration split is apparent
+    test_script=$(find_script "$pkg_json" "test") || true
+    if [ -n "$test_script" ]; then
+      echo "${key_prefix}TEST=${pm} run ${test_script}"
+      echo "${key_prefix}TEST_DIR=${dir}"
+    fi
   fi
 
-  # Lint detection
-  lint_script=$(find_script "$pkg_json" "lint" "eslint" "lint:eslint" "lint:check") || true
-  if [ -n "$lint_script" ]; then
-    echo "${key_prefix}LINT=${pm} run ${lint_script}"
-    echo "${key_prefix}LINT_DIR=${dir}"
-  fi
-
-  # Format detection
-  format_script=$(find_script "$pkg_json" "format" "fmt" "format:check" "prettier") || true
-  if [ -n "$format_script" ]; then
-    echo "${key_prefix}FORMAT=${pm} run ${format_script}"
-    echo "${key_prefix}FORMAT_DIR=${dir}"
+  # E2E / browser test detection
+  test_e2e_script=$(find_script "$pkg_json" "test:e2e" "test-e2e" "e2e" "test:browser" "test:integration") || true
+  if [ -n "$test_e2e_script" ]; then
+    echo "${key_prefix}TEST_E2E=${pm} run ${test_e2e_script}"
+    echo "${key_prefix}TEST_E2E_DIR=${dir}"
   fi
 }
 
