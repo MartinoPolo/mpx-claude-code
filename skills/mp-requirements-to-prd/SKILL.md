@@ -2,11 +2,10 @@
 name: mp-requirements-to-prd
 description: 'Create a PRD as a GitHub issue from REQUIREMENTS.md. Use when: "create PRD", "write PRD", "requirements to PRD"'
 argument-hint: "[milestone name]"
-disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: project-management
 ---
 
@@ -111,16 +110,26 @@ Ensure the `prd` label exists:
 gh label create prd --description "Product Requirements Document" --color 0052CC --force
 ```
 
-### Step 7: Create Issue
+### Step 7: Find Next PRD Number
+
+List existing PRD issues to determine the next sequential number:
 
 ```bash
-gh issue create --title "PRD: [title from requirements]" --label "prd" --body "$(cat <<'EOF'
+gh issue list --label prd --state all --json title --jq '.[].title'
+```
+
+Parse titles for `PRD-N:` prefix, find the highest N, increment by 1. If no PRDs exist, start at 1.
+
+### Step 8: Create Issue
+
+```bash
+gh issue create --title "PRD-<N>: [title from requirements]" --label "prd" --body "$(cat <<'EOF'
 [PRD body from Step 4]
 EOF
 )"
 ```
 
-### Step 8: Assign Milestone
+### Step 9: Assign Milestone
 
 If `$ARGUMENTS` contains a milestone name:
 
@@ -130,7 +139,7 @@ gh issue edit <number> --milestone "<milestone name>"
 
 Skip if no milestone provided.
 
-### Step 9: Report
+### Step 10: Report
 
 Display:
 
