@@ -2,7 +2,6 @@
 name: mp-prd-to-issues
 description: 'Break a PRD GitHub issue into vertical-slice sub-issues with blocking relationships. Use when: "break down PRD", "create sub-issues", "PRD to issues"'
 argument-hint: <PRD issue URL or number>
-disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
