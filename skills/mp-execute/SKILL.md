@@ -3,10 +3,10 @@ name: mp-execute
 description: 'Execute tasks with TDD from GitHub issues, milestones, or inline descriptions. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
 argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or checklist">'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.5"
+  version: "1.8"
   category: project-management
 ---
 
@@ -21,7 +21,9 @@ Unified execution skill with TDD methodology. Accepts GitHub issues, milestones,
 /mp-execute milestone:"Epic 2"        # Pick one open, unblocked issue from milestone
 /mp-execute "add dark mode toggle"    # Inline task (no GitHub issue)
 /mp-execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
-/mp-execute --hard-gate #42           # Single issue with 6-reviewer hard gate
+/mp-execute --full-review #42         # Single issue with 6-reviewer full review
+/mp-execute --no-review #42           # Simple task — skip reviewer sub-agents
+/mp-execute --no-auto-merge #42       # Stop after CI green; leave PR open
 ```
 
 ## Behavior Contract
@@ -109,14 +111,15 @@ The executor handles the full red-green-refactor cycle for each behavior.
 
 ## Step 5: Review + Static Check Loop (up to 3 iterations)
 
-After TDD execution, spawn these sub-agents in parallel:
+After TDD execution, always spawn `mp-checker` with detected **static** check commands from Step 3 (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`). Static checks always run — they are part of the CI-parity gate.
+
+Unless `--no-review` is set, also spawn these reviewer sub-agents in parallel:
 
 - `mp-reviewer-code-quality`
 - `mp-reviewer-best-practices`
 - `mp-reviewer-spec-alignment`
-- `mp-checker` — with detected **static** check commands from Step 3 (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`)
 
-If `--hard-gate` flag is set, also spawn in parallel:
+If `--full-review` is set, additionally spawn in parallel:
 
 - `mp-reviewer-security`
 - `mp-reviewer-performance`
@@ -240,13 +243,35 @@ Closes #N
 
 For inline tasks (no GitHub issue): skip PR creation.
 
+### 9d. Ensure Mergeable (resolve merge conflicts)
+
+After creating/updating the PR, check mergeability:
+
+```bash
+gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'
+```
+
+If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved. Do not assume CI is pending or rate-limited — merge conflicts are the most common reason for missing CI checks.
+
+1. Fetch and merge the base branch locally:
+   ```bash
+   git fetch origin <base_branch>
+   git merge origin/<base_branch>
+   ```
+2. Resolve all conflicts (prefer the feature branch's version for code this skill just wrote; incorporate base-only changes where they don't conflict with the current work)
+3. Run Step 5 (static checks) + Step 6 (tests) locally to verify the merge resolution
+4. Commit the merge and push
+5. Re-check mergeability — repeat if still conflicting (up to 2 iterations)
+
+If still conflicting after 2 iterations → escalate to user.
+
 ## Step 10: CI Green Gate (mandatory — completion gate)
 
 **The skill is not done until CI is green.** Local Step 6 is not a substitute — CI environment differences (OS, headless browsers, timing, secrets, build flags) can still produce divergent results.
 
 ### 10a. Watch CI
 
-After push, watch checks until they complete:
+After push (and after confirming PR is mergeable per Step 9d), watch checks until they complete:
 
 ```bash
 gh pr checks <pr_number> --watch
@@ -273,7 +298,7 @@ If CI still fails after 3 iterations → escalate to user with full log summary.
 The skill is done **only when all of these are true**:
 
 - All pushed commits are on the remote branch
-- The PR is open (or merged, if `--auto-merge` is passed)
+- The PR is merged (default) — or left open if `--no-auto-merge` is set
 - `gh pr checks <pr>` shows **all checks passed**
 - No uncommitted changes remain
 
@@ -282,7 +307,7 @@ The skill is done **only when all of these are true**:
 After CI is green:
 
 1. Spawn `mp-docs-updater` sub-agent if significant changes warrant documentation updates
-2. Report summary:
+2. Compose the final report (the same text that will be the final report of this run) covering:
 
 - Issue/task completed
 - Tests added/modified
@@ -292,6 +317,22 @@ After CI is green:
 - Any remaining blockers
 - Unresolved items triaged (routed to sibling issues or tracking issue)
 - Review findings summary
+
+3. Post the final report as a PR comment (GitHub issues only). Write the composed text to a temp file and post it:
+
+```bash
+gh pr comment <pr_number> --body-file <temp_file>
+```
+
+The comment must be byte-identical to the text output as the final report of this run, so the PR carries a complete audit trail.
+
+4. Unless `--no-auto-merge` is set, auto-merge the PR (CI is already green per Step 10):
+
+```bash
+gh pr merge <pr_number> --squash --auto --delete-branch
+```
+
+5. Output the same composed text as the final report of this run.
 
 ## Rules
 
@@ -308,8 +349,11 @@ After CI is green:
 
 ## Flags
 
-| Flag          | Effect                                                                      |
-| ------------- | --------------------------------------------------------------------------- |
-| `--hard-gate` | Add security, performance, and error-handling reviewers (6 total)           |
-| `--no-tdd`    | Skip TDD loop, implement directly (for trivial changes like config updates) |
-| `--dry-run`   | Analyze and plan only, don't implement                                      |
+Auto-merge is the **default** behavior: after CI is green and the final-report comment is posted, the PR is squash-merged and the branch deleted. Use `--no-auto-merge` to opt out.
+
+| Flag              | Effect                                                                          |
+| ----------------- | ------------------------------------------------------------------------------- |
+| `--full-review`   | Add security, performance, and error-handling reviewers (6 reviewers total)     |
+| `--no-review`     | Skip all reviewer sub-agents in Step 5 (static checks still run for CI parity)  |
+| `--no-tdd`        | Skip TDD loop, implement directly (for trivial changes like config updates)     |
+| `--no-auto-merge` | Stop after CI green + final-report comment; leave PR open instead of merging it |
