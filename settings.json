@@ -2,12 +2,13 @@
   "env": {
     "ENABLE_TOOL_SEARCH": "auto:1",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75",
-    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1"
+    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "0"
   },
   "attribution": {
     "commit": "",
     "pr": ""
   },
+  "model": "sonnet",
   "hooks": {
     "PreToolUse": [
       {
@@ -106,6 +107,7 @@
     "chrome-devtools-mcp@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "autoUpdatesChannel": "stable",
+  "autoUpdatesChannel": "latest",
+  "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true
 }

@@ -5,7 +5,7 @@ argument-hint: <PRD issue URL or number>
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: project-management
 ---
 
@@ -13,15 +13,20 @@ metadata:
 
 Break a PRD GitHub issue into independently implementable vertical slices. $ARGUMENTS
 
+Issue body format: @skills/shared/GITHUB_ISSUE_TEMPLATE.md
+
 ## Rules
 
 - Always fetch and read the PRD issue first
 - Vertical slices, not horizontal layers — each issue cuts through all relevant layers (UI, API, DB)
 - Each issue must have acceptance criteria
+- Each issue must map to specific PRD requirements via a Requirements section
 - Assign sub-issues to the same milestone as the PRD issue
 - Show full breakdown to user before creating any issues
 - Use `gh` CLI for all GitHub operations
 - Label every sub-issue with `task` and either `HITL` or `AFK` (create labels if they don't exist)
+- HITL/AFK classification lives on the label only — never in the issue body
+- HITL issues get a blockquote at the top explaining why human input is needed
 - Link every sub-issue as a native GitHub sub-issue of the PRD using the `addSubIssue` GraphQL mutation
 
 ## Workflow
@@ -64,15 +69,16 @@ For each sub-issue, define:
 
 1. **Title** — short, descriptive, action-oriented
 2. **Description** — what needs to be done and why
-3. **Acceptance criteria** — testable conditions (checkbox list)
-4. **Blocking relationships** — which issues must complete first
-5. **Labels** — `task` plus feature-area labels (e.g., `area:api`, `area:ui`, `area:db`)
+3. **Requirements** — mapped from the PRD body (imperative statements)
+4. **Acceptance criteria** — testable conditions (checkbox list), mapped to requirements
+5. **Blocking relationships** — which issues must complete first
+6. **Labels** — `task` plus feature-area labels (e.g., `area:api`, `area:ui`, `area:db`)
 
 ### Step 3b: Classify Slices — HITL vs AFK
 
 Classify each slice as one of:
 
-- **HITL** (Human In The Loop) — requires human interaction during implementation: architectural decisions, design reviews, API contract approvals, UX decisions, ambiguous requirements needing clarification
+- **HITL** (Human In The Loop) — requires human interaction during implementation: architectural decisions, API contract approvals, UX decisions, ambiguous requirements needing clarification. Requiring human visual confirmation is NOT a reason for a HITL label.
 - **AFK** (Away From Keyboard) — can be implemented and merged autonomously without human interaction: well-defined scope, clear acceptance criteria, no open design questions
 
 Default to HITL when uncertain. A slice is AFK only when the path forward is unambiguous.
@@ -81,7 +87,7 @@ Default to HITL when uncertain. A slice is AFK only when the path forward is una
 
 Show the user:
 
-- Numbered list of all sub-issues: **Title**, **Type** [HITL or AFK], **Blocked by**, **User stories covered**
+- Numbered list of all sub-issues: **Title**, **HITL/AFK**, **Blocked by**, **PRD requirements covered**
 - Dependency graph (which issues block which)
 - Milestone assignment
 - Labels per issue
@@ -108,23 +114,28 @@ gh label create "area:api" --description "API layer" --color "1D76DB" --force
 Create each sub-issue via `gh issue create`, then link it as a native sub-issue of the PRD using GraphQL.
 
 ```bash
-# 1. Create the issue
-ISSUE_URL=$(gh issue create --title "Short descriptive title" --label "task,HITL,area:api" --milestone "Milestone Name" --body "$(cat <<'EOF'
-**Type:** HITL | AFK
+# 1. Create the issue (HITL example — include blockquote; omit for AFK)
+ISSUE_URL=$(gh issue create --title "Short descriptive title" --label "task,HITL,area:api" --milestone "Milestone Name" --assignee @me --body "$(cat <<'EOF'
+> **Requires discussion:** [Why human input is needed — e.g. "API contract needs team approval"]
 
 ## Description
 
 [What and why]
 
+## Requirements
+
+- REQ-1: [Imperative statement mapped from PRD]
+- REQ-2: ...
+
 ## Acceptance Criteria
 
-- [ ] [Testable condition 1]
-- [ ] [Testable condition 2]
+- [ ] [Testable condition — maps to requirements above]
+- [ ] ...
 
 ## Blocking Relationships
 
-- Blocked by #N (if applicable)
-- Blocks #M (if applicable)
+- Blocked by #N (reason)
+- Blocks #M (reason)
 
 ## Notes
 
