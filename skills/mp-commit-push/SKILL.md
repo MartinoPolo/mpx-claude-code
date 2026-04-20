@@ -1,10 +1,10 @@
 ---
 name: mp-commit-push
 description: 'Stage, commit, and push changes (no PR). Use when: "commit and push", "push my changes", "ship it"'
-allowed-tools: Bash(git *), Bash(gh *)
+allowed-tools: Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: git-workflow
 ---
 
@@ -14,52 +14,26 @@ Stage, commit, and push changes. No PR created. $ARGUMENTS
 
 ## Workflow
 
-### Step 1: Check Status
+### Step 1: Delegate to Haiku Agent
 
-```bash
-git status
-git diff --stat
-```
+Spawn `mp-git-committer` sub-agent with:
 
-If nothing to commit (clean working tree + no staged changes) → skip to Step 4 (Push).
+> push: true
+> commit_hint: $ARGUMENTS (user's description, if any)
 
-### Step 2: Review Recent Commits
+### Step 2: Handle Result
 
-```bash
-git log --oneline -5
-```
+Parse the agent's JSON output:
 
-Match repository's commit style.
+- **OK** → display commit hash, message, push status
+- **SKIP** → report "Nothing to commit" (if clean tree) or "Already up-to-date" (if nothing to push)
+- **FAIL** → escalate (Step 3)
 
-### Step 3: Stage and Commit
+### Step 3: Escalation (on FAIL only)
 
-```bash
-git add <specific-files>
-```
+Read the error from agent output. Diagnose and fix the issue (e.g., pre-commit hook failure, push rejection). Then re-spawn `mp-git-committer` with the same parameters.
 
-Stage specific files (skip .env, credentials, secrets).
-
-```bash
-git commit -m "$(cat <<'EOF'
-type(scope): Description
-
-Optional body with details
-EOF
-)"
-```
-
-Commit format: conventional (see /mp-commit). Validated by pre-commit hook.
-
-- Prefer new commits over --amend
-- Focus on "why" over "what"
-
-### Step 4: Push
-
-```bash
-git push -u origin $(git branch --show-current)
-```
-
-If nothing to push (local and remote in sync) → report "Already up-to-date" and stop.
+Up to 2 retry attempts. If still failing → report error to user and stop.
 
 ## Output
 
@@ -67,5 +41,4 @@ After completion, display:
 
 - Commit hash and message (if committed)
 - Push status
-- "Skipped commit — nothing to commit" (if applicable)
-- "Already up-to-date" (if nothing to push)
+- "Nothing to commit — already up-to-date" (if applicable)

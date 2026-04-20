@@ -1,10 +1,10 @@
 ---
 name: mp-pr
 description: 'Create or update PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
-allowed-tools: Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Agent, Bash(git *), Bash(gh *), Bash(node *)
+allowed-tools: Agent, Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: git-workflow
 ---
 
@@ -16,28 +16,7 @@ Pass `draft` as argument to create a draft PR instead of a normal PR.
 
 ## Workflow
 
-### Step 1: Detect Base Branch
-
-```bash
-node $HOME/.claude/scripts/detect-base-branch.js
-```
-
-Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-detects from remote branches.
-
-**Based on result:**
-
-- **Branch returned** → use it, display to user
-- **Null with candidates** → ask user to pick from candidates
-- **Null without candidates** → ask user to specify manually
-
-### Step 2: Review Changes
-
-```bash
-git log origin/<base>..HEAD --oneline
-git diff origin/<base>..HEAD --stat
-```
-
-### Step 3: Find Linked Issue
+### Step 1: Find Linked Issue
 
 **Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
 
@@ -45,87 +24,42 @@ If agent fallback needed, spawn `mp-issue-finder` sub-agent with repo, branch na
 
 **Based on result:**
 
-- **High confidence match** → add `Closes #N` to PR body
+- **High confidence match** → pass issue_number to Step 2
 - **Candidates returned** → ask user which (if any) to link
-- **No match** → proceed without linking
+- **No match** → proceed without issue_number
 
-### Step 4: Check Existing PR
+### Step 2: Delegate to Haiku Agent
 
-```bash
-gh pr view --json number,title,body,url,state 2>/dev/null
-```
+Spawn `mp-pr-manager` sub-agent with:
 
-- **OPEN PR exists** → edit mode (Step 5a)
-- **No PR or not OPEN** → create mode (Step 5b)
+> issue_number: (from Step 1, if found)
+> base_branch: (from $ARGUMENTS if user specified, otherwise omit for auto-detection)
+> draft: true (if `draft` in $ARGUMENTS)
 
-### Step 5a: Update Existing PR
+### Step 3: Handle Result
 
-```bash
-gh pr edit --title "#N type(scope): Description" --body "$(cat <<'EOF'
-## Description
-- Summary bullet 1
-- Summary bullet 2
+Parse the agent's JSON output:
 
-## Resolves
-Closes #123
+- **OK** → display PR URL, number, whether created or updated, base branch
+- **FAIL** → escalate (Step 4)
 
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: <what was verified>
-EOF
-)"
-```
+### Step 4: Escalation (on FAIL only)
 
-### Step 5b: Create PR
+Read the error from agent output. Diagnose and fix the issue (e.g., `gh auth` problem, remote not set). Then re-spawn `mp-pr-manager` with the same parameters.
 
-```bash
-gh pr create --base <base> --title "#N type(scope): Description" --body "$(cat <<'EOF'
-## Description
-- Summary bullet 1
-- Summary bullet 2
-
-## Resolves
-Closes #123
-
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: <what was verified>
-EOF
-)"
-```
-
-If `draft` is in `$ARGUMENTS`, add `--draft` flag to `gh pr create`.
+Up to 2 retry attempts. If still failing → report error to user and stop.
 
 ## PR Rules
 
-### Title
+PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
 
-`#N type(scope): Description` — when a linked issue exists, prefix with `#N`. Without linked issue: `type(scope): Description`.
+## Troubleshooting
 
-### Description
-
-Review ALL commits `origin/<base>..HEAD`. Write a structured PR body with the sections below:
-
-- `## Description` → 1-6 concise bullets summarizing full scope of changes
-- `## Resolves` → `Closes #N` when linked issue exists; otherwise `None`
-- `## Testing (Optional)` → include only when tests/manual checks were run
-
-```
-## Description
-- Extract base branch detection into reusable agent (was duplicated across 3 skills)
-- Add existing PR check to avoid duplicate PRs on repeated runs
-
-## Resolves
-Closes #42
-
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: create + update PR flow
-```
-
-### Critical
-
-> Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
+| Problem                   | Solution                                                          |
+| ------------------------- | ----------------------------------------------------------------- |
+| "PR creation fails"       | Check `gh auth status`, verify remote exists with `git remote -v` |
+| "Base branch not found"   | Specify base explicitly: `/mp-pr main`                            |
+| "PR already exists"       | Existing PR is updated automatically — this is expected           |
 
 ## Output
 

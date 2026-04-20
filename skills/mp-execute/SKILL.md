@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.9"
+  version: "1.10"
   category: project-management
 ---
 
@@ -185,63 +185,33 @@ Spawn `mp-unresolved-issue-tracker` sub-agent:
 
 The agent finds the parent PRD, scans sibling issues for scope match (appends to sibling body if fits), and creates/updates an `Unresolved: [PRD title]` tracking issue (labeled `HITL`) for remaining items. See `agents/mp-unresolved-issue-tracker.md` for full logic.
 
-## Step 8: Commit
+## Step 8: Commit and Push
 
-Stage and commit with conventional commit format:
+Spawn `mp-git-committer` sub-agent to stage, commit, and push:
 
-```bash
-git add <specific-files>
-git commit -m "type(scope): description (refs #N)"
-```
+> push: true (for GitHub issues) / false (for inline tasks)
+> issue_ref: "refs #N" or "fixes #N" (for GitHub issues)
+> commit_hint: summary of implemented behaviors from Step 4
 
-Rules:
+**Handle result:**
 
-- Reference GitHub issue in commit message: `refs #N` or `fixes #N`
-- For inline tasks (no issue): no refs suffix
-- Prefer specific files over `git add -A`
-- Prefer new commits over `--amend`
+- **OK** → continue to Step 9 (GitHub issues) or Step 11 (inline tasks)
+- **SKIP** → report "Nothing to commit" — check if push needed
+- **FAIL** → diagnose error from agent output. If pre-commit hook failed, fix the issue and re-spawn agent. Up to 2 retries before escalating to user.
 
-## Step 9: Push and Create PR (GitHub issues only)
+## Step 9: Create PR (GitHub issues only)
 
-After commit, push and create a PR unless a significant blocker prevents it (e.g., failing checks, unresolved critical findings).
+For inline tasks (no GitHub issue): skip to Step 11.
 
-### 9a. Push
+Spawn `mp-pr-manager` sub-agent to create or update the PR:
 
-```bash
-git push -u origin $(git branch --show-current)
-```
+> issue_number: N (from Step 1)
+> description_hint: summary of changes and behaviors implemented
 
-### 9b. Detect Base Branch
+**Handle result:**
 
-```bash
-node $HOME/.claude/scripts/detect-base-branch.js
-```
-
-### 9c. Create or Update PR
-
-```bash
-gh pr view --json number,title,body,url,state 2>/dev/null
-```
-
-- **OPEN PR exists** → update with `gh pr edit`
-- **No PR** → create with `gh pr create`
-
-PR title format: `#N type(scope): Description` (where N is the issue number).
-
-PR body structure:
-
-```
-## Description
-- Summary bullets
-
-## Resolves
-Closes #N
-
-## Testing (Optional)
-- [ ] Tests added/modified
-```
-
-For inline tasks (no GitHub issue): skip PR creation.
+- **OK** → continue to Step 9d
+- **FAIL** → diagnose error, fix, re-spawn (up to 2 retries). If still failing → escalate to user.
 
 ### 9d. Ensure Mergeable (resolve merge conflicts)
 
@@ -260,7 +230,7 @@ If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not 
    ```
 2. Resolve all conflicts (prefer the feature branch's version for code this skill just wrote; incorporate base-only changes where they don't conflict with the current work)
 3. Run Step 5 (static checks) + Step 6 (tests) locally to verify the merge resolution
-4. Commit the merge and push
+4. Spawn `mp-git-committer` sub-agent with push: true, commit_hint: "merge conflict resolution with <base>"
 5. Re-check mergeability — repeat if still conflicting (up to 2 iterations)
 
 If still conflicting after 2 iterations → escalate to user.

@@ -1,10 +1,10 @@
 ---
 name: mp-commit
 description: 'Stage and commit changes with conventional commit format. Use when: "commit this", "stage and commit", "make a commit"'
-allowed-tools: Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *), Bash(git *), Bash(gh *)
+allowed-tools: Agent, Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *), Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: git-workflow
 ---
 
@@ -14,39 +14,26 @@ Stage and commit changes with conventional commit format. $ARGUMENTS
 
 ## Workflow
 
-### Step 1: Check Status
+### Step 1: Delegate to Haiku Agent
 
-```bash
-git status
-git diff --stat
-```
+Spawn `mp-git-committer` sub-agent with:
 
-### Step 2: Review Recent Commits
+> push: false
+> commit_hint: $ARGUMENTS (user's description of what to commit, if any)
 
-```bash
-git log --oneline -5
-```
+### Step 2: Handle Result
 
-Match repository's commit style.
+Parse the agent's JSON output:
 
-### Step 3: Stage Changes
+- **OK** → display commit hash, message, files changed
+- **SKIP** → report "Nothing to commit"
+- **FAIL** → escalate (Step 3)
 
-```bash
-git add <specific-files>
-```
+### Step 3: Escalation (on FAIL only)
 
-Stage specific files (skip .env, credentials, secrets).
+Read the error from agent output. Diagnose and fix the issue (e.g., pre-commit hook failure, staging error). Then re-spawn `mp-git-committer` with the same parameters.
 
-### Step 4: Commit
-
-```bash
-git commit -m "$(cat <<'EOF'
-type(scope): Description
-
-Optional body with details
-EOF
-)"
-```
+Up to 2 retry attempts. If still failing → report error to user and stop.
 
 ## Commit Rules
 

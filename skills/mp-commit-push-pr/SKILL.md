@@ -4,84 +4,32 @@ description: 'Full workflow - commit, push, and create or update PR. Use when: "
 allowed-tools: Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: git-workflow
 ---
 
 # Commit, Push, and Create/Update PR
 
-Full workflow: stage → commit → push → detect base → create or update PR. $ARGUMENTS
+Full workflow: stage → commit → push → find issue → create/update PR. $ARGUMENTS
 
 Pass `draft` as argument to create a draft PR instead of a normal PR.
 
 ## Workflow
 
-### Step 1: Check Status
+### Step 1: Commit and Push
 
-```bash
-git status
-git diff --stat
-```
+Spawn `mp-git-committer` sub-agent with:
 
-If nothing to commit (clean working tree + no staged changes) → skip to Step 4 (Push).
+> push: true
+> commit_hint: $ARGUMENTS (user's description, if any)
 
-### Step 2: Review Recent Commits
+**Handle result:**
 
-```bash
-git log --oneline -5
-```
+- **OK** → continue to Step 2
+- **SKIP** (nothing to commit) → check if already pushed; if yes, continue to Step 2
+- **FAIL** → diagnose error, fix the issue, re-spawn agent (up to 2 retries). If still failing → report to user and stop.
 
-Match repository's commit style.
-
-### Step 3: Stage and Commit
-
-```bash
-git add <specific-files>
-```
-
-Stage specific files (skip .env, credentials, secrets).
-
-```bash
-git commit -m "$(cat <<'EOF'
-type(scope): Description
-
-Optional body with details
-EOF
-)"
-```
-
-**Commit Rules:** (see `/mp-commit` for full format reference)
-
-- Conventional commit format: `type(scope): description`
-- Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
-- Prefer new commits over `--amend`
-- Focus on "why" over "what"
-- Keep subject line under 72 characters
-- Imperative mood: "Add feature" not "Added feature"
-
-### Step 4: Push
-
-```bash
-git push -u origin $(git branch --show-current)
-```
-
-If nothing to push (local and remote in sync) → skip to Step 5.
-
-### Step 5: Detect Base Branch
-
-```bash
-node $HOME/.claude/scripts/detect-base-branch.js
-```
-
-Pass explicit base from `$ARGUMENTS` if provided; otherwise the script auto-detects from remote branches.
-
-**Based on result:**
-
-- **Branch returned** → use it, display to user
-- **Null with candidates** → ask user to pick from candidates
-- **Null without candidates** → ask user to specify manually
-
-### Step 6: Find Linked Issue
+### Step 2: Find Linked Issue
 
 **Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
 
@@ -89,87 +37,27 @@ If agent fallback needed, spawn `mp-issue-finder` sub-agent with repo, branch na
 
 **Based on result:**
 
-- **High confidence match** → add `Closes #N` to PR body
+- **High confidence match** → pass issue_number to Step 3
 - **Candidates returned** → ask user which (if any) to link
-- **No match** → proceed without linking
+- **No match** → proceed without issue_number
 
-### Step 7: Check Existing PR
+### Step 3: Create or Update PR
 
-```bash
-gh pr view --json number,title,body,url,state 2>/dev/null
-```
+Spawn `mp-pr-manager` sub-agent with:
 
-- **OPEN PR exists** → edit mode (Step 8a)
-- **No PR or not OPEN** → create mode (Step 8b)
+> issue_number: (from Step 2, if found)
+> base_branch: (from $ARGUMENTS if user specified, otherwise omit for auto-detection)
+> draft: true (if `draft` in $ARGUMENTS)
+> description_hint: $ARGUMENTS or summary from mp-git-committer result
 
-### Step 8a: Update Existing PR
+**Handle result:**
 
-```bash
-gh pr edit --title "#N type(scope): Description" --body "$(cat <<'EOF'
-## Description
-- Summary bullet 1
-- Summary bullet 2
-
-## Resolves
-Closes #123
-
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: <what was verified>
-EOF
-)"
-```
-
-### Step 8b: Create PR
-
-```bash
-gh pr create --base <base> --title "#N type(scope): Description" --body "$(cat <<'EOF'
-## Description
-- Summary bullet 1
-- Summary bullet 2
-
-## Resolves
-Closes #123
-
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: <what was verified>
-EOF
-)"
-```
-
-If `draft` is in `$ARGUMENTS`, add `--draft` flag to `gh pr create`.
+- **OK** → display PR URL, number, action taken
+- **FAIL** → diagnose error, fix, re-spawn (up to 2 retries). If still failing → report to user and stop.
 
 ## PR Rules
 
-### Title
-
-`#N type(scope): Description` — when a linked issue exists, prefix with `#N`. Without linked issue: `type(scope): Description`.
-
-### Description
-
-Review ALL commits `origin/<base>..HEAD`. Write a structured PR body with the sections below:
-
-- `## Description` → 1-6 concise bullets summarizing full scope of changes
-- `## Resolves` → `Closes #N` when linked issue exists; otherwise `None`
-- `## Testing (Optional)` → include only when tests/manual checks were run
-
-```
-## Description
-- Extract base branch detection into reusable agent (was duplicated across 3 skills)
-- Add existing PR check to avoid duplicate PRs on repeated runs
-
-## Resolves
-Closes #42
-
-## Testing (Optional)
-- [ ] npm test
-- [ ] Manual smoke test: commit + push + PR flow
-```
-
-### Critical
-
-> Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
+PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
 
 ## Troubleshooting
 
