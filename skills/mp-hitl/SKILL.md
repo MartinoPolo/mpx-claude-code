@@ -94,7 +94,7 @@ For each HITL issue, in priority order:
 
 1. Read the issue body — focus on `## Notes` for the HITL reason, `## Acceptance Criteria` for ambiguity, `## Description` for open questions
 2. Cross-reference against the PRD's `## Implementation Decisions` section — remove anything already decided
-3. Spawn an `Explore` agent to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
+3. Spawn an `Explore` agent (`model: "sonnet"`) to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
 
 #### 5b: Grill Decision Points
 
@@ -102,7 +102,7 @@ Group the issue's decision points into thematic batches. Present each batch as a
 
 Only split into a follow-up round when earlier answers would change later questions.
 
-Follow the `mp-grill-me` pattern: if a question can be answered by exploring the codebase, explore instead of asking.
+Follow the `mp-grill-me` pattern: if a question can be answered by exploring the codebase, spawn an `Explore` agent (`model: "sonnet"`) instead of asking.
 
 #### 5c: Record Outcome
 

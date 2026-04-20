@@ -67,7 +67,7 @@ Break the PRD into **vertical slices** using the tracer-bullet concept:
 
 For each sub-issue, define:
 
-1. **Title** — short, descriptive, action-oriented
+1. **Title** — short, descriptive, action-oriented. Never include the PRD issue number in the title
 2. **Description** — what needs to be done and why
 3. **Requirements** — mapped from the PRD body (imperative statements)
 4. **Acceptance criteria** — testable conditions (checkbox list), mapped to requirements

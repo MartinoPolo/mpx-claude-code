@@ -27,7 +27,6 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
 
    ```
    .mpx/REQUIREMENTS.md      # Persistent requirements (empty template)
-   .mpx/LESSONS_LEARNED.md   # Architectural knowledge (empty template)
    ```
 
    `REQUIREMENTS.md` template:
@@ -36,13 +35,6 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
 
    Persistent project requirements. Updated via `/mp-grill-requirements`.
    GitHub issues track execution state; this file tracks the full requirement set.
-   ```
-
-   `LESSONS_LEARNED.md` template:
-   ```markdown
-   # Lessons Learned
-
-   Architectural insights and hard-won knowledge. Prevents re-learning mistakes.
    ```
 
    Commit the `.mpx/` files.
@@ -92,8 +84,7 @@ project/
 ├── .claude/
 │   └── CLAUDE.md           # Project context template
 └── .mpx/
-    ├── REQUIREMENTS.md     # Persistent requirements
-    └── LESSONS_LEARNED.md  # Architectural knowledge
+    └── REQUIREMENTS.md     # Persistent requirements
 
 GitHub:
 ├── Remote repo (private or public)
@@ -105,7 +96,7 @@ GitHub:
 
 - `.gitignore` is copied from `templates/gitignore.template` — deterministic, no LLM generation
 - Project-specific ignores (e.g., Obsidian's `main.js`, `data.json`) should be appended after init
-- `.mpx/` is intentionally NOT ignored — requirements and lessons should be versioned
+- `.mpx/` is intentionally NOT ignored — requirements and decisions should be versioned
 - Branch protection requires GitHub Pro for private repos; skill degrades gracefully on Free plan
 - `dev` is always the default branch — development happens there, `main` is for stable/releases
 - Required status check `checks` is a placeholder; actual CI workflow added separately

@@ -113,7 +113,7 @@ The executor handles the full red-green-refactor cycle for each behavior.
 
 After TDD execution, always spawn `mp-checker` with detected **static** check commands from Step 3 (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`). Static checks always run — they are part of the CI-parity gate.
 
-Unless `--no-review` is set, also spawn these reviewer sub-agents in parallel:
+Unless `--no-review` is set, also spawn these sonnet reviewer sub-agents in parallel:
 
 - `mp-reviewer-code-quality`
 - `mp-reviewer-best-practices`

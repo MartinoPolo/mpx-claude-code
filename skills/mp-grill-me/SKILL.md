@@ -6,4 +6,4 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 
 Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, grouping related questions into thematic batches per round. Only split across rounds when answers to earlier questions would change later ones. For each question, provide your recommended answer.
 
-If a question can be answered by exploring the codebase, explore the codebase instead.
+If a question can be answered by exploring the codebase, spawn an `Explore` agent with `model: "sonnet"` instead of asking.

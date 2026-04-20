@@ -21,7 +21,7 @@ Reference material: [deep-modules.md](deep-modules.md), [interface-design.md](in
 
 ### 1. Explore the codebase
 
-Spawn `Explore` sub-agent to navigate the codebase naturally. Do NOT follow rigid heuristics — explore organically and note where you experience friction:
+Spawn `Explore` sub-agent (`model: "sonnet"`) to navigate the codebase naturally. Do NOT follow rigid heuristics — explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small files?
 - Where are modules so shallow that the interface is nearly as complex as the implementation?

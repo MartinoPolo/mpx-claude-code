@@ -40,7 +40,6 @@ After grilling all requirements, write to `.mpx/REQUIREMENTS.md`:
 - Append to existing REQUIREMENTS.md (preserve existing content).
 - Group requirements by functional area.
 - Each requirement gets: clear title, description, acceptance criteria.
-- No checkboxes (GitHub issues track completion).
 
 If input came from `.mpx/RAW_REQUIREMENTS.md`, remove grilled items from that file after writing structured output.
 

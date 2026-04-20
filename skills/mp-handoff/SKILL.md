@@ -1,21 +1,21 @@
 ---
 name: mp-handoff
-description: 'Create HANDOFF.md capturing session progress for the next session. Use when: "handoff", "save progress", "end of session"'
+description: 'Create or update HANDOFF.md with a general session progress summary. Use when: "handoff", "save progress", "end of session"'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: project-management
 ---
 
 # Session Handoff
 
-Creates ephemeral `HANDOFF.md` in the project root that bridges between sessions. Persists decisions to `.mpx/` when present (REQUIREMENTS.md, LESSONS_LEARNED.md, decisions/).
+Creates or updates `HANDOFF.md` in the project root — a general session summary for continuity. Optionally persists decisions to `.mpx/decisions/` when present.
 
 ## Purpose
 
-Capture accumulated knowledge, context, and insights that would be lost when starting a new conversation. HANDOFF.md is ephemeral — created here, consumed and deleted by `/mp-execute` at the start of the next session.
+Capture accumulated knowledge, context, and insights that would be lost when starting a new conversation. HANDOFF.md persists in the project root and is updated at the end of each session.
 
 ## Workflow
 
@@ -42,9 +42,8 @@ Use `TaskList` to see current task status:
 
 1. Check if `.mpx/` exists
 2. If yes, read `.mpx/REQUIREMENTS.md` for current requirements
-3. Read `.mpx/LESSONS_LEARNED.md` for architectural knowledge
-4. Check `.mpx/decisions/` for ADR-style decision records
-5. This context enriches the handoff but is not required
+3. Check `.mpx/decisions/` for ADR-style decision records
+4. This context enriches the handoff but is not required
 
 ### Step 4: Create or Update HANDOFF.md
 
@@ -106,18 +105,11 @@ Date: [Today's date]
 
 ### Step 5: Persist Decisions (Conditional)
 
-Only if an existing `.mpx/` folder is present and decisions were made during this session:
+Only if an existing `.mpx/` folder is present and significant decisions were made during this session:
 
-1. Append architectural lessons to `.mpx/LESSONS_LEARNED.md`
-2. Create ADR files in `.mpx/decisions/` for significant decisions (e.g., `001-chose-drizzle.md`)
+1. Create ADR files in `.mpx/decisions/` for significant decisions (e.g., `001-chose-drizzle.md`)
 
-If `.mpx/` folder is missing:
-
-- Do not create `.mpx/`
-- Do not create any `.mpx/**` files
-- Create or update `HANDOFF.md` only
-
-Decisions are persistent (unlike HANDOFF.md which is ephemeral).
+If `.mpx/` folder is missing: do not create it; create or update `HANDOFF.md` only.
 
 ADR format:
 
@@ -143,31 +135,20 @@ Show the user what was created:
 
 > "Session handoff created:
 >
-> - `HANDOFF.md` (project root, ephemeral)
->   [If .mpx/ exists:]
-> - Updated `.mpx/LESSONS_LEARNED.md`
+> - `HANDOFF.md` (project root)
+>   [If .mpx/ exists and decisions were made:]
 > - Created `.mpx/decisions/NNN-decision-name.md`
 >
 > Captured:
 >
 > - [x] items of progress
 > - [x] decisions [persisted to .mpx/ if applicable]
-> - [x] lessons learned
-> - [x] next steps
->
-> HANDOFF.md will be consumed automatically by `/mp-execute` in your next session."
-
-## HANDOFF.md Lifecycle
-
-1. `/mp-handoff` **creates** HANDOFF.md (project root)
-2. `/mp-execute` **reads** HANDOFF.md at start, passes context to executor
-3. `/mp-execute` **deletes** HANDOFF.md after processing
-4. Purpose: bridge between sessions only — not a permanent record
+> - [x] next steps"
 
 ## Notes
 
-- HANDOFF.md is ephemeral — it exists only between sessions
-- Decisions are persisted to `.mpx/LESSONS_LEARNED.md` and `.mpx/decisions/` when `.mpx/` exists
+- HANDOFF.md persists in the project root — updated each session, not deleted
+- Decisions are persisted to `.mpx/decisions/` when `.mpx/` exists
 - Always creates HANDOFF.md in project root regardless of `.mpx/` presence
 - When `.mpx/` folder is absent, writes `HANDOFF.md` only
 - Focus on "why" not just "what" — reasoning is crucial

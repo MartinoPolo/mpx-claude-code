@@ -148,7 +148,6 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 ```
 .mpx/
 ├── REQUIREMENTS.md      # Persistent requirements (source of truth)
-├── LESSONS_LEARNED.md   # Knowledge gathered on the way
 └── decisions/           # Architecture Decision Records explaining _why_ choices were made
     └── 001-chose-drizzle.md
 ```
@@ -218,7 +217,7 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 | Skill                         | Description                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `/mp-handoff`                 | Create ephemeral HANDOFF.md for session bridging                                            |
+| `/mp-handoff`                 | Create or update HANDOFF.md with a general session summary for continuity                   |
 | `/mp-update-docs`             | Update README and documentation                                                             |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, progressive disclosure) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |

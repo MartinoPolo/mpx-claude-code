@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: utility
 ---
 
@@ -41,7 +41,6 @@ Apply all changes directly — do not ask for confirmation. Produce the consolid
 - Group requirements by functional area with clear `##` section headings
 - Use `###` subsections within each area
 - Keep requirement IDs stable (preserve original IDs for traceability)
-- Preserve `[ ]` / `[x]` checkboxes if present (implementation tracking)
 
 **Language rules:**
 - Use imperative mood: "Render each tree as..." not "Each tree should be rendered as..."
