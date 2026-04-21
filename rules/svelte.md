@@ -8,9 +8,11 @@ applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js"
 
 # Svelte 5
 
-- Use Svelte 5 runes exclusively.
+- Use Svelte 5 runes for reactivity (`$state`, `$derived`, `$props`, `$effect`).
+- Use `onMount` for fire-once setup (data fetching, third-party library init) that should never re-run.
 - When a value can be computed from other reactive state, use `$derived()` instead of writing a `$effect()` that sets another `$state` variable. Effects that exist only to synchronize state cause unnecessary render cycles.
 - Reserve `$effect()` strictly for side effects that interact with the outside world: DOM manipulation, logging, analytics, WebSocket subscriptions, or synchronizing with non-Svelte APIs. Always return a cleanup function from effects that create subscriptions or timers.
+- Never pass an async function directly to `$effect()` — it does not support async (the return value is reserved for cleanup). Wrap async calls with `void asyncFn()` or an IIFE instead. `onMount` supports async functions directly.
 - Use `$state.raw()` instead of `$state()` for large arrays or objects that are read frequently but updated rarely. Raw state skips deep proxy wrapping, but requires full reassignment to trigger updates (mutations won't be detected).
 - Use `$state.snapshot()` to extract a plain JavaScript object from reactive state before passing it to external APIs like `localStorage.setItem()`, `JSON.stringify()`, or `fetch` request bodies that don't understand Svelte proxies.
 - Use `$derived.by()` when the derived computation requires multiple steps or intermediate variables. It is automatically memoized and only re-evaluates when its dependencies change.
