@@ -146,7 +146,7 @@ Do NOT abort setup if symlinking fails — report the manual command and continu
 
 Check in order:
 1. `$HOME/.claude/rules/` exists and is a symlink → resolve its target to find the repo root
-2. Common locations: `/c/_MP_projects/mpx-claude-code`, `~/mpx-claude-code`
+2. Common locations: `/c/projects/mpx-claude-code`, `~/mpx-claude-code`
 3. If not found, ask the user for the path
 
 ### Step 8: Commit and Push

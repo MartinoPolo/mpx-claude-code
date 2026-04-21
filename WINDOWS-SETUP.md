@@ -119,6 +119,43 @@ rm -rf ~/.claude/agents
 
 **Rule of thumb:** If your paths have no spaces, drop inner quotes entirely. If they do, run `mklink` from a native `cmd.exe` window rather than piping through Git Bash.
 
+## Claude Code (PowerShell Tool)
+
+Claude Code's Bash tool runs in Git Bash, where `cmd.exe //c "mklink ..."` fails due to quote mangling (see above). **Use the PowerShell tool instead** — it calls `New-Item -ItemType SymbolicLink` natively, bypassing all quoting issues.
+
+### Creating file symlinks
+
+```powershell
+New-Item -ItemType SymbolicLink -Path "C:\projects\<project>\.claude\rules\<rule>.md" -Target "C:\projects\mpx-claude-code\rules-per-project\<rule>.md"
+```
+
+### Full example: symlink Svelte rules into a project
+
+```powershell
+New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\shadcn-svelte.md" -Target "C:\projects\mpx-claude-code\rules-per-project\shadcn-svelte.md"
+New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\svelte-context.md" -Target "C:\projects\mpx-claude-code\rules-per-project\svelte-context.md"
+New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\sveltekit-paths.md" -Target "C:\projects\mpx-claude-code\rules-per-project\sveltekit-paths.md"
+```
+
+### Verifying
+
+A symlink shows `l` in the Mode column:
+
+```powershell
+Get-ChildItem "C:\projects\<project>\.claude\rules\"
+# Mode: -a---l  means symlink
+```
+
+### What does NOT work in Claude Code
+
+```bash
+# Bash tool — all of these fail with "syntax is incorrect":
+cmd //c "mklink \"C:\path\link.md\" \"C:\path\target.md\""
+cmd //c 'mklink "C:\path\link.md" "C:\path\target.md"'
+```
+
+**Rule:** For symlinks in Claude Code, always use the **PowerShell tool** with `New-Item -ItemType SymbolicLink`.
+
 ## Troubleshooting
 
 | Problem | Cause | Fix |
