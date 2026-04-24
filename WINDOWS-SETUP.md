@@ -6,6 +6,14 @@
 
 > Junctions (`mklink /J`) don't require admin, but file symlinks do. Since this setup uses both, run everything as Administrator to avoid partial failures.
 
+**Git symlinks must be enabled globally.** Git for Windows defaults to `core.symlinks=false`, which causes git to replace real symlinks with plain text files on checkout/clone/merge. Run once:
+
+```bash
+git config --global core.symlinks true
+```
+
+Without this, any `git pull`, `git checkout`, or `git clone` will silently break `.claude/rules/` symlinks — creating text files containing the target path instead of actual symlinks.
+
 ## Link Types
 
 | Command | Type | Use For | Requires Admin |

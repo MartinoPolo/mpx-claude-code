@@ -19,51 +19,53 @@ Use the **reactivity classes** in `src/lib/reactivity/` with Svelte's **Context 
 | `ReadonlyState<T>`  | wraps `MutableState` | Read-only accessor. Created via `state.readonly()`.                               |
 | `ProtectedState<T>` | wraps `MutableState` | Read-only with escape hatch `set_unprotected()`. Created via `state.protected()`. |
 
-## Context Pattern (`src/lib/context/`)
+## Context Pattern
 
-Every context follows the **set / use** convention:
+Every context uses `createContext` (Svelte 5.40+) with a **set / use** convention:
 
 ```ts
-// src/lib/context/my_feature.context.svelte.ts
-import { getContext, setContext } from "svelte";
-import { CONTEXT_KEYS } from "./context_key";
+// src/lib/feature/my_feature.context.svelte.ts
+import { createContext } from "svelte";
 import { StateRaw } from "$lib/reactivity/state.svelte";
 import { Derived } from "$lib/reactivity/derived.svelte";
 
-function create_my_feature_context() {
+// 1. Type + createContext destructuring
+type MyFeatureContext = ReturnType<typeof createMyFeatureContext>;
+
+const [useMyFeature, setMyFeatureInternal] = createContext<MyFeatureContext>();
+export { useMyFeature };
+
+// 2. set function
+export function setMyFeatureContext() {
+  const ctx = createMyFeatureContext();
+  setMyFeatureInternal(ctx);
+  return ctx;
+}
+
+// 3. Factory last — return is the last thing in the file
+function createMyFeatureContext() {
   const count = new StateRaw(0);
   const doubled = new Derived(() => count.current * 2);
   return { count, doubled };
-}
-
-type MyFeatureContext = ReturnType<typeof create_my_feature_context>;
-
-export function set_my_feature_context() {
-  const context = create_my_feature_context();
-  setContext(CONTEXT_KEYS.my_feature, context);
-  return context;
-}
-
-export function use_my_feature() {
-  return getContext<MyFeatureContext>(CONTEXT_KEYS.my_feature);
 }
 ```
 
 ## Rules
 
-1. **`set_*`** — call once in a parent layout/component to provide the context.
-2. **`use_*`** — call in any descendant to consume the context.
-3. Register all context keys in `src/lib/context/context_key.ts`.
-4. Compose state from `StateRaw`, `Derived`, `Persisted` inside the `create_*` factory function.
-5. Name context files `<feature>.context.svelte.ts`.
-6. Export the return type as `type <Feature>Context = ReturnType<typeof create_*>`.
+1. `set*Context()` — factory+provider, call once in a parent component to provide the context.
+2. `use*()` — consumer getter, call in any descendant to consume the context.
+3. Both generated from `createContext<T>()` + factory wrapper — no manual keys needed.
+4. Compose state from `StateRaw`, `Derived`, `Persisted` inside the `create*` factory function.
+5. `type <Feature>Context = ReturnType<typeof create*>`.
+6. Files named `<feature>.context.svelte.ts`.
+7. File ordering: imports → type alias + `createContext` destructuring → `set*Context()` → `create*` factory (last, so the return is the final thing in the file).
 
 ## Persisted State Example
 
 ```ts
-import { Persisted, json_serde } from "$lib/reactivity/persisted.svelte";
+import { Persisted, jsonSerde } from "$lib/reactivity/persisted.svelte";
 
-function is_theme(value: unknown): value is "dark" | "light" | "system" {
+function isTheme(value: unknown): value is "dark" | "light" | "system" {
   return (
     typeof value === "string" && ["dark", "light", "system"].includes(value)
   );
@@ -71,21 +73,7 @@ function is_theme(value: unknown): value is "dark" | "light" | "system" {
 
 const theme = new Persisted({
   key: "theme",
-  serde: json_serde(is_theme),
-  default_value: "system" as const,
+  serde: jsonSerde(isTheme),
+  defaultValue: "system" as const,
 });
 ```
-
-## Reference: Dark Mode
-
-Dark mode uses `mode-watcher` (shadcn-svelte recommended). No Svelte context needed.
-
-- `<ModeWatcher />` in `src/routes/+layout.svelte`
-- Toggle: `src/lib/components/DarkModeToggle.svelte` (uses `mode`, `setMode` from `mode-watcher`)
-
-## Reference: Showcase Form (example context using all reactivity classes)
-
-- Context: `src/lib/context/showcase_form.context.svelte.ts`
-- Set in: `src/routes/+layout.svelte`
-- Consumed by: `src/routes/+page.svelte`
-- Uses: `Persisted` (selects), `StateRaw` (checkboxes), `Derived` (selection count)

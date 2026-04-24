@@ -8,7 +8,7 @@
     "commit": "",
     "pr": ""
   },
-  "model": "claude-opus-4-6[1m]",
+  "model": "sonnet",
   "hooks": {
     "PreToolUse": [
       {
