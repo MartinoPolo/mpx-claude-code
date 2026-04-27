@@ -8,7 +8,7 @@
     "commit": "",
     "pr": ""
   },
-  "model": "sonnet",
+  "model": "claude-opus-4-6[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -33,6 +33,11 @@
             "type": "command",
             "command": "node $HOME/.claude/hooks/gh-transform.js",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/fallow-gate.sh",
+            "timeout": 30
           }
         ]
       }
