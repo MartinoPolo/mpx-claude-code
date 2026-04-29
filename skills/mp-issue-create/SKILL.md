@@ -5,7 +5,7 @@ argument-hint: '<description> [--prd <number>]'
 allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 
@@ -58,12 +58,12 @@ Search for affected code using Grep/Glob:
 
 Determine whether the issue requires human interaction:
 
-- **HITL**: architectural decisions, API contract approvals, UX decisions, ambiguous requirements
+- **HITL**: has unanswered questions or uncertain decisions that require asking the user. Examples: unclear API contract, ambiguous business rule, multiple valid approaches needing a decision. NOT for: visual inspection, manual testing, code review, QA verification
 - **AFK**: well-defined scope, clear acceptance criteria, no open design questions
 
-Default to HITL when uncertain.
+When all questions have been resolved upfront, the issue should be AFK.
 
-If HITL: write a clear reason for the blockquote (e.g. "Database schema change needs review before migration").
+If HITL: list the specific unanswered questions in the blockquote.
 
 ### Step 5: Ensure Labels Exist
 
@@ -88,7 +88,8 @@ Use the canonical template from `@skills/shared/GITHUB_ISSUE_TEMPLATE.md`.
 **For HITL issues**, start with the blockquote:
 
 ```markdown
-> **Requires discussion:** [Why human input is needed]
+> **Unanswered questions:**
+> - [Specific question that needs answering before/during implementation]
 
 ## Description
 ...

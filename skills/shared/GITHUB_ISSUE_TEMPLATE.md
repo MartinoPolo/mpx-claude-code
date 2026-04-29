@@ -5,7 +5,8 @@ Canonical issue body format for all task issues created by `mp-issue-create` and
 ## Template
 
 ```markdown
-> **Requires discussion:** [Why human input is needed]
+> **Unanswered questions:**
+> - [Specific question that needs answering before/during implementation]
 
 ## Description
 
@@ -36,7 +37,8 @@ Canonical issue body format for all task issues created by `mp-issue-create` and
 ### HITL Blockquote
 
 - Present **only** on HITL-labeled issues. Omit entirely for AFK issues.
-- Explains WHY human input is needed (architectural decision, API contract approval, ambiguous requirement).
+- Lists the specific unanswered questions that need resolving before or during implementation.
+- HITL is exclusively for uncertain decisions resolved by asking the user — not for visual inspection, manual testing, or code review.
 - HITL/AFK classification lives on the label, never in the body.
 
 ### Description
@@ -77,9 +79,9 @@ Every task issue gets:
 
 ### HITL vs AFK Classification
 
-- **HITL** — requires human interaction during implementation: architectural decisions, API contract approvals, UX decisions, ambiguous requirements needing clarification
+- **HITL** — has unanswered questions or uncertain decisions that require asking the user. Examples: unclear API contract, ambiguous business rule, multiple valid approaches needing a decision. NOT for: visual inspection, manual testing, code review, QA verification
 - **AFK** — can be implemented autonomously: well-defined scope, clear acceptance criteria, no open design questions
-- Default to HITL when uncertain
+- When all questions have been resolved upfront, the issue should be AFK
 
 ## Label Colors
 
