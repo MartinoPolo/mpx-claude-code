@@ -1,23 +1,22 @@
 ---
 paths:
-  - "**/*.svelte"
-  - "**/*.svelte.ts"
-  - "**/*.svelte.js"
-  - "**/*.context.**"
-applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js, **/*.context.**"
+    - '**/*.svelte'
+    - '**/*.svelte.ts'
+    - '**/*.svelte.js'
+    - '**/*.context.**'
+applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js, **/*.context.**'
 ---
 
 Use the **reactivity classes** in `src/lib/reactivity/` with Svelte's **Context API** for shared state. Never use raw Svelte stores (`writable`, `readable`) — use these classes instead.
 
 ## Reactivity Classes (`src/lib/reactivity/`)
 
-| Class               | Backed by            | Use case                                                                          |
-| ------------------- | -------------------- | --------------------------------------------------------------------------------- |
-| `StateRaw<T>`       | `$state.raw()`       | Mutable reactive state. Supports custom equality checks and value transforms.     |
-| `Derived<T>`        | `$derived.by()`      | Computed reactive value. Supports mutable override.                               |
-| `Persisted<T>`      | `localStorage`       | Persistent state with cross-tab sync via `storage` events. Requires a `Serde<T>`. |
-| `ReadonlyState<T>`  | wraps `MutableState` | Read-only accessor. Created via `state.readonly()`.                               |
-| `ProtectedState<T>` | wraps `MutableState` | Read-only with escape hatch `set_unprotected()`. Created via `state.protected()`. |
+| Class              | Backed by            | Use case                                                                          |
+| ------------------ | -------------------- | --------------------------------------------------------------------------------- |
+| `StateRaw<T>`      | `$state.raw()`       | Mutable reactive state. Supports custom equality checks and value transforms.     |
+| `Derived<T>`       | `$derived.by()`      | Computed reactive value. Supports mutable override.                               |
+| `Persisted<T>`     | `localStorage`       | Persistent state with cross-tab sync via `storage` events. Requires a `Serde<T>`. |
+| `ReadonlyState<T>` | wraps `MutableState` | Read-only accessor. Created via `state.readonly()`.                               |
 
 ## Context Pattern
 
@@ -25,9 +24,9 @@ Every context uses `createContext` (Svelte 5.40+) with a **set / use** conventio
 
 ```ts
 // src/lib/feature/my_feature.context.svelte.ts
-import { createContext } from "svelte";
-import { StateRaw } from "$lib/reactivity/state.svelte";
-import { Derived } from "$lib/reactivity/derived.svelte";
+import { createContext } from 'svelte';
+import { StateRaw } from '$lib/reactivity/state.svelte';
+import { Derived } from '$lib/reactivity/derived.svelte';
 
 // 1. Type + createContext destructuring
 type MyFeatureContext = ReturnType<typeof createMyFeatureContext>;
@@ -37,16 +36,16 @@ export { useMyFeature };
 
 // 2. set function
 export function setMyFeatureContext() {
-  const ctx = createMyFeatureContext();
-  setMyFeatureInternal(ctx);
-  return ctx;
+	const ctx = createMyFeatureContext();
+	setMyFeatureInternal(ctx);
+	return ctx;
 }
 
 // 3. Factory last — return is the last thing in the file
 function createMyFeatureContext() {
-  const count = new StateRaw(0);
-  const doubled = new Derived(() => count.current * 2);
-  return { count, doubled };
+	const count = new StateRaw(0);
+	const doubled = new Derived(() => count.current * 2);
+	return { count, doubled };
 }
 ```
 
@@ -63,17 +62,15 @@ function createMyFeatureContext() {
 ## Persisted State Example
 
 ```ts
-import { Persisted, jsonSerde } from "$lib/reactivity/persisted.svelte";
+import { Persisted, jsonSerde } from '$lib/reactivity/persisted.svelte';
 
-function isTheme(value: unknown): value is "dark" | "light" | "system" {
-  return (
-    typeof value === "string" && ["dark", "light", "system"].includes(value)
-  );
+function isTheme(value: unknown): value is 'dark' | 'light' | 'system' {
+	return typeof value === 'string' && ['dark', 'light', 'system'].includes(value);
 }
 
 const theme = new Persisted({
-  key: "theme",
-  serde: jsonSerde(isTheme),
-  defaultValue: "system" as const,
+	key: 'theme',
+	serde: jsonSerde(isTheme),
+	defaultValue: 'system' as const,
 });
 ```
