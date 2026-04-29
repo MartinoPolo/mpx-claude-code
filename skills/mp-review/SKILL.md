@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: code-review
 ---
 
@@ -115,9 +115,9 @@ Compute total issues from merged findings (`Critical + Important + Minor`).
 
 Run only when autofix ON and at least one finding exists.
 
-Spawn `mp-executor` sub-agent in fix mode with:
+**Analyze each finding and determine the concrete fix** — identify exact file paths, lines, and the specific code change needed. Then spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions:
 
-- strict checklist derived from findings (one task per finding)
+- concrete fix per finding: file path, current code, and exact change to apply (the executor applies — it does not diagnose)
 - resolved scope summary (branch/changes/pr)
 - report path (`REVIEW.md`)
 - requirement: fix only in-scope findings

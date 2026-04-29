@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.10"
+  version: "1.11"
   category: project-management
 ---
 
@@ -130,9 +130,10 @@ If `--full-review` is set, additionally spawn in parallel:
 If reviewers or checker report issues (confidence > 65):
 
 1. Collect all findings into a scoped fix list
-2. Spawn `mp-executor` sub-agent in fix mode with the findings
-3. Re-run ONLY the failed reviewers/checks
-4. Repeat up to 3 iterations total
+2. **Analyze each finding and determine the concrete fix** — identify exact file paths, lines, and the specific code change needed. The calling agent (opus) does all the thinking here.
+3. Spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions: for each finding, pass the file path, current code, and exact change to apply. Do not pass raw findings for the executor to interpret.
+4. Re-run ONLY the failed reviewers/checks
+5. Repeat up to 3 iterations total
 
 If still failing after 3 iterations → collect remaining issues as **unresolved items** for triage in Step 7.
 
@@ -154,9 +155,10 @@ If no test commands were detected → skip to Step 6c.
 If any test command fails:
 
 1. Collect failures with file:line, error message, and failing test name
-2. Spawn `mp-executor` sub-agent in fix mode. The fix scope is **either** the implementation **or** the test — whichever is incorrect relative to the issue's acceptance criteria. Never change a test just to make it pass (see Rules).
-3. Re-run ONLY the failed test commands
-4. Repeat up to 3 iterations
+2. **Diagnose each failure and determine the exact fix** — decide whether the implementation or the test is wrong relative to acceptance criteria (never change a test just to make it pass — see Rules). Identify the file, line, root cause, and concrete code change.
+3. Spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions: for each failure, pass the file path, root cause, and exact change to apply. The executor applies fixes — it does not diagnose.
+4. Re-run ONLY the failed test commands
+5. Repeat up to 3 iterations
 
 If tests still fail after 3 iterations → **do not push**. Report failures to user and stop. This is a hard blocker, not an unresolved item.
 
@@ -197,7 +199,7 @@ Spawn `mp-git-committer` sub-agent to stage, commit, and push:
 
 - **OK** → continue to Step 9 (GitHub issues) or Step 11 (inline tasks)
 - **SKIP** → report "Nothing to commit" — check if push needed
-- **FAIL** → diagnose error from agent output. If pre-commit hook failed, fix the issue and re-spawn agent. Up to 2 retries before escalating to user.
+- **FAIL** → diagnose error from agent output. If pre-commit hook failed, fix the issue (use sonnet sub-agent) and re-spawn commiter agent. Up to 2 retries before escalating to user.
 
 ## Step 9: Create PR (GitHub issues only)
 
@@ -211,7 +213,7 @@ Spawn `mp-pr-manager` sub-agent to create or update the PR:
 **Handle result:**
 
 - **OK** → continue to Step 9d
-- **FAIL** → diagnose error, fix, re-spawn (up to 2 retries). If still failing → escalate to user.
+- **FAIL** → diagnose error, fix (use sonnet sub-agent), re-spawn (up to 2 retries). If still failing → escalate to user.
 
 ### 9d. Ensure Mergeable (resolve merge conflicts)
 
