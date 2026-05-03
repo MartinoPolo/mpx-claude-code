@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.12"
+  version: "1.13"
   category: project-management
 ---
 
@@ -286,8 +286,7 @@ The skill is done **only when all of these are true**:
 
 After CI is green:
 
-1. Spawn `mp-docs-updater` sub-agent if significant changes warrant documentation updates
-2. Compose the final report (the same text that will be the final report of this run) covering:
+1. Compose the final report (the same text that will be the final report of this run) covering:
 
 - Issue/task completed
 - Tests added/modified
@@ -298,7 +297,7 @@ After CI is green:
 - Unresolved items triaged (routed to sibling issues or tracking issue)
 - Review findings summary
 
-3. Post the final report as a PR comment (GitHub issues only). Write the composed text to a temp file and post it:
+2. Post the final report as a PR comment (GitHub issues only). Write the composed text to a temp file and post it:
 
 ```bash
 gh pr comment <pr_number> --body-file <temp_file>
@@ -306,15 +305,15 @@ gh pr comment <pr_number> --body-file <temp_file>
 
 The comment must be byte-identical to the text output as the final report of this run, so the PR carries a complete audit trail.
 
-4. Unless `--no-auto-merge` is set, merge the PR and sync the main worktree:
+3. Unless `--no-auto-merge` is set, merge the PR and sync the main worktree:
 
-**4a. Check PR state** (auto-merge may have already merged it):
+**3a. Check PR state** (auto-merge may have already merged it):
 
 ```bash
 gh pr view <pr_number> --json state --jq '.state'
 ```
 
-**4b. Merge if still open** (without `--delete-branch` — it fails in worktree contexts):
+**3b. Merge if still open** (without `--delete-branch` — it fails in worktree contexts):
 
 If state is `OPEN`:
 
@@ -324,22 +323,22 @@ gh pr merge <pr_number> --squash --auto
 
 If state is `MERGED`, skip.
 
-**4c. Delete the remote feature branch** (idempotent):
+**3c. Delete the remote feature branch** (idempotent):
 
 ```bash
 git push origin --delete <branch_name> 2>/dev/null || true
 ```
 
-**4d. Pull merged changes into the main worktree:**
+**3d. Pull merged changes into the main worktree:**
 
 ```bash
 MAIN_REPO=$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")
 git -C "$MAIN_REPO" pull
 ```
 
-Skip 4d if not in a worktree (i.e., `git rev-parse --git-common-dir` returns `.git`).
+Skip 3d if not in a worktree (i.e., `git rev-parse --git-common-dir` returns `.git`).
 
-5. Output the same composed text as the final report of this run.
+4. Output the same composed text as the final report of this run.
 
 ## Rules
 

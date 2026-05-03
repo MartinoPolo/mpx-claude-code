@@ -47,14 +47,14 @@ If input came from `.mpx/RAW_REQUIREMENTS.md`, remove grilled items from that fi
 
 Summarize what was added: count of requirements, functional areas touched, any items deferred or needing follow-up.
 
-## Glossary Update (if applicable)
+## Vocabulary Update (if applicable)
 
-If `GLOSSARY.md` exists in the project root:
+If `VOCABULARY.md` exists in the project root:
 
 1. Review the grilling session for new domain terms, renamed concepts, or clarified definitions.
 2. If new or updated terms were identified, present them to the user:
    - New terms with proposed definitions
    - Existing terms with updated definitions
    - Ambiguities or synonym conflicts
-3. Only update `GLOSSARY.md` after user confirms the changes.
+3. Only update `VOCABULARY.md` after user confirms the changes.
 4. If no new terms emerged, skip silently.

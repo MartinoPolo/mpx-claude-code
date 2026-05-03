@@ -48,7 +48,7 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 
 **For bugs:** `/mp-bug-report` investigates root cause, designs TDD fix plan, creates labeled issue.
 
-**Cross-cutting:** `/mp-glossary` maintains canonical domain terms in `GLOSSARY.md`.
+**Cross-cutting:** `/mp-vocabulary` maintains canonical domain terms in `VOCABULARY.md`.
 
 Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continuity.
 
@@ -162,7 +162,7 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 | `/mp-to-prd`              | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)    |
 | `/mp-to-issues`           | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking           |
 | `/mp-hitl`                | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order) |
-| `/mp-glossary`            | Create/update GLOSSARY.md — canonical domain terms, aliases, relationships                   |
+| `/mp-vocabulary`          | Create/update VOCABULARY.md — canonical domain terms, aliases, relationships                 |
 | `/mp-issue-create`        | Create well-structured GitHub issues (feature, chore, docs) with codebase context            |
 | `/mp-bug-report`          | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs    |
 

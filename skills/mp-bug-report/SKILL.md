@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(git *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: issue-management
 ---
 
@@ -117,6 +117,6 @@ Add labels: `bug` + any area labels detected from codebase exploration.
 
 - Issue body must be **durable** — no file paths, line numbers, or implementation details that break after refactors
 - Describe modules, behaviors, and contracts instead
-- Use project's domain language (check GLOSSARY.md if it exists)
+- Use project's domain language (check VOCABULARY.md if it exists)
 - Each RED-GREEN cycle is a vertical slice — NOT horizontal
 - Keep investigation thorough but issue body concise

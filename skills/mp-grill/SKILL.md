@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "1.0"
+  version: "1.1"
   category: planning
 ---
 
@@ -19,7 +19,7 @@ Interview the user relentlessly about every aspect of their plan, design, or req
 Check for `.mpx/` documentation:
 
 - `.mpx/REQUIREMENTS.md`
-- `.mpx/VOCABULARY.md` or `GLOSSARY.md`
+- `.mpx/VOCABULARY.md`
 - `.mpx/ARCHITECTURE.md`
 
 If any exist, read them silently as grilling context. Reference their vocabulary and constraints during the session.
@@ -59,7 +59,7 @@ After grilling concludes, check which docs exist and have relevant updates:
 - Append to existing content, grouped by functional area
 - Each requirement: clear title, description, acceptance criteria
 
-**VOCABULARY.md / GLOSSARY.md** — If new domain terms crystallized or existing definitions sharpened:
+**VOCABULARY.md** — If new domain terms crystallized or existing definitions sharpened:
 - Present new/updated terms to user before writing
 - Only update after user confirms
 

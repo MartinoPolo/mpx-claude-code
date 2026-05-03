@@ -1,12 +1,12 @@
 ---
-name: mp-glossary
-description: 'Create or update GLOSSARY.md with canonical domain terms, aliases, relationships. Confirms with user before writing. Use when: "update glossary", "define terms", "domain language", "glossary"'
+name: mp-vocabulary
+description: 'Create or update VOCABULARY.md with canonical domain terms, aliases, relationships. Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
 argument-hint: "[topic or context to focus term extraction on]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: planning
 ---
 
@@ -16,7 +16,7 @@ metadata:
 
 - Scan the current conversation for domain-relevant nouns, verbs, and concepts
 - If $ARGUMENTS specifies a topic, focus extraction on that area
-- If GLOSSARY.md already exists in project root, read it (update mode)
+- If VOCABULARY.md already exists in project root, read it (update mode)
 - Also scan: REQUIREMENTS.md, PRD issues, README, key source files for domain terms
 
 **Step 2: Identify problems**
@@ -25,7 +25,7 @@ metadata:
 - Flag synonyms (different words for the same concept)
 - Flag vague terms (imprecise language that could cause confusion)
 
-**Step 3: Propose glossary**
+**Step 3: Propose vocabulary**
 
 - Be opinionated -- when multiple words exist for the same concept, pick ONE canonical term
 - For each term: canonical name, one-sentence definition, aliases to avoid
@@ -43,12 +43,12 @@ Present the proposed changes to the user:
 
 Only proceed to writing after user confirms.
 
-**Step 5: Write GLOSSARY.md**
+**Step 5: Write VOCABULARY.md**
 
 Format:
 
 ```markdown
-# Glossary
+# Vocabulary
 
 > Canonical domain terms for this project. Use these terms consistently in PRDs, issues, code, and conversation.
 
