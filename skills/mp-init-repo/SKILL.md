@@ -33,7 +33,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
    ```markdown
    # Requirements
 
-   Persistent project requirements. Updated via `/mp-grill-requirements`.
+   Persistent project requirements. Updated via `/mp-grill`.
    GitHub issues track execution state; this file tracks the full requirement set.
    ```
 

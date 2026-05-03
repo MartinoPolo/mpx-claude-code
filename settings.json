@@ -114,5 +114,7 @@
   "effortLevel": "high",
   "autoUpdatesChannel": "latest",
   "autoDreamEnabled": true,
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "remoteControlAtStartup": true,
+  "agentPushNotifEnabled": true
 }

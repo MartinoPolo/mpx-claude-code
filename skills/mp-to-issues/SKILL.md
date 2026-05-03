@@ -1,11 +1,11 @@
 ---
-name: mp-prd-to-issues
-description: 'Break a PRD GitHub issue into vertical-slice sub-issues with blocking relationships. Use when: "break down PRD", "create sub-issues", "PRD to issues"'
+name: mp-to-issues
+description: 'Break a PRD GitHub issue into vertical-slice sub-issues with blocking relationships. Use when: "break down PRD", "create sub-issues", "PRD to issues", "to issues"'
 argument-hint: <PRD issue URL or number>
 allowed-tools: Read, Glob, Grep, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.6"
+  version: "0.7"
   category: project-management
 ---
 

@@ -102,7 +102,7 @@ Group the issue's decision points into thematic batches. Present each batch as a
 
 Only split into a follow-up round when earlier answers would change later questions.
 
-Follow the `mp-grill-me` pattern: if a question can be answered by exploring the codebase, spawn an `Explore` agent (`model: "sonnet"`) instead of asking.
+Follow the `mp-grill` pattern: if a question can be answered by exploring the codebase, spawn an `Explore` agent (`model: "sonnet"`) instead of asking.
 
 #### 5c: Record Outcome
 

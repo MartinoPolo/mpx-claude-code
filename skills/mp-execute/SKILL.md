@@ -6,13 +6,21 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.11"
+  version: "1.12"
   category: project-management
 ---
 
 # Execute Work
 
 Unified execution skill with TDD methodology. Accepts GitHub issues, milestones, or inline tasks.
+
+## Communication Style
+
+Use compressed output throughout execution: drop articles, filler, pleasantries, hedging. Fragments OK. Use abbreviations (DB/auth/config) and arrows (X → Y). Pattern: `[thing] [action] [reason]. [next step].` Keep technical terms exact, code blocks intact, error messages verbatim.
+
+When reading sub-agent results, extract only actionable findings — ignore verbose prose.
+
+**Exception:** Step 11 final report uses normal professional prose (it's posted as a PR comment and read by humans).
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # GitHub Issue Template
 
-Canonical issue body format for all task issues created by `mp-issue-create` and `mp-prd-to-issues`.
+Canonical issue body format for all task issues created by `mp-issue-create` and `mp-to-issues`.
 
 ## Template
 

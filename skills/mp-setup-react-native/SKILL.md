@@ -97,7 +97,7 @@ If `.mpx/REQUIREMENTS.md` does not already exist in the cloned repo, create it:
 ```markdown
 # Requirements
 
-Persistent project requirements. Updated via `/mp-grill-requirements`.
+Persistent project requirements. Updated via `/mp-grill`.
 GitHub issues track execution state; this file tracks the full requirement set.
 ```
 

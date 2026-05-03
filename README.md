@@ -31,13 +31,13 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 ## Workflow
 
 ```
-/mp-grill-requirements     ◄── Raw requirements → grill user → structured REQUIREMENTS.md
+/mp-grill                  ◄── Grill user on plan/design/requirements → update .mpx/ docs
         │
         ▼
-/mp-requirements-to-prd    ◄── REQUIREMENTS.md → PRD as GitHub issue (with module design)
+/mp-to-prd                 ◄── REQUIREMENTS.md → PRD as GitHub issue (with module design)
         │
         ▼
-/mp-prd-to-issues          ◄── PRD → vertical-slice sub-issues (HITL/AFK classified)
+/mp-to-issues              ◄── PRD → vertical-slice sub-issues (HITL/AFK classified)
         │
         ▼
 /mp-execute                ◄── Orchestrate TDD, checks, review, unresolved triage,
@@ -158,10 +158,9 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 | Skill                     | Description                                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
-| `/mp-grill-me`            | Stress-test a plan or design via relentless Q&A                                              |
-| `/mp-grill-requirements`  | Raw requirements → grill user → structured REQUIREMENTS.md (updates GLOSSARY.md if present)  |
-| `/mp-requirements-to-prd` | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)    |
-| `/mp-prd-to-issues`       | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking           |
+| `/mp-grill`               | Stress-test plan/design/requirements via relentless Q&A (auto-updates .mpx/ docs if present) |
+| `/mp-to-prd`              | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)    |
+| `/mp-to-issues`           | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking           |
 | `/mp-hitl`                | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order) |
 | `/mp-glossary`            | Create/update GLOSSARY.md — canonical domain terms, aliases, relationships                   |
 | `/mp-issue-create`        | Create well-structured GitHub issues (feature, chore, docs) with codebase context            |
@@ -203,7 +202,9 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 | Skill         | Description                       |
 | ------------- | --------------------------------- |
-| `/mp-release` | Bump version, push tag, verify CI |
+| `/mp-release`              | Bump version, push tag, verify CI                              |
+| `/mp-grill-me`             | Superseded by `/mp-grill`                                      |
+| `/mp-grill-requirements`   | Superseded by `/mp-grill`                                      |
 
 ### Setup Skills
 

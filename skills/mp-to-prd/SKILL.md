@@ -1,11 +1,11 @@
 ---
-name: mp-requirements-to-prd
-description: 'Create a PRD as a GitHub issue from REQUIREMENTS.md. Use when: "create PRD", "write PRD", "requirements to PRD"'
+name: mp-to-prd
+description: 'Create a PRD as a GitHub issue from REQUIREMENTS.md. Use when: "create PRD", "write PRD", "requirements to PRD", "to PRD"'
 argument-hint: "[milestone name]"
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: project-management
 ---
 
