@@ -30,6 +30,16 @@ applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js"
 
 - Use `{#snippet}` blocks instead of slots for reusable template fragments. Use `{@render}` instead of `<svelte:component>` for dynamic component rendering.
 
+## Reactive Collections (SvelteMap, SvelteSet, SvelteDate, SvelteURL)
+
+Classes from `svelte/reactivity` are already reactive — they track mutations internally. `$state()` only deep-proxies plain objects/arrays; it has **no effect on class instances**. Wrapping them in `$state()` does nothing and may fight eslint-plugin-svelte rules.
+
+- **Never wrap** in `$state()` — the wrapper is a no-op on class instances.
+- **Never reassign** — reassignment isn't reactive without `$state`, and `$state` doesn't help here.
+- **Declare as `const`, mutate in place** with `.set()`, `.delete()`, `.clear()`.
+- To "replace" contents: `map.clear()` then re-`.set()` each entry.
+- Inside `$derived.by()`: SvelteMap is fine (lint may require it in `.svelte` files). Do not flag as a review finding.
+
 ## State Management
 
 - Use Svelte's `createContext` (5.40+) for shared state across component trees. Avoid global stores or module-level singletons when context can scope state to a subtree.
