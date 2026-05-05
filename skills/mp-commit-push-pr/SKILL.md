@@ -61,12 +61,12 @@ PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventio
 
 ## Troubleshooting
 
-| Problem                   | Solution                                                          |
-| ------------------------- | ----------------------------------------------------------------- |
-| "PR creation fails"       | Check `gh auth status`, verify remote exists with `git remote -v` |
-| "No commits to push"      | Ensure working tree has staged/unstaged changes                   |
-| "Base branch not found"   | Specify base explicitly: `/mp-commit-push-pr main`                |
-| "PR already exists"       | Existing PR is updated automatically — this is expected           |
+| Problem                 | Solution                                                          |
+| ----------------------- | ----------------------------------------------------------------- |
+| "PR creation fails"     | Check `gh auth status`, verify remote exists with `git remote -v` |
+| "No commits to push"    | Ensure working tree has staged/unstaged changes                   |
+| "Base branch not found" | Specify base explicitly: `/mp-commit-push-pr main`                |
+| "PR already exists"     | Existing PR is updated automatically — this is expected           |
 
 ## Output
 
