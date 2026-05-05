@@ -2,13 +2,14 @@
   "env": {
     "ENABLE_TOOL_SEARCH": "auto:1",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75",
-    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "0"
+    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "0",
+    "CLAUDE_CODE_NO_FLICKER": "1"
   },
   "attribution": {
     "commit": "",
     "pr": ""
   },
-  "model": "sonnet",
+  "model": "claude-opus-4-6[1m]",
   "hooks": {
     "PreToolUse": [
       {
