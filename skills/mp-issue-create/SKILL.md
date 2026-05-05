@@ -1,17 +1,17 @@
 ---
 name: mp-issue-create
 description: 'Create GitHub issues with optional PRD linking. Use when: "create issue", "open issue", "new feature issue", "add issue to PRD"'
-argument-hint: '<description> [--prd <number>]'
+argument-hint: "<description> [--prd <number>]"
 allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: utility
 ---
 
 # Create GitHub Issue
 
-Create a well-structured GitHub issue using the canonical template. Optionally link to a PRD as a sub-issue. $ARGUMENTS
+Create a well-structured GitHub issue using the canonical template. Links to a PRD as a native sub-issue — either from `--prd <number>` or auto-discovered. $ARGUMENTS
 
 Issue body format: @skills/shared/GITHUB_ISSUE_TEMPLATE.md
 
@@ -25,7 +25,21 @@ From `$ARGUMENTS`, extract:
 - **Details**: any specifics provided
 - **`--prd <number>`**: optional PRD issue number to link as sub-issue
 
-### Step 2: Fetch PRD Context (if `--prd` is set)
+### Step 2: Resolve PRD
+
+**If `--prd` is set**, use that number directly.
+
+**If `--prd` is not set**, spawn a sonnet sub-agent to find the most relevant open PRD:
+
+```
+Agent task: Search open GitHub issues labelled "PRD" (gh issue list --label PRD --state open --json number,title,body --limit 50).
+Return the single best-matching PRD number for: "<summary>".
+If no match is found, return null.
+```
+
+If the agent returns a PRD number, treat it as if `--prd <number>` was passed. If it returns null, proceed without a PRD (standalone issue).
+
+### Step 2b: Fetch PRD Context (if PRD resolved)
 
 ```bash
 gh issue view <prd_number> --json title,body,milestone,labels
@@ -89,9 +103,11 @@ Use the canonical template from `@skills/shared/GITHUB_ISSUE_TEMPLATE.md`.
 
 ```markdown
 > **Unanswered questions:**
+>
 > - [Specific question that needs answering before/during implementation]
 
 ## Description
+
 ...
 ```
 
@@ -99,17 +115,18 @@ Use the canonical template from `@skills/shared/GITHUB_ISSUE_TEMPLATE.md`.
 
 ```markdown
 ## Description
+
 ...
 ```
 
 **Requirements section:**
 
-- If `--prd` is set: map relevant requirements from the PRD body
+- If PRD resolved: map relevant requirements from the PRD body
 - If standalone: define requirements directly, or omit if acceptance criteria are sufficient
 
 **Blocking Relationships:**
 
-- If `--prd` is set: reference sibling sub-issues that block or are blocked by this issue
+- If PRD resolved: reference sibling sub-issues that block or are blocked by this issue
 - If standalone: include if user specifies dependencies, otherwise omit section
 
 ### Step 7: Create Issue
@@ -126,9 +143,9 @@ EOF
 )")
 ```
 
-Include `--milestone` only when `--prd` is set and the PRD has a milestone.
+Include `--milestone` only when a PRD was resolved and it has a milestone.
 
-### Step 8: Link to PRD (if `--prd` is set)
+### Step 8: Link to PRD (if PRD resolved)
 
 Link as a native sub-issue of the PRD:
 
