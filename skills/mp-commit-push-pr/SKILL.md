@@ -4,7 +4,7 @@ description: 'Full workflow - commit, push, and create or update PR. Use when: "
 allowed-tools: Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: git-workflow
 ---
 
@@ -27,7 +27,7 @@ Spawn `mp-git-committer` sub-agent with:
 
 - **OK** → continue to Step 2
 - **SKIP** (nothing to commit) → check if already pushed; if yes, continue to Step 2
-- **FAIL** → diagnose error, fix the issue, re-spawn agent (up to 2 retries). If still failing → report to user and stop.
+- **FAIL** → handle at main-agent level (Sonnet/Opus): diagnose error, fix the issue, re-spawn agent (up to 2 retries). If still failing → report to user and stop.
 
 ### Step 2: Find Linked Issue
 

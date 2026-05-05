@@ -1,6 +1,6 @@
 ---
 name: mp-issue-create
-description: 'Create GitHub issues with optional PRD linking. Use when: "create issue", "open issue", "new feature issue", "add issue to PRD"'
+description: 'Create GitHub issues with optional PRD linking. Use when: "create issue", "create github issue"'
 argument-hint: "<description> [--prd <number>]"
 allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent, Bash(git *), Bash(gh *)
 metadata:
