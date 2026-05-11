@@ -76,6 +76,7 @@ Every task issue gets:
 - `task` — always
 - Exactly one of `HITL` or `AFK` — never both, never neither
 - Area labels as appropriate (`area:api`, `area:ui`, `area:db`, etc.)
+- `design-needed` — when the issue requires a design brief and/or mockup before implementation can begin. Apply when: new UI components, significant visual changes, complex layout work, or user-facing workflows that need design exploration. Do NOT apply for purely backend work, bug fixes, or minor UI tweaks to existing components.
 
 ### HITL vs AFK Classification
 
@@ -86,9 +87,10 @@ Every task issue gets:
 ## Label Colors
 
 ```
-task   — #0E8A16 (green)  — "Implementation task"
-HITL   — #FBCA04 (yellow) — "Requires human interaction"
-AFK    — #0E8A16 (green)  — "Can be implemented autonomously"
+task            — #0E8A16 (green)  — "Implementation task"
+HITL            — #FBCA04 (yellow) — "Requires human interaction"
+AFK             — #0E8A16 (green)  — "Can be implemented autonomously"
+design-needed   — #E8820C (orange) — "Needs design brief + mockup before implementation"
 ```
 
 ## Creation Command
