@@ -75,18 +75,18 @@ If the diff exceeds context limits, fall back to `--stat` only and let agents re
 
 The orchestrator (Opus) builds tailored context for each agent:
 
-| Agent | Diff | Changed Files | PR/Issue Comments |
-|-------|------|---------------|-------------------|
-| spec-alignment | Full | Yes | Full — needs decision context |
-| code-quality | Full | Yes | Brief digest |
-| best-practices | Full | Yes | Brief digest |
-| security | Full | Yes | — |
-| performance | Full | Yes | — |
-| error-handling | Full | Yes | — |
-| architecture scanner | — | Yes | Architectural decisions only |
-| dead code scanner | Full | Yes | — |
-| documentation scanner | — | Yes | Full — needs to know what was built |
-| unresolved scanner | — | Yes | Full — primary data source |
+| Agent                 | Diff | Changed Files | PR/Issue Comments                   |
+| --------------------- | ---- | ------------- | ----------------------------------- |
+| spec-alignment        | Full | Yes           | Full — needs decision context       |
+| code-quality          | Full | Yes           | Brief digest                        |
+| best-practices        | Full | Yes           | Brief digest                        |
+| security              | Full | Yes           | —                                   |
+| performance           | Full | Yes           | —                                   |
+| error-handling        | Full | Yes           | —                                   |
+| architecture scanner  | —    | Yes           | Architectural decisions only        |
+| dead code scanner     | Full | Yes           | —                                   |
+| documentation scanner | —    | Yes           | Full — needs to know what was built |
+| unresolved scanner    | —    | Yes           | Full — primary data source          |
 
 Build a brief digest of PR/issue comments for agents that receive it: summarize key decisions, concerns raised, and deferred items in ~500 words.
 
@@ -156,7 +156,6 @@ Spawn `Explore` sub-agent with `model: "sonnet"`:
 > - `.mpx/VOCABULARY.md` — are there new domain terms in the code that aren't defined?
 > - `ARCHITECTURE.md` or `.mpx/ARCHITECTURE.md` — do structural changes warrant an update?
 > - `.mpx/REQUIREMENTS.md` — are implemented requirements still marked as pending?
-> - `ROADMAP.md` or `.mpx/ROADMAP.md` — does progress need recording?
 > - `README.md` — are setup steps, features, or usage instructions outdated?
 >
 > Changed files: [list with stats]
@@ -175,6 +174,7 @@ Spawn a sub-agent with `model: "sonnet"`:
 > Look for: "deferred", "TODO", "left for later", "unresolved", "out of scope", "follow-up", "nice to have", "future work", "skipped", "punted", "not implemented yet", "known issue", "hack", "workaround", "temporary".
 >
 > For each candidate found:
+>
 > 1. Read the relevant source files to check if it was actually implemented in a later PR within the PRD
 > 2. Search open GitHub issues to check if it's already tracked:
 >    ```bash
@@ -237,6 +237,7 @@ Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 ## Critical
 
 ### [Category] — [Title]
+
 - [ ] **File:** path/to/file.ts:42
 - **Finding:** [what's wrong]
 - **Action:** [what to do]
@@ -244,6 +245,7 @@ Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 ## Important
 
 ### [Category] — [Title]
+
 - [ ] **File:** path/to/file.ts:99
 - **Finding:** [what's wrong]
 - **Action:** [what to do]
@@ -251,6 +253,7 @@ Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 ## Minor
 
 ### [Category] — [Title]
+
 - [ ] **File:** path/to/file.ts:10
 - **Finding:** [what's wrong]
 - **Action:** [what to do]
@@ -258,18 +261,23 @@ Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 ## Unresolved Items
 
 ### Needs AFK Issue
+
 - [ ] [Title] — [details, suggested issue title]
 
 ### Needs HITL Issue
+
 - [ ] [Title] — [details, open questions]
 
 ### Already Tracked
+
 - #N — [title] (no action needed)
 
 ## Documentation Updates
+
 - [ ] [file] — [specific update needed]
 
 ## Architecture Promotion Candidates
+
 - [Title] — [brief description, recommended for `/mp-architecture-review`]
 ```
 
@@ -284,6 +292,7 @@ Present the synthesized action list to the user:
 > [Show the PHASE_END document content]
 >
 > Review the findings. You can:
+>
 > - Confirm all items → proceed to execution
 > - Drop specific items → "drop items 3, 7"
 > - Edit items → "change item 5 to [X]"
