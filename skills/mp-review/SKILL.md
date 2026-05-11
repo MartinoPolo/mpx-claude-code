@@ -2,7 +2,6 @@
 name: mp-review
 description: 'Review code with configurable scope and autofix. Use when: "review scope branch", "review changes", "review pr #123 autofix"'
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
-disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
 metadata:
   author: MartinoPolo
