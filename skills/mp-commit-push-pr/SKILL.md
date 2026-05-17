@@ -1,6 +1,6 @@
 ---
 name: mp-commit-push-pr
-description: 'Full workflow - commit, push, and create or update PR. Use when: "commit push and PR", "full workflow", "ship with PR"'
+description: 'Full workflow - commit, push, and create or update PR. Use when: "commit push and PR", "full workflow", "commit push PR"'
 allowed-tools: Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo

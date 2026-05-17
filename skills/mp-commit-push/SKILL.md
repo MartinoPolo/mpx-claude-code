@@ -1,6 +1,6 @@
 ---
 name: mp-commit-push
-description: 'Stage, commit, and push changes (no PR). Use when: "commit and push", "push my changes", "ship it"'
+description: 'Stage, commit, and push changes (no PR). Use when: "commit and push", "push my changes", "push this"'
 allowed-tools: Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
