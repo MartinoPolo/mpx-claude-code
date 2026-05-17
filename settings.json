@@ -1,9 +1,9 @@
 {
   "env": {
-    "ENABLE_TOOL_SEARCH": "auto:1",
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50",
+    "CLAUDE_CODE_NO_FLICKER": "1",
     "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "0",
-    "CLAUDE_CODE_NO_FLICKER": "1"
+    "ENABLE_TOOL_SEARCH": "auto:1"
   },
   "attribution": {
     "commit": "",
@@ -11,34 +11,14 @@
   },
   "model": "claude-opus-4-6[1m]",
   "hooks": {
-    "PreToolUse": [
+    "Notification": [
       {
-        "matcher": "Bash",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "node $HOME/.claude/hooks/enforce-pkg-mgr.js",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "node $HOME/.claude/hooks/pre-commit-gate.js",
-            "timeout": 60
-          },
-          {
-            "type": "command",
-            "command": "node $HOME/.claude/hooks/dangerous-command-guard.js",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "node $HOME/.claude/hooks/gh-transform.js",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "$HOME/.claude/hooks/fallow-gate.sh",
-            "timeout": 30
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
+            "timeout": 10
           }
         ]
       }
@@ -65,26 +45,34 @@
         ]
       }
     ],
-    "Stop": [
+    "PreToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
+            "command": "node $HOME/.claude/hooks/enforce-pkg-mgr.js",
+            "timeout": 5
+          },
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
-            "timeout": 10
+            "command": "node $HOME/.claude/hooks/pre-commit-gate.js",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/dangerous-command-guard.js",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/gh-transform.js",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node $HOME/.claude/hooks/fallow-gate.js",
+            "timeout": 30
           }
         ]
       }
@@ -100,6 +88,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
@@ -107,13 +107,13 @@
     "command": "$HOME/.claude/scripts/context-bar.sh"
   },
   "enabledPlugins": {
+    "chrome-devtools-mcp@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "github@claude-plugins-official": false,
-    "typescript-lsp@claude-plugins-official": true,
-    "chrome-devtools-mcp@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
-  "autoUpdatesChannel": "latest",
+  "autoUpdatesChannel": "stable",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
   "remoteControlAtStartup": true,
