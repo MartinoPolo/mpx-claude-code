@@ -5,29 +5,29 @@ argument-hint: "[topic, requirements text, or path to requirements file]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "2.0"
   category: planning
 ---
 
 # Grill
 
 Interview the user relentlessly about every aspect of their plan, design, or requirements until reaching shared understanding. Walk down each branch of the decision tree, resolving dependencies one by one.
+Avoid using AskUserQuestion tool, ask directly in the conversation.
 
 ## Step 1: Detect Project Docs
 
-Check for `.mpx/` documentation:
+Check for `.mpx/` documentation (see `skills/shared/DOCUMENTATION_STRATEGY.md` for format details):
 
-- `.mpx/REQUIREMENTS.md`
-- `.mpx/VOCABULARY.md`
-- `.mpx/ARCHITECTURE.md`
+- `.mpx/CONTEXT.md` — project summary, domain language, feature index, constraints
+- `.mpx/DECISIONS.md` — settled architectural and design decisions with rationale
 
-If any exist, read them silently as grilling context. Reference their vocabulary and constraints during the session.
+**Legacy fallback**: `.mpx/REQUIREMENTS.md`, `.mpx/VOCABULARY.md`, `.mpx/ARCHITECTURE.md`
 
+If any exist, read them silently as grilling context. Reference their domain language and constraints during the session.
 If none exist (or outside a repo), proceed as a pure conversational grill.
 
 ## Step 2: Resolve Input
 
-- If `$ARGUMENTS` is a file path, read it as the grilling subject.
 - If `$ARGUMENTS` is inline text, use as the grilling subject.
 - If `$ARGUMENTS` is a topic or plan description, use directly.
 - If no arguments, ask the user what to grill.
@@ -36,10 +36,10 @@ If none exist (or outside a repo), proceed as a pure conversational grill.
 
 Interview relentlessly. For each branch of the decision tree:
 
-1. **Batch related questions** into thematic groups. Present each group in one round.
-2. **Only split into follow-up rounds** when answers to earlier questions would materially change later ones.
-3. **Provide a recommended answer** with each question.
-4. If a question can be answered by exploring the codebase, spawn an `Explore` agent with `model: "sonnet"` instead of asking.
+1. If a question can be answered by exploring the codebase, spawn an `Explore` agent with `model: "sonnet"` instead of asking.
+2. **Batch related questions** into thematic groups. Present each group in one round.
+3. **Only split into follow-up rounds** when answers to earlier questions would materially change later ones.
+4. **Provide a recommended answer** with each question.
 
 For requirements specifically, clarify each one:
 
@@ -52,20 +52,23 @@ Continue until every branch is resolved and shared understanding is reached.
 
 ## Step 4: Update Project Docs
 
-After grilling concludes, check which docs exist and have relevant updates:
+After grilling concludes, check which docs exist and have relevant updates.
+We're trying to keep these files concise and on point, so think twice before adding anything. It should be the most important context and decisions for the project.
+If not sure if important enough, ask user.
 
-**REQUIREMENTS.md** — If new or clarified requirements emerged:
-- Append to existing content, grouped by functional area
-- Each requirement: clear title, description, acceptance criteria
+**CONTEXT.md** — If new terms, features, or constraints emerged:
 
-**VOCABULARY.md** — If new domain terms crystallized or existing definitions sharpened:
-- Present new/updated terms to user before writing
-- Only update after user confirms
+- § Domain Language: add new terms in definition-list format (`**Term** — One-sentence definition.`)
+- § Core Features: update feature index (name + status + PRD#)
+- § Key Constraints: add newly settled constraints
+- § Flagged Ambiguities: record any resolved term conflicts
+- Present changes to user before writing. Only update after user confirms.
 
-**ARCHITECTURE.md** — If architectural decisions were made:
-- Update relevant sections with decisions and rationale
+**DECISIONS.md** — If architectural or design decisions were settled:
 
-Skip any doc that doesn't exist or has nothing new to add. Ask before writing: "Should I update [doc] with [summary of changes]?"
+- Add entries grouped by domain (Platform, UI, Data, Session)
+- Each entry: `### Title` + `Decided: date` + `What:` + `Why:` + `Rejected:`
+- Do NOT add entries for open/unresolved questions — only settled decisions.
 
 ## Report
 
