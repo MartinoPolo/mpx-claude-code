@@ -91,7 +91,7 @@ Rules:
 | `mp-init-repo`           | —                            | Creates CONTEXT.md + DECISIONS.md |
 | `mp-setup-sveltekit`     | —                            | Creates CONTEXT.md + DECISIONS.md |
 | `mp-setup-react-native`  | —                            | Creates CONTEXT.md + DECISIONS.md |
-| `mp-handoff`             | CONTEXT.md, DECISIONS.md     | DECISIONS.md (if decisions made)  |
+| `mp-handoff`             | CONTEXT.md, DECISIONS.md     | writes HANDOFF.md                 |
 | `mp-bug-report`          | CONTEXT.md § Domain Language | —                                 |
 | `mp-to-issues`           | CONTEXT.md § Domain Language | —                                 |
 
