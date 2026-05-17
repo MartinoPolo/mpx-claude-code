@@ -5,7 +5,7 @@ argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [auto
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: code-review
 ---
 
@@ -39,20 +39,22 @@ Default coverage: `full`
 
 ## Reviewer Sets
 
-### Full (6)
+### Full (7)
 
 - `mp-reviewer-code-quality`
 - `mp-reviewer-best-practices`
 - `mp-reviewer-spec-alignment`
+- `mp-reviewer-test-quality`
 - `mp-reviewer-security`
 - `mp-reviewer-performance`
 - `mp-reviewer-error-handling`
 
-### Partial/Half (3)
+### Partial/Half (4)
 
 - `mp-reviewer-code-quality`
 - `mp-reviewer-best-practices`
 - `mp-reviewer-spec-alignment`
+- `mp-reviewer-test-quality`
 
 ## Workflow
 

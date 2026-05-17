@@ -18,7 +18,6 @@ Do NOT trust implementer summary — verify by reading actual code
 - Requirement misinterpretation — solved the right problem?
 - Missing edge cases from spec
 - Compliance with AGENTS.md and README.md
-- Test quality — do tests verify behavior (not implementation details)? Do assertions cover critical paths and boundary conditions? Are tests meaningful (not just "doesn't throw")? Avoid excessive branching or looping in test code
 - Comment alignment — do existing comments/docstrings still match the code? Are TODOs still relevant? Do function descriptions match actual behavior?
 
 ## Output
