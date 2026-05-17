@@ -1,27 +1,23 @@
 ---
 name: mp-to-prd
-description: 'Create a PRD as a GitHub issue from REQUIREMENTS.md. Use when: "create PRD", "write PRD", "requirements to PRD", "to PRD"'
+description: 'Create a PRD as a GitHub issue from passed requirements. Use when: "create PRD", "write PRD", "requirements to PRD", "to PRD"'
 argument-hint: "[milestone name]"
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: project-management
 ---
 
 # Write PRD
 
-Create a Product Requirements Document as a GitHub issue from REQUIREMENTS.md. $ARGUMENTS
+Create a Product Requirements Document as a GitHub issue from passed requirements. $ARGUMENTS
 
 ## Workflow
 
 ### Step 1: Read Requirements
 
-```bash
-# From project root
-```
-
-Read `.mpx/REQUIREMENTS.md`. If missing, report error and stop.
+Read `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (if it exists). If CONTEXT.md is missing, report error and stop.
 
 ### Step 2: Explore Codebase
 
@@ -52,7 +48,7 @@ Build the PRD with these sections:
 
 #### Overview
 
-What this is and why it matters. Tie back to REQUIREMENTS.md.
+What this is and why it matters. Tie back to CONTEXT.md.
 
 #### User Stories
 
@@ -150,7 +146,8 @@ Display:
 
 ## Rules
 
-- Always read REQUIREMENTS.md first — the PRD must trace back to requirements
+- Always read CONTEXT.md first — the PRD must use project domain language and respect constraints
+- Check DECISIONS.md for settled decisions that constrain the design
 - Show the PRD to the user before creating the issue
 - Use `gh` CLI for all GitHub operations
 - PRD body must be well-formatted GitHub markdown

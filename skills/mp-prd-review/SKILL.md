@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "1.2"
   category: project-management
 ---
 
@@ -153,9 +153,8 @@ Spawn `Explore` sub-agent with `model: "sonnet"`:
 >
 > For each file below, check ONLY if it exists. Skip any that don't exist — do not suggest creating them.
 >
-> - `.mpx/VOCABULARY.md` — are there new domain terms in the code that aren't defined?
-> - `ARCHITECTURE.md` or `.mpx/ARCHITECTURE.md` — do structural changes warrant an update?
-> - `.mpx/REQUIREMENTS.md` — are implemented requirements still marked as pending?
+> - `.mpx/CONTEXT.md` — are there new domain terms not in § Domain Language? Are features in § Core Features still marked as pending when implemented?
+> - `.mpx/DECISIONS.md` — do structural changes warrant new decision entries?
 > - `README.md` — are setup steps, features, or usage instructions outdated?
 >
 > Changed files: [list with stats]

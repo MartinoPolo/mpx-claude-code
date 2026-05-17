@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Bash, Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: setup
 ---
 
@@ -23,18 +23,35 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
    bash $HOME/.claude/skills/mp-init-repo/scripts/init-repo.sh
    ```
 
-3. **Create `.mpx/` structure**: Create the local planning directory:
+3. **Create `.mpx/` structure**: Create the project documentation directory (see `skills/shared/DOCUMENTATION_STRATEGY.md` for format):
 
    ```
-   .mpx/REQUIREMENTS.md      # Persistent requirements (empty template)
+   .mpx/CONTEXT.md      # Project context: domain language, feature index, constraints
+   .mpx/DECISIONS.md    # Settled architectural and design decisions
    ```
 
-   `REQUIREMENTS.md` template:
+   `CONTEXT.md` template:
    ```markdown
-   # Requirements
+   # [Project Name] Context
 
-   Persistent project requirements. Updated via `/mp-grill`.
-   GitHub issues track execution state; this file tracks the full requirement set.
+   ## What This Is
+   [3-sentence project summary]
+
+   ## Domain Language
+   [Terms added via `/mp-grill` or `/mp-vocabulary`]
+
+   ## Core Features
+   [Feature index: name + status + PRD#]
+
+   ## Key Constraints
+   [Settled facts about the system]
+   ```
+
+   `DECISIONS.md` template:
+   ```markdown
+   # Decisions
+
+   Settled architectural and design decisions. Updated via `/mp-grill` and `/mp-harvest-decisions`.
    ```
 
    Commit the `.mpx/` files.
@@ -84,7 +101,8 @@ project/
 ├── .claude/
 │   └── CLAUDE.md           # Project context template
 └── .mpx/
-    └── REQUIREMENTS.md     # Persistent requirements
+    ├── CONTEXT.md          # Domain language, feature index, constraints
+    └── DECISIONS.md        # Settled architectural decisions
 
 GitHub:
 ├── Remote repo (private or public)

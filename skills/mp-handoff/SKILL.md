@@ -5,13 +5,13 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: project-management
 ---
 
 # Session Handoff
 
-Creates or updates `HANDOFF.md` in the project root — a general session summary for continuity. Optionally persists decisions to `.mpx/decisions/` when present.
+Creates or updates `HANDOFF.md` in the project root — a general session summary for continuity.
 
 ## Purpose
 
@@ -41,8 +41,8 @@ Use `TaskList` to see current task status:
 ### Step 3: Identify Project Context (Optional)
 
 1. Check if `.mpx/` exists
-2. If yes, read `.mpx/REQUIREMENTS.md` for current requirements
-3. Check `.mpx/decisions/` for ADR-style decision records
+2. If yes, read `.mpx/CONTEXT.md` for domain language and feature context
+3. Read `.mpx/DECISIONS.md` for settled decisions
 4. This context enriches the handoff but is not required
 
 ### Step 4: Create or Update HANDOFF.md
@@ -105,29 +105,19 @@ Date: [Today's date]
 
 ### Step 5: Persist Decisions (Conditional)
 
-Only if an existing `.mpx/` folder is present and significant decisions were made during this session:
+Only if `.mpx/DECISIONS.md` exists and significant decisions were made during this session:
 
-1. Create ADR files in `.mpx/decisions/` for significant decisions (e.g., `001-chose-drizzle.md`)
+- Append new decision entries to `.mpx/DECISIONS.md` using the standard format:
+  ```markdown
+  ### Decision title
+
+  Decided: YYYY-MM-DD
+  What: One sentence describing the choice.
+  Why: One sentence explaining the rationale.
+  Rejected: Brief list of alternatives considered.
+  ```
 
 If `.mpx/` folder is missing: do not create it; create or update `HANDOFF.md` only.
-
-ADR format:
-
-```markdown
-# [Decision Title]
-
-**Date:** [Date]
-**Status:** Accepted
-
-## Context
-[What prompted this decision]
-
-## Decision
-[What was decided]
-
-## Reasoning
-[Why this choice over alternatives]
-```
 
 ### Step 6: Confirm
 
@@ -136,19 +126,19 @@ Show the user what was created:
 > "Session handoff created:
 >
 > - `HANDOFF.md` (project root)
->   [If .mpx/ exists and decisions were made:]
-> - Created `.mpx/decisions/NNN-decision-name.md`
+>   [If .mpx/DECISIONS.md exists and decisions were made:]
+> - Updated `.mpx/DECISIONS.md` with N new entries
 >
 > Captured:
 >
 > - [x] items of progress
-> - [x] decisions [persisted to .mpx/ if applicable]
+> - [x] decisions [persisted to DECISIONS.md if applicable]
 > - [x] next steps"
 
 ## Notes
 
 - HANDOFF.md persists in the project root — updated each session, not deleted
-- Decisions are persisted to `.mpx/decisions/` when `.mpx/` exists
+- Decisions are appended to `.mpx/DECISIONS.md` when it exists
 - Always creates HANDOFF.md in project root regardless of `.mpx/` presence
 - When `.mpx/` folder is absent, writes `HANDOFF.md` only
 - Focus on "why" not just "what" — reasoning is crucial

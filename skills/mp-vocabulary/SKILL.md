@@ -1,12 +1,12 @@
 ---
 name: mp-vocabulary
-description: 'Create or update domain language in CONTEXT.md (or legacy VOCABULARY.md). Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
+description: 'Create or update domain language in CONTEXT.md § Domain Language. Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
 argument-hint: "[topic or context to focus term extraction on]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.0"
+  version: "1.1"
   category: planning
 ---
 
@@ -16,7 +16,7 @@ metadata:
 
 - Scan the current conversation for domain-relevant nouns, verbs, and concepts
 - If $ARGUMENTS specifies a topic, focus extraction on that area
-- Check for `.mpx/CONTEXT.md` first (new format). If missing, fall back to `.mpx/VOCABULARY.md` (legacy)
+- Read `.mpx/CONTEXT.md` § Domain Language. If CONTEXT.md doesn't exist, report error and stop.
 - Also scan: PRD issues, README, key source files for domain terms
 
 **Step 2: Identify problems**
@@ -45,7 +45,7 @@ Only proceed to writing after user confirms.
 
 **Step 5: Write**
 
-**New format (CONTEXT.md)** — Update the `## Domain Language` section using definition-list format:
+Update `.mpx/CONTEXT.md` `## Domain Language` section using definition-list format:
 
 ```markdown
 ## Domain Language

@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: setup
 ---
 
@@ -86,13 +86,30 @@ npx -C <path> sv add mcp
 
 ### Step 7: Initialize .mpx structure
 
-If `.mpx/REQUIREMENTS.md` does not exist, create it:
+Create `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (see `skills/shared/DOCUMENTATION_STRATEGY.md` for format):
 
+`.mpx/CONTEXT.md`:
 ```markdown
-# Requirements
+# [Project Name] Context
 
-Persistent project requirements. Updated via `/mp-grill`.
-GitHub issues track execution state; this file tracks the full requirement set.
+## What This Is
+[3-sentence project summary]
+
+## Domain Language
+[Terms added via `/mp-grill` or `/mp-vocabulary`]
+
+## Core Features
+[Feature index: name + status + PRD#]
+
+## Key Constraints
+[Settled facts about the system]
+```
+
+`.mpx/DECISIONS.md`:
+```markdown
+# Decisions
+
+Settled architectural and design decisions. Updated via `/mp-grill` and `/mp-harvest-decisions`.
 ```
 
 ### Step 8: Verify Framework Rules

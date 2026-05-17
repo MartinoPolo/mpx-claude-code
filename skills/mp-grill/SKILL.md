@@ -5,7 +5,7 @@ argument-hint: "[topic, requirements text, or path to requirements file]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "2.0"
+  version: "2.1"
   category: planning
 ---
 
@@ -20,8 +20,6 @@ Check for `.mpx/` documentation (see `skills/shared/DOCUMENTATION_STRATEGY.md` f
 
 - `.mpx/CONTEXT.md` — project summary, domain language, feature index, constraints
 - `.mpx/DECISIONS.md` — settled architectural and design decisions with rationale
-
-**Legacy fallback**: `.mpx/REQUIREMENTS.md`, `.mpx/VOCABULARY.md`, `.mpx/ARCHITECTURE.md`
 
 If any exist, read them silently as grilling context. Reference their domain language and constraints during the session.
 If none exist (or outside a repo), proceed as a pure conversational grill.
