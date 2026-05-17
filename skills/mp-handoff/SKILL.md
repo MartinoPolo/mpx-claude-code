@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: project-management
 ---
 
@@ -103,44 +103,24 @@ Date: [Today's date]
 - [Relationships between components that aren't obvious from code]
 ```
 
-### Step 5: Persist Decisions (Conditional)
-
-Only if `.mpx/DECISIONS.md` exists and significant decisions were made during this session:
-
-- Append new decision entries to `.mpx/DECISIONS.md` using the standard format:
-  ```markdown
-  ### Decision title
-
-  Decided: YYYY-MM-DD
-  What: One sentence describing the choice.
-  Why: One sentence explaining the rationale.
-  Rejected: Brief list of alternatives considered.
-  ```
-
-If `.mpx/` folder is missing: do not create it; create or update `HANDOFF.md` only.
-
-### Step 6: Confirm
+### Step 5: Confirm
 
 Show the user what was created:
 
 > "Session handoff created:
 >
 > - `HANDOFF.md` (project root)
->   [If .mpx/DECISIONS.md exists and decisions were made:]
-> - Updated `.mpx/DECISIONS.md` with N new entries
 >
 > Captured:
 >
 > - [x] items of progress
-> - [x] decisions [persisted to DECISIONS.md if applicable]
+> - [x] decisions
 > - [x] next steps"
 
 ## Notes
 
 - HANDOFF.md persists in the project root — updated each session, not deleted
-- Decisions are appended to `.mpx/DECISIONS.md` when it exists
-- Always creates HANDOFF.md in project root regardless of `.mpx/` presence
-- When `.mpx/` folder is absent, writes `HANDOFF.md` only
+- This skill only writes HANDOFF.md — use `/mp-grill` or `/mp-harvest-decisions` to persist decisions to `.mpx/DECISIONS.md`
 - Focus on "why" not just "what" — reasoning is crucial
 - Capture implicit knowledge that isn't documented elsewhere
 - If HANDOFF.md already exists, it is read and merged with current session context (update-or-create)
