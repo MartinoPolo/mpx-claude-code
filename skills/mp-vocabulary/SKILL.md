@@ -1,12 +1,12 @@
 ---
 name: mp-vocabulary
-description: 'Create or update VOCABULARY.md with canonical domain terms, aliases, relationships. Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
+description: 'Create or update domain language in CONTEXT.md (or legacy VOCABULARY.md). Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
 argument-hint: "[topic or context to focus term extraction on]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "1.0"
   category: planning
 ---
 
@@ -16,8 +16,8 @@ metadata:
 
 - Scan the current conversation for domain-relevant nouns, verbs, and concepts
 - If $ARGUMENTS specifies a topic, focus extraction on that area
-- If VOCABULARY.md already exists in project root, read it (update mode)
-- Also scan: REQUIREMENTS.md, PRD issues, README, key source files for domain terms
+- Check for `.mpx/CONTEXT.md` first (new format). If missing, fall back to `.mpx/VOCABULARY.md` (legacy)
+- Also scan: PRD issues, README, key source files for domain terms
 
 **Step 2: Identify problems**
 
@@ -27,8 +27,8 @@ metadata:
 
 **Step 3: Propose vocabulary**
 
-- Be opinionated -- when multiple words exist for the same concept, pick ONE canonical term
-- For each term: canonical name, one-sentence definition, aliases to avoid
+- Be opinionated — when multiple words exist for the same concept, pick ONE canonical term
+- For each term: canonical name, one-sentence definition
 - Group terms into natural clusters (by subdomain, lifecycle, or actor)
 - Show relationships between terms with cardinality (e.g., "A **User** has many **Sessions**")
 
@@ -37,36 +37,32 @@ metadata:
 Present the proposed changes to the user:
 
 - New terms (with definitions)
-- Updated definitions (show old -> new)
+- Updated definitions (show old → new)
 - Flagged ambiguities or conflicts
 - Ask user to approve, edit, or reject
 
 Only proceed to writing after user confirms.
 
-**Step 5: Write VOCABULARY.md**
+**Step 5: Write**
 
-Format:
+**New format (CONTEXT.md)** — Update the `## Domain Language` section using definition-list format:
 
 ```markdown
-# Vocabulary
+## Domain Language
 
-> Canonical domain terms for this project. Use these terms consistently in PRDs, issues, code, and conversation.
+**Workspace** — Top-level container: one GitHub repo + one project folder + one window.
+**Issue** — Atomic work unit. One GitHub issue, one worktree, one branch, one color.
 
-## [Subdomain / Category]
-
-| Term | Definition | Aliases to Avoid |
-|------|-----------|-----------------|
-| **CanonicalTerm** | One-sentence definition. | oldName, ambiguousTerm |
+_Avoid_: "task" for Issue, "project" for Workspace.
 
 ## Relationships
 
-- A **User** has many **Sessions** (1:N)
-- A **Session** belongs to one **Workspace** (N:1)
+- A **Workspace** has many **Issues** (1:N)
+- An **Issue** has many **Sessions** (1:N)
 
-## Example Dialogue
+## Flagged Ambiguities
 
-> **Dev:** "When a user creates a new workspace..."
-> **PM:** "You mean when the **Owner** provisions a **Workspace**? Because any **Member** can create **Projects** within it, but only the **Owner** creates the **Workspace** itself."
+- "workspace" was previously used for both the app container and VS Code workspace — resolved: **Workspace** is the Grovekeeper container only.
 ```
 
 If updating: merge new terms into existing structure, update changed definitions, preserve terms that haven't changed.
@@ -78,8 +74,8 @@ If updating: merge new terms into existing structure, update changed definitions
 
 ### Rules
 
-- Only include domain terms -- skip generic programming concepts (function, class, API, database)
+- Only include domain terms — skip generic programming concepts (function, class, API, database)
 - Keep definitions to ONE sentence maximum
-- Flag conflicts explicitly -- never silently resolve ambiguity
+- Flag conflicts explicitly — never silently resolve ambiguity
 - Show relationships with bold term names and cardinality
-- When re-running: read existing file, incorporate new terms, update definitions, re-flag ambiguities, rewrite example dialogue to include new terms
+- When re-running: read existing file, incorporate new terms, update definitions, re-flag ambiguities
