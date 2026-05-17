@@ -80,17 +80,26 @@ Rules:
 
 ## Skill Responsibilities
 
-| Skill                    | Reads                        | Updates                        |
-| ------------------------ | ---------------------------- | ------------------------------ |
-| `mp-grill`               | CONTEXT.md, DECISIONS.md     | Both (after user confirmation) |
-| `mp-vocabulary`          | CONTEXT.md                   | CONTEXT.md § Domain Language   |
-| `mp-to-prd`              | CONTEXT.md § Core Features   | —                              |
-| `mp-prd-review`          | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)    |
-| `mp-consolidate-context` | CONTEXT.md                   | CONTEXT.md (cleanup)           |
-| `mp-harvest-decisions`   | Session JSONL files          | CONTEXT.md, DECISIONS.md       |
-| `mp-init-repo`           | —                            | Creates CONTEXT.md template    |
-| `mp-handoff`             | CONTEXT.md, DECISIONS.md     | — (read-only reference)        |
-| `mp-bug-report`          | CONTEXT.md § Domain Language | —                              |
+| Skill                    | Reads                        | Updates                           |
+| ------------------------ | ---------------------------- | --------------------------------- |
+| `mp-grill`               | CONTEXT.md, DECISIONS.md     | Both (after user confirmation)    |
+| `mp-vocabulary`          | CONTEXT.md                   | CONTEXT.md § Domain Language      |
+| `mp-to-prd`              | CONTEXT.md, DECISIONS.md     | —                                 |
+| `mp-prd-review`          | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)       |
+| `mp-consolidate-context` | CONTEXT.md                   | CONTEXT.md (cleanup)              |
+| `mp-harvest-decisions`   | Session JSONL files          | CONTEXT.md, DECISIONS.md          |
+| `mp-init-repo`           | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `mp-setup-sveltekit`     | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `mp-setup-react-native`  | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `mp-handoff`             | CONTEXT.md, DECISIONS.md     | DECISIONS.md (if decisions made)  |
+| `mp-bug-report`          | CONTEXT.md § Domain Language | —                                 |
+| `mp-to-issues`           | CONTEXT.md § Domain Language | —                                 |
+
+## Legacy Files
+
+Older projects may still have `.mpx/REQUIREMENTS.md`, `.mpx/VOCABULARY.md`, or `.mpx/ARCHITECTURE.md`. Skills should **not** create, update, or fall back to these files. If encountered in an existing project, treat them as read-only historical context — the canonical sources are CONTEXT.md and DECISIONS.md.
+
+When initializing a new project, only scaffold CONTEXT.md and DECISIONS.md.
 
 ## When to Split DECISIONS.md
 
