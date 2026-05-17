@@ -14,16 +14,6 @@ If an approach is getting messy or you've been patching the same area repeatedly
 
 ## Self-Improvement Protocol
 
-When encountering errors, unexpected behavior, or workflow friction, Analyze root cause, why instructions didn't prevent it. Resolve immediate issue. Add rule in AGENTS.md or memory. Document what changed and why.
+When encountering errors, unexpected behavior, or workflow friction, Analyze root cause, why instructions didn't prevent it. Resolve immediate issue. Add rule in AGENTS.md or memory. Document what changed and why. Always ask the user first with a detailed description of the friction and proposed solution.
 
-**Trigger examples**: silent command failures, missing workflow steps, ambiguous instructions, unreliable tools
-
-## Session Activity Tracking
-
-At end of each response where agents were spawned or skills invoked, append session activity includeing reference files skill used:
-
-**Session Activity:**
-
-- `agent-name` (model) — brief purpose
-- `/skill-name` — brief purpose
-  REFERENCE_1.md - reason for invocation
+**Trigger examples**: silent command failures, missing workflow steps, ambiguous instructions, unreliable tools.
