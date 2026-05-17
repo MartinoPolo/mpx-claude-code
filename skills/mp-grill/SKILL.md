@@ -56,17 +56,16 @@ If not sure if important enough, ask user.
 
 **CONTEXT.md** — If new terms, features, or constraints emerged:
 
-- § Domain Language: add new terms in definition-list format (`**Term** — One-sentence definition.`)
+- § Domain Language: for each candidate term, show the full proposed entry (`**Term** — One-sentence definition.`) and ask the user whether to add it. Write only confirmed terms.
 - § Core Features: update feature index (name + status + PRD#)
 - § Key Constraints: add newly settled constraints
 - § Flagged Ambiguities: record any resolved term conflicts
-- Present changes to user before writing. Only update after user confirms.
 
 **DECISIONS.md** — If architectural or design decisions were settled:
 
 - Add entries grouped by domain (Platform, UI, Data, Session)
 - Each entry: `### Title` + `Decided: date` + `What:` + `Why:` + `Rejected:`
-- Do NOT add entries for open/unresolved questions — only settled decisions.
+- Only add entries for settled decisions (open questions stay in the conversation until resolved).
 
 ## Report
 

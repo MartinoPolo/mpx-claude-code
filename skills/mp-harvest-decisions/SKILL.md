@@ -80,7 +80,7 @@ If conflicts exist, present each one to the user via `AskUserQuestion`:
 Present a summary of proposed changes before writing:
 
 **CONTEXT.md updates:**
-- New domain terms for § Domain Language
+- New domain terms for § Domain Language — show each candidate entry (`**Term** — Definition.`) individually and ask the user whether to add it. Write only confirmed terms.
 - New or updated feature entries for § Core Features
 - New constraints for § Key Constraints
 

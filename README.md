@@ -34,7 +34,7 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 /mp-grill                  ◄── Grill user on plan/design/requirements → update .mpx/ docs
         │
         ▼
-/mp-to-prd                 ◄── REQUIREMENTS.md → PRD as GitHub issue (with module design)
+/mp-to-prd                 ◄── CONTEXT.md → PRD as GitHub issue (with module design)
         │
         ▼
 /mp-to-issues              ◄── PRD → vertical-slice sub-issues (HITL/AFK classified)
@@ -48,7 +48,7 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 
 **For bugs:** `/mp-bug-report` investigates root cause, designs TDD fix plan, creates labeled issue.
 
-**Cross-cutting:** `/mp-vocabulary` maintains canonical domain terms in `VOCABULARY.md`.
+**Cross-cutting:** `/mp-vocabulary` maintains canonical domain terms in `.mpx/CONTEXT.md` § Domain Language.
 
 Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continuity.
 
@@ -147,24 +147,25 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 ```
 .mpx/
-├── REQUIREMENTS.md      # Persistent requirements (source of truth)
-└── decisions/           # Architecture Decision Records explaining _why_ choices were made
-    └── 001-chose-drizzle.md
+├── CONTEXT.md           # Domain language, feature index, constraints (read-heavy)
+└── DECISIONS.md         # Settled architectural decisions with rationale (write-heavy)
 ```
+
+See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill responsibilities.
 
 ## Skills Reference
 
 ### Planning Skills
 
-| Skill                     | Description                                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| `/mp-grill`               | Stress-test plan/design/requirements via relentless Q&A (auto-updates .mpx/ docs if present) |
-| `/mp-to-prd`              | REQUIREMENTS.md → PRD as GitHub issue (module design, implementation & testing decisions)    |
-| `/mp-to-issues`           | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking           |
-| `/mp-hitl`                | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order) |
-| `/mp-vocabulary`          | Create/update VOCABULARY.md — canonical domain terms, aliases, relationships                 |
-| `/mp-issue-create`        | Create well-structured GitHub issues (feature, chore, docs) with codebase context            |
-| `/mp-bug-report`          | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs    |
+| Skill              | Description                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `/mp-grill`        | Stress-test plan/design/requirements via relentless Q&A (auto-updates CONTEXT.md + DECISIONS.md)   |
+| `/mp-to-prd`       | CONTEXT.md → PRD as GitHub issue (module design, implementation & testing decisions)               |
+| `/mp-to-issues`    | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking                 |
+| `/mp-hitl`         | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order)       |
+| `/mp-vocabulary`   | Create/update `.mpx/CONTEXT.md` § Domain Language — canonical domain terms, aliases, relationships |
+| `/mp-issue-create` | Create well-structured GitHub issues (feature, chore, docs) with codebase context                  |
+| `/mp-bug-report`   | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs          |
 
 ### Execution Skills
 
@@ -174,13 +175,28 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 ### Code Quality Skills
 
-| Skill                     | Description                                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `/mp-check-fix`           | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise typecheck/lint/format/build |
-| `/mp-review`              | Unified code review (scope: PR, branch, changes)                                                         |
-| `/mp-architecture-review` | Explore codebase for shallow modules → parallel interface design → refactor GitHub issue                 |
-| `/mp-decompose`           | Break down large files into logical modules                                                              |
-| `/mp-code-clean`          | Dead code removal and deduplication                                                                      |
+| Skill           | Description                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| `/mp-check-fix` | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise typecheck/lint/format/build |
+| `/mp-review`    | Unified code review (scope: PR, branch, changes)                                                         |
+
+### Periodic Maintenance Skills
+
+Run after larger chunks of work (milestone end, PRD completion, or on a regular cadence). Sorted by human attention required — lowest first.
+
+| Skill                     | Scope             | Attention | Notes                                                                  |
+| ------------------------- | ----------------- | --------- | ---------------------------------------------------------------------- |
+| `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code. Creates PR with findings.                        |
+| `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc. Auto-fixes + creates PR.       |
+| `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Removes duplicates, tightens language. Fully automatic.                |
+| `/mp-skill-audit`         | All skills        | Low       | Checks 8 consistency rules, auto-fixes drift. Creates report.          |
+| `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
+| `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |
+| `/mp-code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication. Pass folder for focused scope.       |
+| `/mp-decompose`           | Whole repo        | Medium    | Splits oversized files into modules. Pass file for focused scope.      |
+| `/mp-architecture-review` | Whole repo        | High      | Interactive — grills about pain points, proposes deepening candidates. |
+
+All maintenance skills (except architecture-review) auto-fix findings and present a PR for review.
 
 ### Design Skills
 
@@ -200,11 +216,12 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 ### Deprecated Skills
 
-| Skill         | Description                       |
-| ------------- | --------------------------------- |
-| `/mp-release`              | Bump version, push tag, verify CI                              |
-| `/mp-grill-me`             | Superseded by `/mp-grill`                                      |
-| `/mp-grill-requirements`   | Superseded by `/mp-grill`                                      |
+| Skill                          | Description                             |
+| ------------------------------ | --------------------------------------- |
+| `/mp-release`                  | Bump version, push tag, verify CI       |
+| `/mp-grill-me`                 | Superseded by `/mp-grill`               |
+| `/mp-grill-requirements`       | Superseded by `/mp-grill`               |
+| `/mp-consolidate-requirements` | Superseded by `/mp-consolidate-context` |
 
 ### Setup Skills
 
@@ -218,9 +235,8 @@ Planning uses GitHub Issues for tracking and local files for persistence:
 
 | Skill                         | Description                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `/mp-handoff`                 | Create or update HANDOFF.md with a general session summary for continuity                   |
-| `/mp-update-docs`             | Update README and documentation                                                             |
-| `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, progressive disclosure) |
+| `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
+| `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
@@ -287,7 +303,7 @@ Hooks auto-detect the project toolchain (`vite-plus` | `biome` | `classic`) via 
 | `template-sveltekit`             | SvelteKit + Vite Plus + Drizzle + Vitest + Playwright       | [MartinoPolo/template-sveltekit](https://github.com/MartinoPolo/template-sveltekit)                         |
 | `template-react-native-monorepo` | React + RN + Expo + Hono + Gluestack + NativeWind + Drizzle | [MartinoPolo/template-react-native-monorepo](https://github.com/MartinoPolo/template-react-native-monorepo) |
 
-Both include: Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules, Stylelint, knip, 80% coverage thresholds, `.claude/` with CLAUDE.md, `.mpx/` with REQUIREMENTS.md, GitHub Actions CI.
+Both include: Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules, Stylelint, knip, 80% coverage thresholds, `.claude/` with CLAUDE.md, `.mpx/` with CONTEXT.md + DECISIONS.md, GitHub Actions CI.
 
 ## Custom Status Line
 

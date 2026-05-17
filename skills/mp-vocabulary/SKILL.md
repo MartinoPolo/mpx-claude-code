@@ -34,14 +34,14 @@ metadata:
 
 **Step 4: Confirm with user**
 
-Present the proposed changes to the user:
+Present each candidate term with its full proposed entry text (`**Term** — One-sentence definition.`):
 
-- New terms (with definitions)
-- Updated definitions (show old → new)
+- New terms — show the exact text that would be written
+- Updated definitions — show old → new
 - Flagged ambiguities or conflicts
-- Ask user to approve, edit, or reject
+- Ask user to approve, edit, or reject each term
 
-Only proceed to writing after user confirms.
+Only write confirmed terms.
 
 **Step 5: Write**
 
