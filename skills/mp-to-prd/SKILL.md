@@ -5,7 +5,7 @@ argument-hint: "[milestone name]"
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: project-management
 ---
 
@@ -106,26 +106,18 @@ Ensure the `prd` label exists:
 gh label create prd --description "Product Requirements Document" --color 0052CC --force
 ```
 
-### Step 7: Find Next PRD Number
-
-List existing PRD issues to determine the next sequential number:
+### Step 7: Create Issue
 
 ```bash
-gh issue list --label prd --state all --json title --jq '.[].title'
-```
-
-Parse titles for `PRD-N:` prefix, find the highest N, increment by 1. If no PRDs exist, start at 1.
-
-### Step 8: Create Issue
-
-```bash
-gh issue create --title "PRD-<N>: [title from requirements]" --label "prd" --body "$(cat <<'EOF'
+gh issue create --title "[title from requirements]" --label "prd" --body "$(cat <<'EOF'
 [PRD body from Step 4]
 EOF
 )"
 ```
 
-### Step 9: Assign Milestone
+GitHub assigns the issue number automatically. This number becomes the PRD identifier (e.g., PRD #42).
+
+### Step 8: Assign Milestone
 
 If `$ARGUMENTS` contains a milestone name:
 
@@ -135,7 +127,7 @@ gh issue edit <number> --milestone "<milestone name>"
 
 Skip if no milestone provided.
 
-### Step 10: Report
+### Step 9: Report
 
 Display:
 

@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.2"
+  version: "1.3"
   category: project-management
 ---
 
@@ -222,10 +222,10 @@ Multiple agents may flag the same issue (e.g., code-quality and dead-code scanne
 
 ### 3c. Write PHASE_END Document
 
-Write to `.mpx/reviews/PHASE_END_PRD-<N>.md`:
+Write to `.mpx/reviews/PHASE_END_PRD_<N>.md`:
 
 ```markdown
-# PRD Review: PRD-<N> — [Title]
+# PRD Review: PRD #<N> — [Title]
 
 Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 
@@ -295,7 +295,7 @@ Present the synthesized action list to the user:
 > - Confirm all items → proceed to execution
 > - Drop specific items → "drop items 3, 7"
 > - Edit items → "change item 5 to [X]"
-> - Defer everything → document is saved at `.mpx/reviews/PHASE_END_PRD-N.md`
+> - Defer everything → document is saved at `.mpx/reviews/PHASE_END_PRD_N.md`
 
 Wait for user response before proceeding.
 
@@ -337,7 +337,7 @@ Run all detected CHECK and TEST commands via `mp-checker`.
 
 ### If > 20 items or user defers:
 
-Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_PRD-N.md`, and execute items manually or via `/mp-execute` for individual issues created from unresolved items.
+Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_PRD_N.md`, and execute items manually or via `/mp-execute` for individual issues created from unresolved items.
 
 ## Step 6: Close-out
 
