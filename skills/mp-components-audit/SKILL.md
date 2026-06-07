@@ -1,5 +1,5 @@
 ---
-name: mp-design-system-audit
+name: mp-components-audit
 description: 'Audits the codebase for design-system component usage — finds native elements and detached styles that should use the project''s own components (Button, Input, date picker, etc.), components used with the wrong/missing variant, repeated styles that should become a variant, and hardcoded colors that bypass theme tokens. Use when: "audit component usage", "design system audit", "find raw buttons", "are we using our components correctly", "component usage audit"'
 argument-hint: "[scan-path] [autofix|autofix=true|autofix=false]"
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git diff *), Bash(npm run *), Bash(pnpm *), Bash(yarn *)

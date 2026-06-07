@@ -191,13 +191,13 @@ Run after larger chunks of work (milestone end, PRD completion, or on a regular 
 | `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Removes duplicates, tightens language. Fully automatic.                |
 | `/mp-skill-audit`         | All skills        | Low       | Checks 8 consistency rules, auto-fixes drift. Creates report.          |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
-| `/mp-design-system-audit` | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
+| `/mp-components-audit`    | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
 | `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |
 | `/mp-code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication. Pass folder for focused scope.       |
 | `/mp-decompose`           | Whole repo        | Medium    | Splits oversized files into modules. Pass file for focused scope.      |
 | `/mp-architecture-review` | Whole repo        | High      | Interactive — grills about pain points, proposes deepening candidates. |
 
-All maintenance skills (except architecture-review and design-system-audit) auto-fix findings and present a PR for review. `design-system-audit` reports by default and auto-fixes only when passed `autofix`.
+All maintenance skills (except architecture-review and components-audit) auto-fix findings and present a PR for review. `components-audit` reports by default and auto-fixes only when passed `autofix`.
 
 ### Design Skills
 
