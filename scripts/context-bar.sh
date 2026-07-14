@@ -145,9 +145,11 @@ get_oauth_token() {
         return
     fi
 
-    # 2) credentials files (Linux/WSL)
+    # 2) credentials files — respect CLAUDE_CONFIG_DIR so each account
+    #    (personal ~/.claude vs work ~/.claude-work) reads its own token.
+    local cfg_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
     local f
-    for f in "$HOME/.claude/.credentials.json" "$HOME/.claude/credentials.json"; do
+    for f in "$cfg_dir/.credentials.json" "$cfg_dir/credentials.json"; do
         if [[ -f "$f" ]]; then
             local tok
             tok=$(jq -r '.claudeAiOauth.accessToken // empty' "$f" 2>/dev/null)
@@ -175,7 +177,11 @@ get_oauth_token() {
 }
 
 CACHE_DIR="${TMPDIR:-/tmp}"
-USAGE_CACHE="$CACHE_DIR/claude-usage-cache.json"
+# Key the usage cache to the active config dir so personal and work accounts
+# don't read each other's cached quota (they share one TMPDIR).
+_cfg_tag="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+_cfg_tag="${_cfg_tag//[^A-Za-z0-9]/_}"
+USAGE_CACHE="$CACHE_DIR/claude-usage-cache-${_cfg_tag}.json"
 USAGE_CACHE_TTL=120  # seconds — endpoint rate-limits at ~1 req/2min
 
 fetch_usage_json() {

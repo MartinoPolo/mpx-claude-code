@@ -54,6 +54,76 @@ mklink "%DEST%\CLAUDE.md"      "%REPO%\instructions\CLAUDE.md"
 mklink "%DEST%\settings.json"  "%REPO%\settings.json"
 ```
 
+## Multiple Accounts Side-by-Side (Personal + Work)
+
+Run two permanently-logged-in Claude Code accounts at once — one per terminal — using the official `CLAUDE_CONFIG_DIR` env var. Each config dir has its own `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, and `plugins/`, so the logins never clobber each other.
+
+| Alias | Config dir | Account |
+|-------|-----------|---------|
+| `cc` / `ccd` | `~/.claude` (default) | Personal |
+| `ccw` / `ccwd` | `~/.claude-work` | Work / Team |
+
+### Shared vs per-account
+
+- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions rules scripts skills sounds`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
+- **Per-account** (real files, independent): `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, `plugins/`, caches, telemetry.
+
+> `settings.local.json` is centralized at the **repo root** and symlinked into both config dirs. It stays git-ignored (`*.local.json`) — a local single source of truth, not version-controlled (it holds machine paths).
+
+### Creating the second config dir
+
+Mirror every shared link from `~/.claude` into the new dir, then give it its own login. Junctions need no admin; file symlinks need admin **or** Developer Mode. Use the PowerShell tool / a PowerShell window:
+
+```powershell
+$repo = "C:\_MP_projects\mpx-claude-code"
+$work = "$HOME\.claude-work"
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+
+# Directory junctions (no admin)
+"agents","assets","hooks","instructions","rules","scripts","skills","sounds" | ForEach-Object {
+  New-Item -ItemType Junction -Path "$work\$_" -Target "$repo\$_"
+}
+
+# File symlinks (admin or Developer Mode)
+New-Item -ItemType SymbolicLink -Path "$work\AGENTS.md"           -Target "$repo\instructions\AGENTS.md"
+New-Item -ItemType SymbolicLink -Path "$work\CLAUDE.md"           -Target "$repo\instructions\CLAUDE.md"
+New-Item -ItemType SymbolicLink -Path "$work\settings.json"       -Target "$repo\settings.json"
+New-Item -ItemType SymbolicLink -Path "$work\settings.local.json" -Target "$repo\settings.local.json"
+New-Item -ItemType SymbolicLink -Path "$work\WINDOWS-SETUP.md"    -Target "$repo\WINDOWS-SETUP.md"
+```
+
+**Moving an existing login into a dir without re-auth:** `Move-Item` the `.credentials.json` instead of running `/logout` (logout can revoke the token server-side). The dir it lands in stays authenticated; the dir it left prompts a fresh login next launch.
+
+### Git Bash aliases (`~/.bashrc`)
+
+The `claude` binary is a native `.exe`, so the env var must be a real Windows path — build it with `cygpath -w`:
+
+```bash
+alias cc='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude")" claude'
+alias ccd='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude")" claude --dangerously-skip-permissions'
+alias ccw='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude-work")" claude'
+alias ccwd='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude-work")" claude --dangerously-skip-permissions'
+```
+
+### Verify
+
+```bash
+ls -la ~/.claude-work | grep -E '\->|credentials'   # links + own creds present
+cc  -> /status    # shows Personal
+ccw -> /status    # shows Team
+```
+
+Confirm subscription per dir without launching:
+
+```powershell
+(Get-Content "$HOME\.claude\.credentials.json"      -Raw | ConvertFrom-Json).claudeAiOauth.subscriptionType  # personal
+(Get-Content "$HOME\.claude-work\.credentials.json" -Raw | ConvertFrom-Json).claudeAiOauth.subscriptionType  # team
+```
+
+### Gotcha: concurrent MCP servers
+
+Each running session spawns its **own** copy of every configured MCP server (context7, github, chrome-devtools). Two live sessions = double the MCP processes. If resource use spikes, disable unneeded servers in one account, or don't keep both sessions hot.
+
 ## Per-Project Framework Rules (React/Solid)
 
 User-level rules (svelte, python, rust, css, typescript) auto-load via the `rules` junction above. For frameworks that share `.tsx`/`.jsx` extensions (React, Solid), link the rule into the specific project's `.claude/rules/`.
