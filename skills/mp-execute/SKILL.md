@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/skills/mp-execute/scripts/detect-project-scripts.sh*), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.14"
+  version: "1.15"
   category: project-management
 ---
 
@@ -81,10 +81,21 @@ Spawn `mp-issue-analyzer` sub-agent to explore + analyze + plan:
 >    - Acceptance criteria mapped to test cases
 >    - Risk areas and open questions
 > 4. If external library behavior is uncertain, note it for Context7 lookup
+> 5. If issue body/comments reference design files (e.g. `designs/<slug>/*.html`, `SUMMARY.md`, design brief), read them and extract layout + intent. Map to the existing design system per **Design Mapping** below; record the mapping decisions in the plan as implementation constraints.
 
 If analyzer identifies open questions → ask user (clarification gate).
 
 If analyzer identifies external library uncertainty → spawn `mp-context7-docs-fetcher` sub-agent.
+
+### Design Mapping (when issue references mockups)
+
+Mockups are **inspiration, not source of truth.** When the issue body or comments link design files (HTML mockups, `SUMMARY.md`, design brief):
+
+- Read the linked files before planning.
+- **Layout** — match the mockup.
+- **Colors** — match intent, but always use existing semantic/theme tokens. Never hardcode mockup hex/OKLCH values when a token exists.
+- **Components** — reuse existing custom components + variants (e.g. `Button`) instead of inlining raw elements. If the mockup needs a significantly different variant → add a new variant to the custom component, don't inline raw elements.
+- Pass these mapping decisions to the TDD executor (Step 4) as implementation constraints.
 
 ## Step 3: Detect Available Checks
 
@@ -114,6 +125,7 @@ Spawn `mp-tdd-executor` sub-agent with:
 - The confirmed behaviors list from 4a
 - Project context (test framework, file structure, relevant source files)
 - Acceptance criteria from the issue/task
+- Design Mapping constraints from Step 2 (layout, semantic-token colors, custom-component/variant reuse) when the issue references mockups
 
 The executor handles the full red-green-refactor cycle for each behavior.
 
