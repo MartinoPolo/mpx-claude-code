@@ -30,7 +30,7 @@ const SECRET_PATTERNS = [
   { name: "GitHub OAuth", pattern: /gho_[a-zA-Z0-9]{36}/ },
   { name: "Private Key", pattern: /-----BEGIN[A-Z ]*PRIVATE KEY-----/ },
   { name: "Slack Token", pattern: /xox[bpors]-[a-zA-Z0-9-]+/ },
-  { name: "Generic Secret", pattern: /(?:password|secret|api_key|apikey|auth_token)\s*[:=]\s*["']?[^"'\s]{8,}["']?/i },
+  { name: "Generic Secret", pattern: /\b(?:password|secret|api_key|apikey|auth_token)\b\s*[:=]\s*["']?[^"'\s]{8,}["']?/i },
 ];
 
 const SKIP_SECRET_SCAN_PATTERNS = [
