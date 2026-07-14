@@ -6,6 +6,8 @@ Update docs when functionality changes. Keep comments minimal
 Claim completion only when the task is fully done.
 First find and understand root cause, then fix.
 
+Use conventional commits.
+
 Use `ToolSearch` to load deferred tools only when needed.
 
 ## When Stuck or Producing Mediocre Solutions
