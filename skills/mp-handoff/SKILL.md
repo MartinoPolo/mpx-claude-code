@@ -1,7 +1,6 @@
 ---
 name: mp-handoff
 description: 'Create or update HANDOFF.md with a general session progress summary. Use when: "handoff", "save progress", "end of session"'
-disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:
   author: MartinoPolo
