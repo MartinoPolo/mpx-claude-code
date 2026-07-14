@@ -20,10 +20,17 @@ Full workflow from finished execution to merged PR. $ARGUMENTS
 2. **Sync base** — merge target branch into current (Sonnet agent)
 3. **Commit + push** — stage, commit, push (Haiku agent)
 4. **Create/update PR** — find issue, create PR (Haiku agent)
-5. **Arm auto-merge** — `gh pr merge --squash --auto`
-6. **Watch CI** — `gh pr checks --watch`
-7. **CI fix loop** — diagnose + fix failures (max 3 attempts)
+5. **Watch CI** — `gh pr checks --watch` (do NOT merge yet)
+6. **CI fix loop** — diagnose + fix failures (max 3 attempts)
+7. **Merge on green** — `gh pr merge --squash` only after CI is fully green
 8. **Post-merge** — comment, pull main repo
+
+> ⚠️ **Never `gh pr merge --auto` as the gate.** `--auto` only waits if the base
+> branch has **required status checks** configured. If it doesn't (common), GitHub
+> merges immediately — before CI finishes and regardless of pass/fail. This skill
+> therefore **explicitly watches CI green first, then merges** (Steps 5→7), which is
+> correct whether or not branch protection exists. `--auto` may only be used as a
+> convenience *after* confirming required checks are configured (see Step 7).
 
 ## Step 1: State Detection
 
@@ -40,7 +47,7 @@ gh pr list --head <current-branch> --json number,state,url --jq '.[0]'
 | Uncommitted changes | Step 2 (sync) |
 | Committed but not pushed | Step 3 (push only) |
 | Pushed, no PR | Step 4 (create PR) |
-| PR exists, CI pending/failed | Step 6 (watch CI) |
+| PR exists, CI pending/failed | Step 5 (watch CI) |
 | PR merged | Step 8 (post-merge) |
 
 ## Step 2: Sync Base Branch
@@ -91,7 +98,58 @@ Spawn `mp-pr-manager` sub-agent (Haiku):
 - **OK** → continue with PR number
 - **FAIL** → diagnose, fix, re-spawn (up to 2 retries)
 
-## Step 5: Arm Auto-Merge
+## Step 5: Watch CI (do NOT merge yet)
+
+Wait for the PR's checks to complete. This blocks until all checks finish:
+
+```bash
+gh pr checks <pr_number> --watch
+```
+
+If the PR has **no checks at all** (`gh pr checks` exits non-zero with "no checks reported"), there is no CI to gate on — note this to the user and proceed to Step 7 (merge).
+
+- **All pass** → go to Step 7 (merge on green).
+- **Any fail** → enter Step 6.
+
+> Do not merge here. The merge happens only in Step 7, after green.
+
+## Step 6: CI Fix Loop (max 3 attempts)
+
+On CI failure:
+
+### 6a. Fetch failure details
+
+```bash
+gh run list --branch <branch> --limit 1 --json databaseId,conclusion --jq '.[0]'
+gh run view <run_id> --log-failed
+```
+
+### 6b. Diagnose
+
+Analyze failure logs. Classify:
+
+- **Lint/format/type error** → fix code directly
+- **Test failure** → determine if implementation or test is wrong, fix accordingly. A test that only fails intermittently is **flaky** — harden it (focus/settle guards, generous `waitFor` timeouts) rather than blindly rerunning; a green rerun of a flaky test is not a fix.
+- **Infrastructure/flaky-by-environment** → rerun failed jobs: `gh run rerun <run_id> --failed`
+
+### 6c. Fix and re-push
+
+For code fixes:
+1. Apply fix at Opus level
+2. Spawn `mp-git-committer` sub-agent (Haiku) with push: true, commit_hint: "fix: CI failure — <summary>"
+3. Return to Step 5 (watch CI again). Still do NOT merge until green.
+
+For flaky/infra reruns:
+1. `gh run rerun <run_id> --failed`
+2. Return to Step 5 (watch CI again).
+
+### 6d. Escalation
+
+After 3 fix attempts: report full failure summary to user and stop. **Do not merge.**
+
+## Step 7: Merge on Green
+
+Only reached once Step 5 reports **all checks green** (or confirmed no checks exist).
 
 Detect repo merge strategy:
 
@@ -101,54 +159,25 @@ gh repo view --json squashMergeAllowed,mergeCommitAllowed,rebaseMergeAllowed --j
 
 Prefer squash > merge > rebase (use first allowed).
 
-```bash
-gh pr merge <pr_number> --squash --auto
-```
-
-(Replace `--squash` with detected strategy if squash is not allowed.)
-
-## Step 6: Watch CI
+Merge **explicitly** (not `--auto`) so the merge is gated by the green CI you just confirmed, independent of whether branch protection exists:
 
 ```bash
-gh pr checks <pr_number> --watch
+gh pr merge <pr_number> --squash
 ```
 
-- **All pass** → GitHub auto-merges. Go to Step 8.
-- **Any fail** → enter Step 7.
+(Replace `--squash` with the detected strategy if squash is not allowed.)
 
-## Step 7: CI Fix Loop (max 3 attempts)
-
-On CI failure:
-
-### 7a. Fetch failure details
+Confirm the merge landed:
 
 ```bash
-gh run list --branch <branch> --limit 1 --json databaseId,conclusion --jq '.[0]'
-gh run view <run_id> --log-failed
+gh pr view <pr_number> --json state,mergeCommit --jq '{state, mergeCommit: .mergeCommit.oid}'
 ```
 
-### 7b. Diagnose
-
-Analyze failure logs. Classify:
-
-- **Lint/format/type error** → fix code directly
-- **Test failure** → determine if implementation or test is wrong, fix accordingly
-- **Infrastructure/flaky** → rerun failed jobs: `gh run rerun <run_id> --failed`
-
-### 7c. Fix and re-push
-
-For code fixes:
-1. Apply fix at Opus level
-2. Spawn `mp-git-committer` sub-agent (Haiku) with push: true, commit_hint: "fix: CI failure — <summary>"
-3. Auto-merge is still armed — watch CI again (`gh pr checks <pr_number> --watch`)
-
-For flaky/infra reruns:
-1. `gh run rerun <run_id> --failed`
-2. Watch CI again
-
-### 7d. Escalation
-
-After 3 fix attempts: report full failure summary to user and stop. Do not merge.
+> **`--auto` exception:** if the base branch already has required status checks
+> configured (`gh api repos/{owner}/{repo}/branches/{base}/protection/required_status_checks`
+> returns a non-empty `contexts`/`checks`), `gh pr merge <pr> --squash --auto` is
+> equally safe and may be used instead — GitHub will then genuinely wait for those
+> checks. When in doubt, use the explicit green-then-merge flow above.
 
 ## Step 8: Post-Merge
 
