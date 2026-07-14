@@ -3,8 +3,8 @@ paths:
     - '**/*.svelte'
     - '**/*.svelte.ts'
     - '**/*.svelte.js'
-    - '**/*-variants.ts'
-applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*-variants.ts'
+    - '**/*_variants.ts'
+applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*_variants.ts'
 ---
 
 # shadcn-svelte
@@ -146,13 +146,13 @@ CSS variables in `:root` (light) and `.dark` (dark), OKLCH format. Dark mode via
 
 Custom colors: add to `src/app.css` with `@theme inline` block.
 
-## Component Variant File Structure (`*-variants.ts`)
+## Component Variant File Structure (`*_variants.ts`)
 
-The `*-variants.ts` file is the **single source of truth** — types and constants derived from the `tv()` definition.
+The `*_variants.ts` file is the **single source of truth** — types and constants derived from the `tv()` definition.
 
 ```
 component/
-  component-variants.ts   ← tv() config, types, constants
+  component_variants.ts   ← tv() config, types, constants
   Component.svelte        ← imports from variants file
   index.ts                ← Root from .svelte, everything else from variants file
 ```
@@ -160,5 +160,5 @@ component/
 **Types**: `keyof typeof myVariants.variants.variant` — not `VariantProps<...>` (adds `| undefined`).
 **Full arrays**: `Object.keys(myVariants.variants.variant) as MyVariant[]`.
 **Subset arrays**: `asExhaustiveArray<MyVariant>()([...])` from `$lib/utils/variants.js`.
-**`index.ts`**: import `Root` from `.svelte`, everything else directly from `*-variants.ts`.
+**`index.ts`**: import `Root` from `.svelte`, everything else directly from `*_variants.ts`.
 **`.svelte`**: no `<script module>` re-exports.
