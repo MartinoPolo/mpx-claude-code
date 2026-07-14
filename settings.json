@@ -9,20 +9,11 @@
     "commit": "",
     "pr": ""
   },
-  "model": "claude-opus-4-6[1m]",
+  "permissions": {
+    "defaultMode": "auto"
+  },
+  "model": "sonnet",
   "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -87,6 +78,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\snapy\\.claude\\hooks\\herdr-agent-state.ps1\" session",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
@@ -102,6 +103,10 @@
       }
     ]
   },
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "workflowKeywordTriggerEnabled": false,
   "statusLine": {
     "type": "command",
     "command": "$HOME/.claude/scripts/context-bar.sh"
@@ -112,10 +117,15 @@
     "github@claude-plugins-official": false,
     "typescript-lsp@claude-plugins-official": true
   },
-  "effortLevel": "high",
+  "effortLevel": "xhigh",
   "autoUpdatesChannel": "stable",
+  "minimumVersion": "2.1.169",
   "autoDreamEnabled": true,
   "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "editorMode": "normal",
+  "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
-  "agentPushNotifEnabled": true
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": false
 }

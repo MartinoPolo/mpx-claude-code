@@ -2,6 +2,14 @@ param(
     [uint32]$FlashCount = 3
 )
 
+# --- Mute controls (skip sound AND flash entirely) ---
+# Per-session:  launch Claude with  $env:CLAUDE_NOTIFY_SILENT=1  to silence just that session.
+# Global toggle (all sessions, takes effect immediately, survives across sessions):
+#   Mute:    New-Item "$env:USERPROFILE\.claude\notify-mute" -ItemType File -Force | Out-Null
+#   Unmute:  Remove-Item "$env:USERPROFILE\.claude\notify-mute" -ErrorAction SilentlyContinue
+$MuteFlag = Join-Path $env:USERPROFILE '.claude\notify-mute'
+if ($env:CLAUDE_NOTIFY_SILENT -eq '1' -or (Test-Path $MuteFlag)) { exit 0 }
+
 # FlashWindowEx + sound notification for Claude Code hooks.
 # Flashes the parent terminal/editor window's taskbar icon orange and plays a sound.
 # Works in Windows Terminal, VS Code, standalone PowerShell/cmd.
