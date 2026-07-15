@@ -5,7 +5,7 @@ argument-hint: "[skill name or description]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 
@@ -65,7 +65,7 @@ allowed-tools: <comma-separated tool list>
 metadata:
   author: MartinoPolo
   version: "0.1"
-  category: <planning|execution|git-workflow|utility|setup>
+  category: <planning|execution|project-management|issue-management|git-workflow|code-quality|code-review|refactor|testing|design|setup|utility|obsidian>
 ---
 ```
 

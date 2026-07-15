@@ -4,7 +4,7 @@ description: 'Audit all active skills for consistency, convention drift, and com
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: utility
 ---
 
@@ -38,7 +38,7 @@ Count lines. Flag if over 200. Suggest content to move to REFERENCE.md.
 
 Required fields: `name`, `description`, `allowed-tools`, `metadata.author`, `metadata.version`, `metadata.category`.
 
-Valid categories: `planning`, `execution`, `git-workflow`, `utility`, `setup`, `project-management`, `issue-management`, `code-quality`.
+Valid categories: `planning`, `execution`, `project-management`, `issue-management`, `git-workflow`, `code-quality`, `code-review`, `refactor`, `testing`, `design`, `setup`, `utility`, `obsidian`.
 
 Flag missing or invalid fields. Auto-fix category casing.
 
