@@ -181,7 +181,7 @@ Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into Git
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/mp-board-setup`     | One-time: create the vault board + `.mpx/BOARD.md` symlink and `.mpx/board-files` junction (both gitignored)                                                |
 | `/mp-board-to-issues` | Convert unchecked board notes → labelled GitHub issues (merge, dedup, size, AFK/HITL), marking each board item `[/] → #N`                                    |
-| `/mp-batch-execute`   | Autonomously implement a batch of AFK issues / a board section: sequential fix sub-agents on one branch, verify (checks + tests + visual Playwright), one PR |
+| `/mp-batch-execute`   | Autonomously implement a batch of AFK issues / a board section: sequential fix sub-agents on one branch, verify (checks + tests + code review via `/mp-review` + visual Playwright), one PR. `--full-review` / `--no-review` |
 
 ### Testing Skills
 

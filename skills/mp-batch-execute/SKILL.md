@@ -1,11 +1,11 @@
 ---
 name: mp-batch-execute
-description: 'Autonomously implement a batch of small issues (or a board section) end to end: select AFK issues by range/list/label/section, fix each in a sequential sub-agent on one shared branch, verify with checks + tests + visual Playwright, write results back to the board, and open one PR. Use when: "batch execute", "execute issues", "fix issues in bulk", "run the board", "execute range"'
-argument-hint: '<#100-150 | #136,140 | label:redesign | BUGS | section:BUGS> [size:S]'
+description: 'Autonomously implement a batch of small issues (or the board''s To Process items) end to end: select AFK issues by range/list/label, fix each in a sequential sub-agent on one shared branch, verify with checks + tests + code review + visual Playwright, write results back to the board, and open one PR. Use when: "batch execute", "execute issues", "fix issues in bulk", "run the board", "execute range"'
+argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-review | --no-review]'
 allowed-tools: Read, Edit, Agent, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: project-management
 ---
 
@@ -64,17 +64,30 @@ Spawn the next item's agent only after the current commit is confirmed.
 
 ## Step 5: Verify gate
 
-In a Sonnet sub-agent, reuse the `mp-execute` Step 5/6 policy (details in [REFERENCE.md](REFERENCE.md)):
+Runs **once** on the integrated batch branch, orchestrated at this level (not nested inside a single fix agent). Mirrors `mp-execute`'s Step 5/6: static checks + tests, then code review, then visual.
+
+### 5a. Static checks + tests
+
+Run the detect script and hand the results to `mp-checker`:
 
 ```bash
 bash $HOME/.claude/scripts/detect-check-scripts.sh
 ```
 
-- `mp-checker` runs **static checks** (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`) — always.
-- `mp-checker` runs **unit tests** (`TEST`/`TEST_UNIT`) — always; **e2e** (`TEST_E2E`) when source, route, component, spec, config, or dependency files changed.
-- For UI-changed surfaces, run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST** ([PLAYWRIGHT_TESTING.md](../shared/PLAYWRIGHT_TESTING.md)).
+- **Static checks** (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`) — always.
+- **Unit tests** (`TEST`/`TEST_UNIT`) — always; **e2e** (`TEST_E2E`) when source, route, component, spec, config, or dependency files changed.
 
-Fix failures via a Sonnet fix sub-agent, up to 3 iterations. Failures still unresolved after that are a **hard blocker** — stop, report, and do not open the PR.
+Fix failures via a Sonnet fix sub-agent, up to 3 iterations. Still failing → **hard blocker**: stop, report, do not open the PR.
+
+### 5b. Code review (batch diff)
+
+Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent to run `/mp-review scope=branch autofix=true` against the batch-branch diff (default → `partial` 4-reviewer set; `--full-review` → `full` 7-reviewer set). It engages the `mp-reviewer-*` agents and applies confidence-gated fixes via `mp-executor` (up to 3 iterations), writing `REVIEW.md`.
+
+`mp-review` does not commit — so **commit its fixes** as one `fix(review): apply batch review fixes` commit on the batch branch, then re-run **5a** to confirm still green. Review findings that persist after autofix are **non-blocking**: carry them into the PR body (Step 7), optionally routing them to the sibling issues with `mp-unresolved-issue-tracker`.
+
+### 5c. Visual verification
+
+For UI-changed surfaces, run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST** ([PLAYWRIGHT_TESTING.md](../shared/PLAYWRIGHT_TESTING.md)), in fix-list order. Fix failures via a Sonnet fix sub-agent, up to 3 iterations; still failing → **hard blocker**.
 
 ## Step 6: Write back to the board
 
@@ -83,11 +96,11 @@ For each successfully implemented item, `Edit` `.mpx/BOARD.md`: change the marke
 ## Step 7: One PR
 
 ```bash
-gh pr create --draft --title "<batch title>" --body "<commit→issue table + Closes #<N> for each>"
+gh pr create --draft --title "<batch title>" --body "<commit→issue table + Closes #<N> for each + non-blocking review findings from Step 5b>"
 ```
 
 If running inside a git worktree, sync the main worktree afterward (see REFERENCE.md).
 
 ## Report
 
-List: implemented (issue/commit), skipped HITL/blocked, verify results (checks, tests, visual per surface), board items moved to `# MANUAL TESTING`, and the PR URL.
+List: implemented (issue/commit), skipped HITL/blocked, verify results (checks, tests, review findings + fixes, visual per surface), board items moved to `# MANUAL TESTING`, and the PR URL.
