@@ -31,12 +31,14 @@ Run the setup script with the resolved paths (PowerShell tool):
 The script is idempotent and:
 
 - enables `git core.symlinks` globally so Windows preserves real symlinks;
-- creates `<vault>\Boards\<project>.md` with the five H1 sections **only if it does not already exist** (never clobbers existing notes);
+- creates `<vault>\Boards\<project>.md` with the single `# To Process` intake section **only if it does not already exist** (never clobbers existing notes; lifecycle lanes are added later as work progresses);
 - creates the `.mpx/board-files` junction → `<vault>\Files` (no admin) and the `.mpx/BOARD.md` file symlink → the board;
 - appends `.mpx/BOARD.md` and `.mpx/board-files/` to `.gitignore`.
 
+Without Windows Developer Mode the direct symlink call fails; the script then retries that single op in an elevated child process (`Start-Process -Verb RunAs`), which raises a UAC prompt. Tell the user to accept it.
+
 ## Step 3: Verify + report
 
-Confirm the script printed both links. If it warned that the `.mpx/BOARD.md` symlink could not be created, tell the user to enable Windows Developer Mode (or run elevated) and re-run — the junction and board file are already in place, only the file symlink needs the extra privilege.
+Confirm the script printed both links. If it still warned that the `.mpx/BOARD.md` symlink could not be created (elevation declined, or the UAC prompt wasn't accepted), the junction and board file are already in place — only the file symlink needs the extra privilege. Re-run the script and accept the UAC prompt, or enable Windows Developer Mode (Settings › Privacy & security › For developers) and re-run.
 
-Report the board path, both link paths, and the next step: **open the board in Obsidian, paste bug/task/feature notes with screenshots under the matching H1 section, then run `/mp-board-to-issues` or `/mp-batch-execute`.**
+Report the board path, both link paths, and the next step: **open the board in Obsidian, paste any bug/task/feature notes with screenshots under `# To Process` (no need to sort by type), then run `/mp-board-to-issues` or `/mp-batch-execute`.**

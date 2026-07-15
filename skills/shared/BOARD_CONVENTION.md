@@ -15,39 +15,44 @@ GitHub's issue API cannot round-trip images to an agent — an agent creating or
 
 Both are **gitignored** — they point outside the repo and are per-machine. The vault root comes from the `MPX_OBSIDIAN_VAULT` environment variable. `mp-board-setup` creates all of this.
 
+> **Writing back to the board:** because `.mpx/BOARD.md` is a real symlink, the Write/Edit tools may refuse to write through it ("Refusing to write through symlink"). Resolve it to the vault target (`<vault>\Boards\<project>.md`) and edit that real path directly.
+
 ### Image resolution
 
 Board items reference screenshots as bare-filename wikilinks: `![[Pasted image 20260712212316.png]]` (an optional `|<width>` suffix is display-only, e.g. `![[img.png|639]]`). Resolve each by reading `.mpx/board-files/<filename>` — the junction makes every vault attachment readable at a stable project-relative path. Never rely on the wikilink being a path; it is only a filename.
 
 ## Sections (H1 headings)
 
-The board has five H1 sections. The first three are **intake** (you paste notes there); the last two are **lifecycle lanes**.
+The board has **one predefined intake section**, `# To Process` — paste every note there regardless of whether it's a bug, task, or feature. The seed skeleton contains only this heading:
 
 ```markdown
-# BUGS
-
-# TASKS
-
-# FEATURES
-
-# MANUAL TESTING
-
-# ARCHIVE
+# To Process
 ```
 
-### Section → GitHub label map (intake sections only)
+Type is inferred from each note's **content** at conversion time, not from any section it sits under.
 
-| Section | Type label | Native? |
+### Type classification (from content)
+
+`mp-board-to-issues` reads each note and picks the GitHub type label from what it describes:
+
+| Note describes | Type label | Native? |
 |---|---|---|
-| `# BUGS` | `bug` | yes |
-| `# TASKS` | `task` | yes (custom) |
-| `# FEATURES` | `enhancement` | yes |
+| a defect / something broken | `bug` | yes |
+| a chore / audit / refactor | `task` | yes (custom) |
+| a new capability or improvement | `enhancement` | yes |
 
-`# MANUAL TESTING` and `# ARCHIVE` are lanes, not intake — items there are never converted to issues.
+### Lifecycle lanes (added as work progresses)
+
+Two lanes are **not** part of the seed skeleton — they appear only once items reach them:
+
+- `# MANUAL TESTING` — `mp-batch-execute` creates this heading (if absent) and moves an item here once implemented.
+- `# ARCHIVE` — you create and use this lane yourself, moving items here after manually verifying the fix.
+
+Items under either lane are never converted to issues.
 
 ## Item format
 
-One board item is a single top-level checklist bullet under a section:
+One board item is a single top-level checklist bullet under `# To Process`:
 
 ```markdown
 - [ ] The edit-name button should be a ghost button, aligned with the name ![[Pasted image 20260715085802.png]]
@@ -63,7 +68,7 @@ An item moves through four states. The checkbox marker is the state machine:
 |---|---|---|---|
 | `- [ ]` | intake — not yet processed | you | — |
 | `- [/]` | GitHub issue created | `mp-board-to-issues` | append ` → #<N>` to the item |
-| `- [x]` | implemented | `mp-batch-execute` | **move** the item to `# MANUAL TESTING` |
+| `- [x]` | implemented | `mp-batch-execute` | **move** the item to `# MANUAL TESTING` (creating the lane if absent) |
 | (in `# ARCHIVE`) | manually verified, closed | **you** | you move it after checking the fix |
 
 `mp-batch-execute` never auto-archives — the move to `# ARCHIVE` is a human step after manual verification confirms the fix.
@@ -78,6 +83,6 @@ When `mp-board-to-issues` creates issue `#142` from an item, it rewrites the mar
 
 `mp-batch-execute` matches a board item back to its issue by this ` → #<N>` annotation (or, in board-direct mode, by item text identity) to perform the `- [x]` + move-to-Manual-Testing write-back.
 
-## Section selection syntax (shared by both work skills)
+## Targeting the board (shared by both work skills)
 
-A section argument accepts the bare section name, case-insensitive, with or without leading `#`(s): `BUGS`, `# BUGS`, and `section:BUGS` all select `# BUGS`. Omitting the section targets all three intake sections.
+There is a single intake section, so the work skills take no section argument for the board. `mp-board-to-issues` processes **every unchecked `- [ ]` item under `# To Process`**; `mp-batch-execute` in board-direct mode (`board`) does the same. Items already marked `- [/]` or `- [x]`, and anything under the lifecycle lanes, are skipped.

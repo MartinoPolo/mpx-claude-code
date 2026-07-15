@@ -5,7 +5,7 @@ argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-
 allowed-tools: Read, Edit, Agent, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: project-management
 ---
 
@@ -25,7 +25,7 @@ Orchestrate a batch of small fixes: this session is the Opus orchestrator; each 
 Parse `$ARGUMENTS`:
 
 - `#100-150` (range), `#136,140` (list), `label:<x>` → **issue mode** (GitHub issues).
-- `BUGS` / `# BUGS` / `section:BUGS` → **board-direct mode** (implement section items with no GitHub issue), per the BOARD_CONVENTION section syntax.
+- `board` → **board-direct mode** (implement the unchecked `# To Process` items that have no GitHub issue), per BOARD_CONVENTION.
 - optional `size:<S|M|L>` → filter the work list.
 
 ## Step 2: Build the work list
@@ -38,13 +38,13 @@ gh issue list --state open --json number,title,labels,body,url
 
 Keep issues in the requested range/list/label; then filter client-side: keep `AFK`, drop `HITL` (collect the skipped list), drop blocked issues (parse `## Blocking Relationships` for open `Blocked by #N`), apply the `size:` filter.
 
-**Board-direct mode** — read `.mpx/BOARD.md`, collect unchecked items under the section, and read each `![[...]]` image from `.mpx/board-files/`.
+**Board-direct mode** — read `.mpx/BOARD.md`, collect unchecked items under `# To Process`, and read each `![[...]]` image from `.mpx/board-files/`.
 
 Create one `TaskCreate` entry per work item for visible progress.
 
 ## Step 3: Prepare the branch
 
-From the repo root (`git rev-parse --show-toplevel`), confirm a clean tree and cut the batch branch from the base branch (slug from the section or range, e.g. `batch/bugs`):
+From the repo root (`git rev-parse --show-toplevel`), confirm a clean tree and cut the batch branch from the base branch (slug from the range/label/selection, e.g. `batch/redesign`):
 
 ```bash
 git status --porcelain   # expect empty output
@@ -91,12 +91,12 @@ For UI-changed surfaces, run **raw-Playwright** visual verification with the **s
 
 ## Step 6: Write back to the board
 
-For each successfully implemented item, `Edit` `.mpx/BOARD.md`: change the marker to `- [x]` and **move** the item under `# MANUAL TESTING`. Match the board item by its ` → #<N>` annotation (issue mode) or by item text (board-direct). Leave `# ARCHIVE` for the user.
+For each successfully implemented item, `Edit` `.mpx/BOARD.md`: change the marker to `- [x]` and **move** the item under `# MANUAL TESTING` (create that heading at the board's end if it doesn't exist yet). Match the board item by its ` → #<N>` annotation (issue mode) or by item text (board-direct). Leave `# ARCHIVE` for the user. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
 
 ## Step 7: One PR
 
 ```bash
-gh pr create --draft --title "<batch title>" --body "<commit→issue table + Closes #<N> for each + non-blocking review findings from Step 5b>"
+gh pr create --title "<batch title>" --body "<commit→issue table + Closes #<N> for each + non-blocking review findings from Step 5b>"
 ```
 
 If running inside a git worktree, sync the main worktree afterward (see REFERENCE.md).

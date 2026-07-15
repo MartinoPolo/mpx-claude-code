@@ -24,18 +24,12 @@ foreach ($d in @($boardsDir, $filesDir, $mpxDir)) {
   if (-not (Test-Path $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
 }
 
-# Board skeleton — written only when the board does not already exist (never clobber notes).
+# Board skeleton — a single `# To Process` intake section, written only when the board does
+# not already exist (never clobber notes). Lifecycle lanes (# MANUAL TESTING, # ARCHIVE) are
+# added later as items reach them, not seeded here.
 if (-not (Test-Path $board)) {
 @'
-# BUGS
-
-# TASKS
-
-# FEATURES
-
-# MANUAL TESTING
-
-# ARCHIVE
+# To Process
 '@ | Set-Content -Path $board -Encoding utf8
   Write-Host "created board: $board"
 } else {
@@ -56,8 +50,22 @@ if (-not (Test-Path $boardLink)) {
     New-Item -ItemType SymbolicLink -Path $boardLink -Target $board | Out-Null
     Write-Host "symlink: .mpx/BOARD.md -> $board"
   } catch {
-    Write-Warning "Could not create .mpx/BOARD.md symlink: $($_.Exception.Message)"
-    Write-Warning "Enable Windows Developer Mode (Settings > Privacy & security > For developers) or run elevated, then re-run."
+    # No Developer Mode: retry the single mklink op in an elevated child process (UAC prompt).
+    Write-Warning "Direct symlink failed ($($_.Exception.Message)); retrying elevated -- accept the UAC prompt..."
+    $bl = $boardLink -replace "'", "''"
+    $bd = $board     -replace "'", "''"
+    $mk = "New-Item -ItemType SymbolicLink -Path '$bl' -Target '$bd' | Out-Null"
+    try {
+      Start-Process -FilePath powershell -Verb RunAs -Wait -WindowStyle Hidden `
+        -ArgumentList '-NoProfile', '-NonInteractive', '-Command', $mk
+    } catch {
+      Write-Warning "Elevation was declined or failed: $($_.Exception.Message)"
+    }
+    if (Test-Path $boardLink) {
+      Write-Host "symlink (elevated): .mpx/BOARD.md -> $board"
+    } else {
+      Write-Warning "Could not create .mpx/BOARD.md symlink. Enable Windows Developer Mode (Settings > Privacy & security > For developers) or run elevated, then re-run."
+    }
   }
 } else {
   Write-Host "symlink exists: .mpx/BOARD.md"
