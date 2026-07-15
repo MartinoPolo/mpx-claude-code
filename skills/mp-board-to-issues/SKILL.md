@@ -2,11 +2,10 @@
 name: mp-board-to-issues
 description: 'Convert Obsidian board notes (with pasted screenshots) into GitHub issues: read unchecked items from a board section, merge related notes and dedup against existing issues, estimate size, classify AFK/HITL, create labelled issues, and mark each board item [/] with its issue number. Use when: "board to issues", "convert board", "notes to issues", "board notes to github"'
 argument-hint: "[section: BUGS | TASKS | FEATURES]"
-disable-model-invocation: true
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: project-management
 ---
 

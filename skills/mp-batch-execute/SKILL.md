@@ -2,11 +2,10 @@
 name: mp-batch-execute
 description: 'Autonomously implement a batch of small issues (or a board section) end to end: select AFK issues by range/list/label/section, fix each in a sequential sub-agent on one shared branch, verify with checks + tests + visual Playwright, write results back to the board, and open one PR. Use when: "batch execute", "execute issues", "fix issues in bulk", "run the board", "execute range"'
 argument-hint: '<#100-150 | #136,140 | label:redesign | BUGS | section:BUGS> [size:S]'
-disable-model-invocation: true
 allowed-tools: Read, Edit, Agent, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: project-management
 ---
 
