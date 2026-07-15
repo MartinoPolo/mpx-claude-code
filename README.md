@@ -173,6 +173,24 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/mp-execute` | Orchestrate issue execution: TDD via `mp-tdd-executor`, reviewers/checks, unresolved triage, commit, push, and PR creation. `--no-tdd` to skip tests |
 
+### Board Workflow (Obsidian)
+
+Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into GitHub issues and autonomous batch fixes. All three follow `skills/shared/BOARD_CONVENTION.md` (board format, section→label map, checkbox lifecycle).
+
+| Skill                 | Description                                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/mp-board-setup`     | One-time: create the vault board + `.mpx/BOARD.md` symlink and `.mpx/board-files` junction (both gitignored)                                                |
+| `/mp-board-to-issues` | Convert unchecked board notes → labelled GitHub issues (merge, dedup, size, AFK/HITL), marking each board item `[/] → #N`                                    |
+| `/mp-batch-execute`   | Autonomously implement a batch of AFK issues / a board section: sequential fix sub-agents on one branch, verify (checks + tests + visual Playwright), one PR |
+
+### Testing Skills
+
+| Skill                 | Description                                                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `/mp-playwright-test` | Reliable raw-Playwright visual verification over a scope (uncommitted / current PR / verbal area) — per-surface PASS/FAIL with measured values + screenshots |
+
+`/mp-playwright-test` and `/mp-batch-execute`'s verify gate both follow `skills/shared/PLAYWRIGHT_TESTING.md` — the raw-Playwright reliability contract (stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-playwright-tester` agent is for exploratory testing only.
+
 ### Code Quality Skills
 
 | Skill           | Description                                                                                              |
@@ -237,6 +255,7 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | Skill                         | Description                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
+| `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
