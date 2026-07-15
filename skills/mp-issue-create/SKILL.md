@@ -91,12 +91,12 @@ Create missing labels:
 gh label create "task" --description "Implementation task" --color "0E8A16" --force
 gh label create "HITL" --description "Requires human interaction" --color "FBCA04" --force
 gh label create "AFK" --description "Can be implemented autonomously" --color "0E8A16" --force
-gh label create "design-needed" --description "Needs design brief + mockup before implementation" --color "E8820C" --force
+gh label create "design needed" --description "Requires design (mockup + refine) before/with implementation" --color "5319E7" --force
 ```
 
 Create area labels as needed (`area:api`, `area:ui`, `area:db`, etc.).
 
-Add `design-needed` when the issue involves new UI components, significant visual changes, complex layouts, or user-facing workflows that need design exploration. Do NOT add for purely backend work, bug fixes, or minor UI tweaks.
+Add `design needed` when the issue involves new UI components, significant visual changes, complex layouts, or user-facing workflows that need design exploration. Do NOT add for purely backend work, bug fixes, or minor UI tweaks.
 
 ### Step 6: Build Issue Body
 

@@ -114,16 +114,16 @@ Ask for explicit approval before creating anything. Accept feedback and revise.
 gh label list --limit 100
 ```
 
-Create missing labels (`task`, `HITL`, `AFK`, `design-needed`, area labels):
+Create missing labels (`task`, `HITL`, `AFK`, `design needed`, area labels):
 
 ```bash
 gh label create "task" --description "Implementation task" --color "0E8A16" --force
 gh label create "HITL" --description "Requires human interaction" --color "FBCA04" --force
 gh label create "AFK" --description "Can be implemented autonomously" --color "0E8A16" --force
-gh label create "design-needed" --description "Needs design brief + mockup before implementation" --color "E8820C" --force
+gh label create "design needed" --description "Requires design (mockup + refine) before/with implementation" --color "5319E7" --force
 ```
 
-Add `design-needed` to any sub-issue that involves new UI components, significant visual changes, complex layouts, or user-facing workflows requiring design exploration. Do NOT add for purely backend work, bug fixes, or minor UI tweaks.
+Add `design needed` to any sub-issue that involves new UI components, significant visual changes, complex layouts, or user-facing workflows requiring design exploration. Do NOT add for purely backend work, bug fixes, or minor UI tweaks.
 
 ### Step 7: Create Sub-Issues and Link to PRD
 
