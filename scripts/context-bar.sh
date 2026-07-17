@@ -20,6 +20,10 @@ case "$COLOR" in
     *)        C_ACCENT="$C_GRAY" ;;  # gray: all same color
 esac
 
+# Warning color for stale/unreliable data (coral red). Uses \033 escape form —
+# interpreted by the final printf '%b'. Kept ESC-free here so it round-trips.
+C_WARN=$'\033[38;5;203m'
+
 input=$(cat)
 
 
@@ -138,6 +142,16 @@ time_until() {
     fi
 }
 
+human_age() {
+    # human_age <seconds> -> compact age like "2h", "7m", "45s"
+    local s="$1"
+    [[ "$s" =~ ^[0-9]+$ ]] || { printf '?'; return; }
+    if [[ $s -ge 86400 ]]; then printf '%dd' $((s / 86400))
+    elif [[ $s -ge 3600 ]]; then printf '%dh' $((s / 3600))
+    elif [[ $s -ge 60 ]]; then printf '%dm' $((s / 60))
+    else printf '%ds' "$s"; fi
+}
+
 get_oauth_token() {
     # 1) env var
     if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
@@ -182,16 +196,20 @@ CACHE_DIR="${TMPDIR:-/tmp}"
 _cfg_tag="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 _cfg_tag="${_cfg_tag//[^A-Za-z0-9]/_}"
 USAGE_CACHE="$CACHE_DIR/claude-usage-cache-${_cfg_tag}.json"
+USAGE_ATTEMPT="$CACHE_DIR/claude-usage-attempt-${_cfg_tag}"
+USAGE_LOCK="$CACHE_DIR/claude-usage-lock-${_cfg_tag}"
 USAGE_CACHE_TTL=120  # seconds — endpoint rate-limits at ~1 req/2min
+USAGE_STALE_SECS=300 # seconds — data older than this is flagged stale on-screen
 
 fetch_usage_json() {
     local token="$1"
     [[ -z "$token" ]] && return 1
 
+    local now cache_mtime age
+    now=$(date +%s)
+
     # Return cached data if fresh enough
     if [[ -f "$USAGE_CACHE" ]]; then
-        local now cache_mtime age
-        now=$(date +%s)
         cache_mtime=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
         if [[ -n "$cache_mtime" ]]; then
             age=$((now - cache_mtime))
@@ -201,6 +219,37 @@ fetch_usage_json() {
             fi
         fi
     fi
+
+    # Gate on last ATTEMPT (success or failure), not just last success —
+    # otherwise a persistent error never advances the backoff clock and
+    # every status line render re-fires a request with no cooldown.
+    if [[ -f "$USAGE_ATTEMPT" ]]; then
+        local attempt_mtime attempt_age
+        attempt_mtime=$(stat -c %Y "$USAGE_ATTEMPT" 2>/dev/null || stat -f %m "$USAGE_ATTEMPT" 2>/dev/null)
+        if [[ -n "$attempt_mtime" ]]; then
+            attempt_age=$((now - attempt_mtime))
+            if [[ $attempt_age -lt $USAGE_CACHE_TTL ]]; then
+                [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
+                return
+            fi
+        fi
+    fi
+
+    # Serialize concurrent sessions so they don't all fetch at once. Stale
+    # locks (>10s, i.e. a prior fetch that never cleaned up) are reclaimed.
+    if ! mkdir "$USAGE_LOCK" 2>/dev/null; then
+        local lock_mtime lock_age
+        lock_mtime=$(stat -c %Y "$USAGE_LOCK" 2>/dev/null || stat -f %m "$USAGE_LOCK" 2>/dev/null)
+        lock_age=$((now - ${lock_mtime:-$now}))
+        if [[ $lock_age -lt 10 ]]; then
+            [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
+            return
+        fi
+        rmdir "$USAGE_LOCK" 2>/dev/null
+        mkdir "$USAGE_LOCK" 2>/dev/null
+    fi
+
+    : > "$USAGE_ATTEMPT"
 
     # Fetch fresh data
     local resp
@@ -216,11 +265,13 @@ fetch_usage_json() {
     if [[ -z "$err" && -n "$resp" ]]; then
         echo "$resp" > "$USAGE_CACHE"
     elif [[ -f "$USAGE_CACHE" ]]; then
+        rmdir "$USAGE_LOCK" 2>/dev/null
         # Rate-limited or error — return stale cache instead of nothing
         cat "$USAGE_CACHE"
         return
     fi
 
+    rmdir "$USAGE_LOCK" 2>/dev/null
     echo "$resp"
 }
 
@@ -287,6 +338,19 @@ if [[ -n "$TOKEN" ]]; then
     USAGE_DATA=$(fetch_usage_json "$TOKEN")
 fi
 
+# Age of the numbers on screen = time since the cache last held a SUCCESSFUL
+# fetch (its mtime). The endpoint rate-limits us (HTTP 429), and on failure we
+# serve the stale cache — so this age is how we know the reading is frozen.
+usage_age=""
+if [[ -f "$USAGE_CACHE" ]]; then
+    _cm=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
+    [[ -n "$_cm" ]] && usage_age=$(( $(date +%s) - _cm ))
+fi
+is_stale=0
+if [[ -n "$usage_age" && "$usage_age" =~ ^[0-9]+$ && $usage_age -gt $USAGE_STALE_SECS ]]; then
+    is_stale=1
+fi
+
 aerr=$(echo "$USAGE_DATA" | jq -r '.error.type // empty' 2>/dev/null)
 if [[ -z "$aerr" ]]; then
     five_raw=$(echo "$USAGE_DATA" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
@@ -297,31 +361,39 @@ if [[ -z "$aerr" ]]; then
     five_pct=$(format_pct "$five_raw")
     seven_pct=$(format_pct "$seven_raw")
 
+    # Fresh: keep the original look. Stale: paint labels + numbers coral red and
+    # bracket the line with ⚠ + age, so a frozen reading is unmistakable.
+    lbl="$C_GRAY"; txt=""
+    if [[ $is_stale -eq 1 ]]; then lbl="$C_WARN"; txt="$C_WARN"; fi
+
     if [[ -n "$five_pct" && "$five_pct" =~ ^[0-9]+$ ]]; then
         [[ $five_pct -gt 100 ]] && five_pct=100
         five_bar=$(progress_bar "$five_pct" 8)
         five_countdown=$(time_until "$five_resets")
-        quota_line="${C_GRAY}5h ${five_bar} ${five_pct}%"
-        [[ -n "$five_countdown" ]] && quota_line+=" ⏳${five_countdown}"
+        [[ $is_stale -eq 1 ]] && quota_line="${C_WARN}⚠ " || quota_line=""
+        quota_line+="${lbl}5h ${five_bar}${txt} ${five_pct}%"
+        [[ -n "$five_countdown" ]] && quota_line+="${txt} ⏳${five_countdown}"
 
         if [[ -n "$seven_pct" && "$seven_pct" =~ ^[0-9]+$ ]]; then
             [[ $seven_pct -gt 100 ]] && seven_pct=100
             seven_bar=$(progress_bar "$seven_pct" 8)
             seven_countdown=$(time_until "$seven_resets")
-            quota_line+="${C_GRAY} | 7d ${seven_bar} ${seven_pct}%"
-            [[ -n "$seven_countdown" ]] && quota_line+=" ⏳${seven_countdown}"
+            quota_line+="${lbl} | 7d ${seven_bar}${txt} ${seven_pct}%"
+            [[ -n "$seven_countdown" ]] && quota_line+="${txt} ⏳${seven_countdown}"
         else
-            quota_line+="${C_GRAY} | 7d n/a"
+            quota_line+="${lbl} | 7d n/a"
         fi
-        quota_line+="${C_RESET}"
+
+        if [[ $is_stale -eq 1 ]]; then
+            quota_line+="${C_WARN} · $(human_age "$usage_age") old ⚠${C_RESET}"
+        else
+            quota_line+="${C_RESET}"
+        fi
     fi
 else
-    # Keep it short; don't force any fake numbers.
-    if [[ "$aerr" == "permission_error" ]]; then
-        quota_line="${C_GRAY}5h n/a | 7d n/a${C_RESET}"
-    else
-        quota_line="${C_GRAY}5h n/a | 7d n/a${C_RESET}"
-    fi
+    # Endpoint errored AND no cached numbers to fall back on — say so plainly in
+    # warning color rather than showing a fabricated reading.
+    quota_line="${C_WARN}5h n/a | 7d n/a (usage endpoint unavailable)${C_RESET}"
 fi
 
 # --- Build 4-line status output ---

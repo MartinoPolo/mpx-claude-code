@@ -1,17 +1,17 @@
 ---
 name: mp-board-to-issues
-description: 'Convert Obsidian board notes (with pasted screenshots) into GitHub issues: read unchecked items from the board''s single To Process section, infer each note''s type (bug/task/enhancement) from its content, merge related notes and dedup against existing issues, estimate size, classify AFK/HITL, create labelled issues, and mark each board item [/] with its issue number. Use when: "board to issues", "convert board", "notes to issues", "board notes to github"'
+description: 'Convert Obsidian board notes (with pasted screenshots) into GitHub issues: read items from the board''s single To Process lane, infer each note''s type (bug/task/enhancement) from its content, merge related notes and dedup against existing issues, estimate size, classify AFK/HITL, create labelled issues, and move each item to # Ready to implement with its issue number appended (leaving the checkbox untouched). Use when: "board to issues", "convert board", "notes to issues", "board notes to github"'
 argument-hint: "[optional guidance]"
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: project-management
 ---
 
 # mp-board-to-issues
 
-Turn board notes into well-formed GitHub issues. See [BOARD_CONVENTION.md](../shared/BOARD_CONVENTION.md) for board format, content→type classification, and the checkbox lifecycle; issue bodies and labels follow [GITHUB_ISSUE_TEMPLATE.md](../shared/GITHUB_ISSUE_TEMPLATE.md). $ARGUMENTS
+Turn board notes into well-formed GitHub issues. See [BOARD_CONVENTION.md](../shared/BOARD_CONVENTION.md) for board format, content→type classification, and the four-lane pipeline (state lives in the lane, not the checkbox); issue bodies and labels follow [GITHUB_ISSUE_TEMPLATE.md](../shared/GITHUB_ISSUE_TEMPLATE.md). $ARGUMENTS
 
 ## Rules
 
@@ -20,11 +20,11 @@ Turn board notes into well-formed GitHub issues. See [BOARD_CONVENTION.md](../sh
 
 ## Step 1: Read the board
 
-Read `.mpx/BOARD.md`. Every note lives under the single `# To Process` intake section — there is no section argument. Any `$ARGUMENTS` is optional free-text guidance (e.g. "only the login bug"), not a section selector.
+Read `.mpx/BOARD.md`. Fresh notes live under the single `# To Process` intake lane — there is no section argument. Any `$ARGUMENTS` is optional free-text guidance (e.g. "only the login bug"), not a section selector.
 
 ## Step 2: Collect items
 
-Collect each unchecked `- [ ]` bullet under `# To Process`; skip items already marked `- [/]` or `- [x]`, and ignore anything under the lifecycle lanes (`# MANUAL TESTING`, `# ARCHIVE`). For each item, capture its text (including continuation lines) and every `![[...]]` image wikilink, and **read each image** at `.mpx/board-files/<filename>` so the visual context informs the issue.
+Collect each `- [ ]` bullet under `# To Process`; skip any that already carry a `→ #<N>` annotation (already has an issue), and ignore everything under the downstream lanes (`# Ready to implement`, `# Manual testing`, `# Archive`). Do **not** interpret the checkbox as state — it is the user's manual-verification flag, not a processing marker. For each item, capture its text (including continuation lines) and every `![[...]]` image wikilink, and **read each image** at `.mpx/board-files/<filename>` so the visual context informs the issue.
 
 ## Step 3: Merge + dedup
 
@@ -57,7 +57,7 @@ EOF
 
 ## Step 7: Write back to the board
 
-For each created issue, `Edit` its board item: change `- [ ]` → `- [/]` and append ` → #<N>` (the issue number). This is the annotation `mp-batch-execute` uses to close the loop. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
+For each created issue, `Edit` `.mpx/BOARD.md` to **move** its item from `# To Process` to `# Ready to implement` and append ` → #<N>` (the issue number) to the item text. **Leave the checkbox marker as `- [ ]` — never write `- [x]` or `- [/]`; the checkbox is the user's alone.** The `→ #<N>` annotation is what `mp-batch-execute` uses to close the loop. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
 
 ## Step 8: Offer to resolve HITL
 

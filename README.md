@@ -175,13 +175,13 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 
 ### Board Workflow (Obsidian)
 
-Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into GitHub issues and autonomous batch fixes. All three follow `skills/shared/BOARD_CONVENTION.md` (board format, section→label map, checkbox lifecycle).
+Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into GitHub issues and autonomous batch fixes. All three follow `skills/shared/BOARD_CONVENTION.md` (board format, content→type map, four-lane pipeline). The lane (`# To Process` → `# Ready to implement` → `# Manual testing` → `# Archive`) is the state machine; skills move items between lanes but never touch the checkbox, which is the user's own manual-verification flag.
 
 | Skill                 | Description                                                                                                                                                |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/mp-board-setup`     | One-time: create the vault board + `.mpx/BOARD.md` symlink and `.mpx/board-files` junction (both gitignored)                                                |
-| `/mp-board-to-issues` | Convert unchecked board notes → labelled GitHub issues (merge, dedup, size, AFK/HITL), marking each board item `[/] → #N`                                    |
-| `/mp-batch-execute`   | Autonomously implement a batch of AFK issues / a board section: sequential fix sub-agents on one branch, verify (checks + tests + code review via `/mp-review` + visual Playwright), one PR. `--full-review` / `--no-review` |
+| `/mp-board-setup`     | One-time: create the vault board (four-lane skeleton) + `.mpx/BOARD.md` symlink and `.mpx/board-files` junction (both gitignored)                           |
+| `/mp-board-to-issues` | Convert `# To Process` notes → labelled GitHub issues (merge, dedup, size, AFK/HITL), moving each item to `# Ready to implement` with `→ #N` appended       |
+| `/mp-batch-execute`   | Autonomously implement a batch of AFK issues / the board's To Process items: sequential fix sub-agents on one branch, verify (checks + tests + code review via `/mp-review` + visual Playwright), one PR, then move items to `# Manual testing`. `--full-review` / `--no-review` |
 
 ### Testing Skills
 

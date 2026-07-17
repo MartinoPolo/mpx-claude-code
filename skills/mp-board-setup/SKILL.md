@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: AskUserQuestion, PowerShell, Bash(git rev-parse *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: setup
 ---
 
@@ -31,7 +31,7 @@ Run the setup script with the resolved paths (PowerShell tool):
 The script is idempotent and:
 
 - enables `git core.symlinks` globally so Windows preserves real symlinks;
-- creates `<vault>\Boards\<project>.md` with the single `# To Process` intake section **only if it does not already exist** (never clobbers existing notes; lifecycle lanes are added later as work progresses);
+- creates `<vault>\Boards\<project>.md` with the four-lane skeleton (`# To Process`, `# Ready to implement`, `# Manual testing`, `# Archive`) **only if it does not already exist** (never clobbers existing notes);
 - creates the `.mpx/board-files` junction → `<vault>\Files` (no admin) and the `.mpx/BOARD.md` file symlink → the board;
 - appends `.mpx/BOARD.md` and `.mpx/board-files/` to `.gitignore`.
 

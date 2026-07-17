@@ -24,12 +24,17 @@ foreach ($d in @($boardsDir, $filesDir, $mpxDir)) {
   if (-not (Test-Path $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
 }
 
-# Board skeleton — a single `# To Process` intake section, written only when the board does
-# not already exist (never clobber notes). Lifecycle lanes (# MANUAL TESTING, # ARCHIVE) are
-# added later as items reach them, not seeded here.
+# Board skeleton — the four-lane pipeline, written only when the board does not already exist
+# (never clobber notes). Notes start under `# To Process`; skills move each item down the lanes.
 if (-not (Test-Path $board)) {
 @'
 # To Process
+
+# Ready to implement
+
+# Manual testing
+
+# Archive
 '@ | Set-Content -Path $board -Encoding utf8
   Write-Host "created board: $board"
 } else {
