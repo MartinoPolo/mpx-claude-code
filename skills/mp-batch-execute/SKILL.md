@@ -2,10 +2,10 @@
 name: mp-batch-execute
 description: 'Autonomously implement a batch of small issues (or the board''s To Process items) end to end: select AFK issues by range/list/label, fix each in a sequential sub-agent on one shared branch, verify with checks + tests + code review + visual Playwright, write results back to the board, and open one PR. Use when: "batch execute", "execute issues", "fix issues in bulk", "run the board", "execute range"'
 argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-review | --no-review]'
-allowed-tools: Read, Edit, Agent, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
+allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.7"
   category: project-management
 ---
 
@@ -16,7 +16,7 @@ Orchestrate a batch of small fixes: this session is the Opus orchestrator; each 
 ## Rules
 
 - **One issue per fix sub-agent, sequential, on one shared branch** — all agents share the working tree, so parallel commits race the git index. (`--parallel` uses isolated worktrees instead; see REFERENCE.md.)
-- **Skip HITL** — implement only `AFK` issues; report every issue skipped and why.
+- **Gate `HITL` / `design needed`** — if the selection catches issues with either label and the user's filter didn't explicitly target that label (e.g. `label:design needed`), stop **before implementing anything** and `AskUserQuestion`: skip them / include anyway / run the design phase (mockup + refine) first. Only an explicit label filter proceeds without asking. Report every issue skipped and why.
 - **Never change a test just to make it pass** — fix the implementation, or the test only when it contradicts the acceptance criteria.
 - This skill encodes the **policy**; concrete check/test/Playwright commands come from the project's `AGENTS.md` / memory, not from here.
 
@@ -25,7 +25,7 @@ Orchestrate a batch of small fixes: this session is the Opus orchestrator; each 
 Parse `$ARGUMENTS`:
 
 - `#100-150` (range), `#136,140` (list), `label:<x>` → **issue mode** (GitHub issues).
-- `board` → **board-direct mode** (implement the unchecked `# To Process` items that have no GitHub issue), per BOARD_CONVENTION.
+- `board` → **board-direct mode** (implement the `# To Process` items that have no GitHub issue), per BOARD_CONVENTION.
 - optional `size:<S|M|L>` → filter the work list.
 
 ## Step 2: Build the work list
@@ -36,9 +36,9 @@ Parse `$ARGUMENTS`:
 gh issue list --state open --json number,title,labels,body,url
 ```
 
-Keep issues in the requested range/list/label; then filter client-side: keep `AFK`, drop `HITL` (collect the skipped list), drop blocked issues (parse `## Blocking Relationships` for open `Blocked by #N`), apply the `size:` filter.
+Keep issues in the requested range/list/label; then filter client-side: keep `AFK`, but route anything labeled `HITL` or `design needed` through the gate in Rules first (`design needed` issues carry `AFK` too — the gate still applies; collect the skipped list); drop blocked issues (parse `## Blocking Relationships` for open `Blocked by #N`), apply the `size:` filter.
 
-**Board-direct mode** — read `.mpx/BOARD.md`, collect unchecked items under `# To Process`, and read each `![[...]]` image from `.mpx/board-files/`.
+**Board-direct mode** — read `.mpx/BOARD.md`, collect items under `# To Process` (the checkbox is the user's manual-verification flag, not a work signal — don't filter on it), and read each `![[...]]` image from `.mpx/board-files/`. In issue mode, the corresponding board items sit under `# Ready to implement` (moved there by `mp-board-to-issues`).
 
 Create one `TaskCreate` entry per work item for visible progress.
 
@@ -91,7 +91,7 @@ For UI-changed surfaces, run **raw-Playwright** visual verification with the **s
 
 ## Step 6: Write back to the board
 
-For each successfully implemented item, `Edit` `.mpx/BOARD.md`: change the marker to `- [x]` and **move** the item under `# MANUAL TESTING` (create that heading at the board's end if it doesn't exist yet). Match the board item by its ` → #<N>` annotation (issue mode) or by item text (board-direct). Leave `# ARCHIVE` for the user. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
+For each successfully implemented item, `Edit` `.mpx/BOARD.md` to **move** the item under `# Manual testing` (create that heading if it's missing). **Leave the checkbox marker as `- [ ]` — never write `- [x]`; the checkbox is the user's alone, set only when they manually verify the fix before moving it to `# Archive`.** Match the board item by its ` → #<N>` annotation (issue mode, moving it out of `# Ready to implement`) or by item text (board-direct, moving it out of `# To Process`). (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
 
 ## Step 7: One PR
 
@@ -103,4 +103,4 @@ If running inside a git worktree, sync the main worktree afterward (see REFERENC
 
 ## Report
 
-List: implemented (issue/commit), skipped HITL/blocked, verify results (checks, tests, review findings + fixes, visual per surface), board items moved to `# MANUAL TESTING`, and the PR URL.
+List: implemented (issue/commit), skipped `HITL`/`design needed`/blocked (with the gate decision), verify results (checks, tests, review findings + fixes, visual per surface), board items moved to `# Manual testing`, and the PR URL.
