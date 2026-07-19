@@ -57,7 +57,7 @@ Spawn `mp-pr-manager` sub-agent with:
 
 ## PR Rules
 
-PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
+PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, dangerous-command-guard).
 
 ## Troubleshooting
 

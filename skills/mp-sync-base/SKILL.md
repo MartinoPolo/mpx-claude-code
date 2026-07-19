@@ -1,10 +1,10 @@
 ---
 name: mp-sync-base
 description: 'Merge target branch into current branch. Use when: "sync with main", "merge dev into branch", "update from main"'
-allowed-tools: Bash(git *), Agent, Read, Edit, Bash(gh *)
+allowed-tools: Bash(git *), Agent, Read, Edit, Bash(gh *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "1.2"
   category: git-workflow
 ---
 
@@ -20,16 +20,9 @@ Merge a target branch into the current branch. $ARGUMENTS
 
 If `$ARGUMENTS` provides a branch → use it.
 
-Otherwise, spawn `mp-base-branch-detector` sub-agent:
+Otherwise, run `node $HOME/.claude/scripts/detect-base-branch.js` to detect the target branch deterministically (priority: `dev > develop > main > master`, checked against `origin/<branch>`; falls back to `main`).
 
-- Explicit base branch: none
-- Remote branches: output of `git branch -r`
-
-**Based on result:**
-
-- **Branch returned** → use it, display to user
-- **Null with candidates** → ask user to pick from candidates
-- **Null without candidates** → ask user to specify manually
+Display the returned branch to the user.
 
 ### Step 2: Pre-merge Checks
 

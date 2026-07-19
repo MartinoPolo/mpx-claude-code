@@ -1,6 +1,6 @@
 ---
 name: mp-playwright-test
-description: 'Visually verify UI changes with reliable raw Playwright over a scope you define: uncommitted changes, the current PR, or a verbally described area of the app. Discovers the project runner/auth/port, ensures a fresh dev server, and reports a per-surface PASS/FAIL table with measured values and screenshots. Use when: "playwright test", "visually verify", "test the UI changes", "screenshot the changed pages", "verify the current PR in the browser"'
+description: 'Visually verifies UI changes with raw Playwright over a defined scope, reporting a per-surface PASS/FAIL table with screenshots. Use when: "playwright test", "visually verify"'
 argument-hint: "[uncommitted | pr | <area of the app>]"
 allowed-tools: Read, Grep, Glob, Agent, Bash(git *), Bash(gh *)
 metadata:

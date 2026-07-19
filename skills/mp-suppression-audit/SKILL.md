@@ -1,16 +1,11 @@
 ---
 name: mp-suppression-audit
-description: >-
-  Repository-wide audit of code quality suppressions and config rule changes.
-  Finds eslint-disable, fallow-ignore, svelte-ignore, @ts-ignore, and disabled
-  rules in configs. Evaluates each suppression — fix it if a simple solution
-  exists, keep it if justified. Creates a PR with all fixes.
-  Use when: "audit suppressions", "check suppressions", "suppression audit",
-  "find disabled rules", "lint suppression review", "code quality audit"
+description: 'Repository-wide audit of code quality suppressions (eslint-disable, fallow-ignore, ts-ignore) that fixes unjustified ones and opens a PR. Use when: "audit suppressions", "suppression audit"'
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: code-quality
 ---
 
@@ -33,7 +28,7 @@ Audit all code quality suppressions and lint config rule changes across the repo
 
 ### Step 1: Detect Check Commands
 
-Spawn `mp-checks-detector` sub-agent to discover available check scripts. Store the returned command plan for Step 5.
+Run `bash $HOME/.claude/scripts/detect-check-scripts.sh` (optionally pass a project dir as arg) to discover available check scripts. It prints `KEY=value` pairs (e.g. `CHECK_ALL=...`, `TYPECHECK=...`, `LINT=...`, `FORMAT=...`, `TEST=...`, `TEST_E2E=...`, plus `_DIR` companions and `MONOREPO=true` when applicable). Parse these and store the resulting command plan for Step 5.
 
 ### Step 2: Scan for All Suppressions
 

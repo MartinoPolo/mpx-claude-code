@@ -2,10 +2,11 @@
 name: mp-harvest-decisions
 description: 'Scan recent Claude Code sessions for grilling/design discussions, extract decisions, and update CONTEXT.md + DECISIONS.md. Use when: "harvest decisions", "extract decisions from sessions", "update docs from sessions", "sync decisions"'
 argument-hint: "[days back to scan, default 30]"
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "1.2"
   category: planning
 ---
 
@@ -24,7 +25,7 @@ Scan Claude Code session transcripts for grilling and design-refinement discussi
 
 Search session JSONL files for actual skill invocations — not just mentions in available-skills lists.
 
-**Primary signal** (high confidence): `"name":"Skill"` paired with `"mp-grill"` or `"gk-design-brief"` or `"gk-design-refine"` in the same file.
+**Primary signal** (high confidence): `"name":"Skill"` paired with `"mp-grill"` or `"mp-hitl"` or `"mp-architecture-review"` in the same file.
 
 **Secondary signal** (check if primary yields <5 results): Look for `AskUserQuestion` tool calls with option arrays containing design/architecture decisions.
 

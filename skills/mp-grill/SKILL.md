@@ -1,6 +1,6 @@
 ---
 name: mp-grill
-description: 'Interview the user relentlessly about a plan, design, or requirements until reaching shared understanding. Auto-detects project docs and updates them with decisions. Use when: "grill me", "grill requirements", "grilling"'
+description: 'Interviews the user relentlessly about a plan, design, or requirements until reaching shared understanding, updating project docs with decisions. Use when: "grill me", "grill requirements"'
 argument-hint: "[topic, requirements text, or path to requirements file]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:

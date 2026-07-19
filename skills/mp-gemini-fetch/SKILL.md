@@ -16,7 +16,7 @@ Fetches content from websites that Claude cannot directly access using Gemini CL
 
 ## Prerequisites
 
-- Gemini CLI must be installed: `npm install -g @anthropic/gemini-cli` or equivalent
+- Gemini CLI must be installed: `npm install -g @google/gemini-cli` or equivalent
 - Gemini must be authenticated (run `gemini auth` first)
 
 ## Usage

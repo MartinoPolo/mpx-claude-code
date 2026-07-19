@@ -1,6 +1,6 @@
 ---
 name: mp-board-to-issues
-description: 'Convert Obsidian board notes (with pasted screenshots) into GitHub issues: read items from the board''s single To Process lane, infer each note''s type (bug/task/enhancement) from its content, merge related notes and dedup against existing issues, estimate size, classify AFK/HITL, create labelled issues, and move each item to # Ready to implement with its issue number appended (leaving the checkbox untouched). Use when: "board to issues", "convert board", "notes to issues", "board notes to github"'
+description: 'Converts Obsidian board notes from the To Process lane into labelled GitHub issues, deduping against existing ones and moving each to Ready to implement. Use when: "board to issues", "convert board"'
 argument-hint: "[optional guidance]"
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:

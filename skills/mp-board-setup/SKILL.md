@@ -1,6 +1,6 @@
 ---
 name: mp-board-setup
-description: 'Set up an Obsidian board for this project and link it into the repo so agents can read requirements and pasted screenshots: creates the vault board file with the section skeleton, the .mpx/BOARD.md symlink + .mpx/board-files junction, and gitignores both. Use when: "set up board", "board setup", "init board", "create board"'
+description: 'Sets up an Obsidian board for this project, linking it into the repo via a BOARD.md symlink so agents can read requirements and screenshots. Use when: "set up board", "board setup"'
 argument-hint: "[vault-root]"
 disable-model-invocation: true
 allowed-tools: AskUserQuestion, PowerShell, Bash(git rev-parse *)

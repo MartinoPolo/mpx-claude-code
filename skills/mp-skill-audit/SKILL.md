@@ -1,10 +1,11 @@
 ---
 name: mp-skill-audit
 description: 'Audit all active skills for consistency, convention drift, and common issues. Auto-fixes where possible, reports remaining issues. Use when: "audit skills", "skill audit", "check skills", "lint skills"'
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 
@@ -16,7 +17,7 @@ When invoked from `mp-skill-create`, pass the single skill path as `$ARGUMENTS`.
 
 ## Step 1: Discover Skills
 
-Glob for `skills/*/SKILL.md`. Exclude `skills/deprecated/`.
+Glob for `skills/*/SKILL.md`.
 
 If `$ARGUMENTS` is a skill name or path, audit only that skill.
 

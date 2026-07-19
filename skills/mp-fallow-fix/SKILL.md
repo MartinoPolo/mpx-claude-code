@@ -1,6 +1,7 @@
 ---
 name: mp-fallow-fix
-description: "Diagnose and fix fallow dead-code or audit failures. Use when: fallow check fails, dead-code regression detected, unused exports/types found, or agent needs to suppress/baseline fallow findings. Also use when working with code quality suppressions (@public, fallow-ignore)."
+description: 'Diagnoses and fixes fallow dead-code or audit failures, suppressing or baselining findings when justified. Use when: "fallow check fails", "dead-code regression detected"'
+disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash(*fallow*), Bash(pnpm *fallow*), Bash(git diff*), Bash(git log*)
 metadata:
   author: MartinoPolo

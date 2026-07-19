@@ -1,6 +1,6 @@
 ---
 name: mp-continue
-description: 'Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then continues where the session left off. Use when: "continue", "resume after limit", "pick up where we left off", "recover the interrupted agents"'
+description: 'Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then resumes where the session left off. Use when: "continue", "resume after limit"'
 argument-hint: "[optional focus or task to resume first]"
 allowed-tools: Agent, SendMessage, TaskList, Bash, Read, Grep, Glob
 metadata:

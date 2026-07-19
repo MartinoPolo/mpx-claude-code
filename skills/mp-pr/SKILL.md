@@ -1,6 +1,6 @@
 ---
 name: mp-pr
-description: 'Create or update PR from existing commits. Use when: "create PR", "open pull request", "make a PR", "update PR"'
+description: 'Creates or updates a pull request on GitHub from the commits already on the current branch, detecting the base branch automatically. Use when: "create PR", "open pull request"'
 allowed-tools: Agent, Bash(gh pr *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
@@ -51,7 +51,7 @@ Up to 2 retry attempts. If still failing → report error to user and stop.
 
 ## PR Rules
 
-PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, gh-transform, dangerous-command-guard).
+PR title and body format governed by `agents/mp-pr-manager.md`. Git/PR conventions enforced by hooks (pre-commit-gate, dangerous-command-guard).
 
 ## Troubleshooting
 

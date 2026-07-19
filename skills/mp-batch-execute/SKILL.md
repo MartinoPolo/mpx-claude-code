@@ -1,6 +1,6 @@
 ---
 name: mp-batch-execute
-description: 'Autonomously implement a batch of small issues (or the board''s To Process items) end to end: select AFK issues by range/list/label, fix each in a sequential sub-agent on one shared branch, verify with checks + tests + code review + visual Playwright, write results back to the board, and open one PR. Use when: "batch execute", "execute issues", "fix issues in bulk", "run the board", "execute range"'
+description: 'Autonomously implements a batch of small AFK issues end to end in sequential sub-agents on one shared branch, then opens a single PR. Use when: "batch execute", "execute issues"'
 argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-review | --no-review]'
 allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:

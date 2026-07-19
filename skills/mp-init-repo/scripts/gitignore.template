@@ -76,3 +76,8 @@ jest-cache/
 
 # Backup folders
 **/backup/
+
+# Claude Code local files
+.claude/CLAUDE.local.md
+.claude/settings.local.json
+.claude/*.local.*

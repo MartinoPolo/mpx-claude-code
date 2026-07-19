@@ -2,10 +2,10 @@
 name: mp-review
 description: 'Review code with configurable scope and autofix. Use when: "review scope branch", "review changes", "review pr #123 autofix"'
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
-allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *)
+allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: code-review
 ---
 
@@ -63,8 +63,8 @@ Default coverage: `full`
 #### Branch scope
 
 1. Determine current branch (`git branch --show-current`)
-2. Spawn `mp-base-branch-detector` sub-agent with remote branches and optional user hint
-3. If detector returns ambiguous/null, ask the user
+2. Run `node $HOME/.claude/scripts/detect-base-branch.js [explicit-branch]` (pass user hint as arg if given). It checks `origin/<branch>` existence and commits-ahead for `dev > develop > main > master` and prints one branch name to stdout (falls back to `main`).
+3. Use the printed branch as `<base>`
 4. Build diff scope: `<base>...HEAD` using `git diff <base>...HEAD`
 
 #### Changes scope

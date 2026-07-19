@@ -1,7 +1,8 @@
 ---
 name: mp-yoursafe-overview
-description: 'Re-read every Yoursafe/Verotel onboarding resource (wiki mirror, Obsidian notes, Slack summary, local repos, onboarding scripts) plus fresh live snapshots of the local Docker stack and the dev.app remote box, then regenerate the self-contained HTML onboarding reference. Use when: "update yoursafe overview", "refresh onboarding doc", "regenerate yoursafe reference", "rebuild the yoursafe onboarding page"'
+description: 'Re-reads every Yoursafe/Verotel onboarding resource plus fresh live snapshots, then regenerates the self-contained HTML onboarding reference. Use when: "update yoursafe overview", "refresh onboarding doc"'
 argument-hint: "[optional: 'skip-live' to reuse the existing local + dev.app snapshots]"
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, SendUserFile
 metadata:
   author: MartinoPolo
