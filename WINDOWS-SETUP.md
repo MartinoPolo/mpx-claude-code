@@ -47,11 +47,14 @@ mklink /J "%DEST%\rules"        "%REPO%\rules"
 mklink /J "%DEST%\scripts"      "%REPO%\scripts"
 mklink /J "%DEST%\skills"       "%REPO%\skills"
 mklink /J "%DEST%\sounds"       "%REPO%\sounds"
+mklink /J "%DEST%\templates"    "%REPO%\templates"
 
 :: File symlinks (or use mklink /H for hard links without admin)
-mklink "%DEST%\AGENTS.md"      "%REPO%\instructions\AGENTS.md"
-mklink "%DEST%\CLAUDE.md"      "%REPO%\instructions\CLAUDE.md"
-mklink "%DEST%\settings.json"  "%REPO%\settings.json"
+mklink "%DEST%\AGENTS.md"           "%REPO%\instructions\AGENTS.md"
+mklink "%DEST%\CLAUDE.md"           "%REPO%\instructions\CLAUDE.md"
+mklink "%DEST%\settings.json"       "%REPO%\settings.json"
+mklink "%DEST%\settings.local.json" "%REPO%\settings.local.json"
+mklink "%DEST%\WINDOWS-SETUP.md"    "%REPO%\WINDOWS-SETUP.md"
 ```
 
 ## Multiple Accounts Side-by-Side (Personal + Work)
@@ -65,7 +68,7 @@ Run two permanently-logged-in Claude Code accounts at once — one per terminal 
 
 ### Shared vs per-account
 
-- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions rules scripts skills sounds`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
+- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions rules scripts skills sounds templates`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
 - **Per-account** (real files, independent): `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, `plugins/`, caches, telemetry.
 
 > `settings.local.json` is centralized at the **repo root** and symlinked into both config dirs. It stays git-ignored (`*.local.json`) — a local single source of truth, not version-controlled (it holds machine paths).
@@ -80,7 +83,7 @@ $work = "$HOME\.claude-work"
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 # Directory junctions (no admin)
-"agents","assets","hooks","instructions","rules","scripts","skills","sounds" | ForEach-Object {
+"agents","assets","hooks","instructions","rules","scripts","skills","sounds","templates" | ForEach-Object {
   New-Item -ItemType Junction -Path "$work\$_" -Target "$repo\$_"
 }
 
@@ -213,6 +216,7 @@ New-Item -ItemType SymbolicLink -Path "C:\projects\<project>\.claude\rules\<rule
 New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\shadcn-svelte.md" -Target "C:\projects\mpx-claude-code\rules-per-project\shadcn-svelte.md"
 New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\svelte-context.md" -Target "C:\projects\mpx-claude-code\rules-per-project\svelte-context.md"
 New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\sveltekit-paths.md" -Target "C:\projects\mpx-claude-code\rules-per-project\sveltekit-paths.md"
+New-Item -ItemType SymbolicLink -Path "C:\projects\my-app\.claude\rules\sveltekit-dev-warmup.md" -Target "C:\projects\mpx-claude-code\rules-per-project\sveltekit-dev-warmup.md"
 ```
 
 ### Verifying

@@ -87,7 +87,7 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
          ┌─────────────────────────▼──────────────────────────────────────┐
          │ 5) Review + Check Loop (up to 3 iterations)                   │
          │   parallel: mp-checker + 3 reviewers                           │
-         │   --hard-gate adds: security + performance + error-handling    │
+         │   --full-review adds: security + performance + error-handling  │
          │   findings/confidence > 65 -> mp-executor fixes -> re-run      │
          └─────────────────────────┬──────────────────────────────────────┘
                                       │
@@ -109,11 +109,6 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                         ┌────────────▼────────────┐
                         │ 9) Push + PR            │  issues only,
                         │                         │  create or update PR
-                        └────────────┬────────────┘
-                                      │
-                        ┌────────────▼────────────┐
-                        │ 10) Finalization        │  optional --docs ->
-                        │                         │  mp-docs-updater
                         └─────────────────────────┘
 ```
 
@@ -127,9 +122,8 @@ Pipeline summary:
 6. Run conditional frontend verification with `mp-playwright-tester`
 7. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
 8. Commit, then push and create/update PR (issues only)
-9. Finalize and optionally run docs sync with `--docs` (Step 10)
 
-**Flags:** `--no-tdd` skips TDD for trivial work, `--hard-gate` adds security/performance/error-handling reviewers (6 total), `--dry-run` analyzes without implementing, `--docs` runs docs sync during finalization.
+**Flags:** `--no-tdd` skips TDD for trivial work, `--full-review` adds security/performance/error-handling reviewers (6 total), `--no-review` skips reviewer sub-agents, `--no-auto-merge` leaves the PR open instead of auto-merging after CI is green.
 
 **TDD principles:** tests are still mandatory by default. `mp-execute` now delegates TDD execution to `mp-tdd-executor`, which enforces red-before-green and minimal implementation. See `skills/mp-execute/` for [test quality](skills/mp-execute/tests.md), [mocking strategy](skills/mp-execute/mocking.md), [deep modules](skills/mp-execute/deep-modules.md), and [interface design](skills/mp-execute/interface-design.md).
 
@@ -166,6 +160,7 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 | `/mp-vocabulary`   | Create/update `.mpx/CONTEXT.md` § Domain Language — canonical domain terms, aliases, relationships |
 | `/mp-issue-create` | Create well-structured GitHub issues (feature, chore, docs) with codebase context                  |
 | `/mp-bug-report`   | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs          |
+| `/mp-prd-review`   | Comprehensive PRD-end review: code quality, architecture, cleanup, docs, unresolved items           |
 
 ### Execution Skills
 
@@ -232,8 +227,11 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | `/mp-pr`             | Create or update PR from existing commits (`draft` arg optional)      |
 | `/mp-commit-push-pr` | Full workflow — commit, push, create/update PR (`draft` arg optional) |
 | `/mp-sync-base`      | Merge target branch into current branch                               |
+| `/mp-ship`           | Ship finished work: sync base, commit, push, PR, wait for CI green, merge |
 
 ### Deprecated Skills
+
+Retired skills and agents are archived (not deleted) under [`deprecated/`](deprecated/) — `deprecated/skills/` and `deprecated/agents/` — for history/reference. They are not installed and not runnable as-is. Highlights:
 
 | Skill                          | Description                             |
 | ------------------------------ | --------------------------------------- |
@@ -241,6 +239,8 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | `/mp-grill-me`                 | Superseded by `/mp-grill`               |
 | `/mp-grill-requirements`       | Superseded by `/mp-grill`               |
 | `/mp-consolidate-requirements` | Superseded by `/mp-consolidate-context` |
+
+See `deprecated/skills/` for the full list of retired skills and `deprecated/agents/` for retired agents.
 
 ### Setup Skills
 
@@ -261,12 +261,13 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
+| `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
 
 ## Agents
 
 | Agent                       | Model  | Description                                                                 |
 | --------------------------- | ------ | --------------------------------------------------------------------------- |
-| mp-executor                 | Opus   | Executes grouped task chunks                                                |
+| mp-executor                 | Sonnet | Executes grouped task chunks                                                |
 | mp-issue-analyzer           | Opus   | Analyzes issues and codebase, creates execution plans                       |
 | mp-issue-finder             | Haiku  | Finds issue matching a PR branch                                            |
 | mp-tdd-executor             | Opus   | Executes strict TDD red-green-refactor loops for behaviors                  |
@@ -274,14 +275,17 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | mp-playwright-tester        | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)       |
 | mp-checker                  | Haiku  | Runs check commands and reports failures                                    |
 | mp-context7-docs-fetcher    | Haiku  | Fetches library docs via Context7 MCP                                       |
-| mp-docs-updater             | Sonnet | Updates docs after workflow/system changes                                  |
+| mp-git-committer            | Haiku  | Stages, commits, and optionally pushes with conventional commit format      |
+| mp-pr-manager               | Haiku  | Creates or updates GitHub PRs with conventional title/body format           |
 | mp-unresolved-issue-tracker | Sonnet | Routes unresolved implementation items to sibling issues or tracking issue  |
 | mp-reviewer-best-practices  | Sonnet | Best practices and conventions reviewer (with language-specific references) |
 | mp-reviewer-code-quality    | Sonnet | DRY, naming, maintainability reviewer                                       |
 | mp-reviewer-error-handling  | Sonnet | Error handling and resilience reviewer                                      |
 | mp-reviewer-performance     | Sonnet | Performance reviewer                                                        |
-| mp-reviewer-security        | Sonnet | Security reviewer (OWASP-focused)                                           |
+| mp-reviewer-security        | Sonnet | Security reviewer (OWASP-focused)                                          |
 | mp-reviewer-spec-alignment  | Sonnet | Spec compliance and scope reviewer                                          |
+| mp-reviewer-test-quality    | Sonnet | Test correctness, anti-patterns, redundancy, and mocking discipline reviewer|
+| mp-scanner-architecture     | Sonnet | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
 
@@ -305,14 +309,15 @@ Hook scripts in `hooks/` run automatically during Claude Code lifecycle events. 
 | ---------------------------- | ------------------------ | -------------------------------------------------------------------------- |
 | `enforce-pkg-mgr.js`         | PreToolUse (Bash)        | Blocks wrong package manager commands (detects from lockfile)              |
 | `pre-commit-gate.js`         | PreToolUse (Bash)        | Runs `check:all` (Vite Plus) or typecheck before git commits               |
-| `dangerous-command-guard.js` | PreToolUse (Bash)        | Blocks dangerous git commands (force push, reset --hard, clean, branch -D) |
-| `gh-transform.js`            | PreToolUse (Bash)        | Transforms GitHub API calls for compatibility                              |
+| `dangerous-command-guard.js` | PreToolUse (Bash)        | Blocks broad `rm -rf`, force-push to main/master, `git clean -fdx`, SQL DROP/TRUNCATE, fork bombs, and other irreversible commands |
+| `fallow-gate.js`             | PreToolUse (Bash)        | Blocks `git commit`/`git push` when the fallow audit verdict is fail       |
 | `format-lint-file.js`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files (Vite Plus/Biome/Prettier/ESLint/Ruff) |
 | `post-bash-context.js`       | PostToolUse (Bash)       | Enriches context after bash commands                                       |
 | `notify-flash-beep.ps1`      | Stop                     | Flashes taskbar + plays notification sound (Windows)                       |
 | `compact-context.js`         | SessionStart (compact)   | Re-injects project context after context compaction                        |
+| `herdr-agent-state.ps1`      | SessionStart (*)         | Reports session state to the herdr integration (no-op unless `HERDR_ENV=1`) |
 
-Hooks auto-detect the project toolchain (`vite-plus` | `biome` | `classic`) via `shared.js` and branch behavior accordingly. All hooks include test suites in `hooks/__tests__/`.
+Hooks auto-detect the project toolchain (`vite-plus` | `biome` | `classic`) via `shared.js` and branch behavior accordingly. 4 of the 9 hook scripts have test suites in `hooks/__tests__/` (`dangerous-command-guard`, `enforce-pkg-mgr`, `post-bash-context`, `pre-commit-gate`); the rest do not.
 
 **Custom notification sound:** place a `.wav` file at `~/.claude/sounds/notify.wav` — falls back to a two-note console beep if missing.
 
@@ -350,7 +355,7 @@ Configured via `scripts/context-bar.sh`.
 
 **Report file:** `REVIEW.md` (project root, actionable checklist). Only created when findings exist.
 
-**6 review dimensions** (via parallel sub-agents): code quality, best practices, spec alignment, security (OWASP), performance, error handling. `partial` mode runs 3 (quality, best practices, spec alignment). Each reviewer loads language-specific references when applicable.
+**7 review dimensions** (via parallel sub-agents, `full` coverage): code quality, best practices, spec alignment, test quality, security (OWASP), performance, error handling. `partial`/`half` coverage runs 4 (code quality, best practices, spec alignment, test quality). Each reviewer loads language-specific references when applicable.
 
 **Confidence scoring** (0-100): >80 must fix, 66-80 should address, 40-65 worth reviewing, <40 minor/stylistic.
 
