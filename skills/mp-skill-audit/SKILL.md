@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: utility
 ---
 
@@ -23,7 +23,7 @@ If `$ARGUMENTS` is a skill name or path, audit only that skill.
 
 ## Step 2: Run Checks (per skill)
 
-Spawn parallel Sonnet sub-agents, each auditing 3-5 skills. Each agent runs all 8 checks against each skill and returns findings.
+Spawn parallel Sonnet sub-agents, each auditing 3-5 skills. Each agent runs all 12 checks against each skill and returns findings. Check 12 runs once repo-wide, in the main session.
 
 ### Check 1: Positive Instructions
 
@@ -33,7 +33,7 @@ For each match, evaluate: is there a clear positive reframing? If yes → auto-f
 
 ### Check 2: SKILL.md Line Count
 
-Count lines. Flag if over 200. Suggest content to move to REFERENCE.md.
+Run `wc -l <skill>/SKILL.md`. Flag if over 200. Suggest content to move to REFERENCE.md.
 
 ### Check 3: Frontmatter Completeness
 
@@ -72,6 +72,22 @@ Verify the skill requires user confirmation with full proposed text before writi
 ### Check 8: Description Matches Behavior
 
 Compare the `description` field to the skill body. Flag if the description claims capabilities the body doesn't implement, or if the body does things the description doesn't mention.
+
+### Check 9: Spawned Agent Types Exist
+
+For skills with `Agent` in `allowed-tools`: grep the body for spawned agent type names (`grep -oE 'mp-[a-z0-9-]+' SKILL.md` plus explicitly named types like `general-purpose`). Each spawned type must match a file `agents/<type>.md` or a built-in: `general-purpose`, `Explore`, `Plan`. Flag unknown types.
+
+### Check 10: allowed-tools Paths Exist
+
+Extract path-like tokens from `allowed-tools` entries (containing `/` or ending in `.sh`, `.js`, `.ps1`, `.md`). Resolve `$HOME/.claude/` to the repo root, strip glob wildcards, Glob each remaining path. Flag entries whose file is missing on disk.
+
+### Check 11: Dead allowed-tools Grants
+
+For each `allowed-tools` entry, grep the skill body for its usage token: plain tool grants (`Write`, `AskUserQuestion`, `Agent`) → an instruction must actually use that tool; `Bash(<cmd> *)` grants → grep body for `<cmd>`. Flag entries with no matching usage.
+
+### Check 12: README Table Sync
+
+Runs once for the repo. Glob `skills/*/SKILL.md`, `agents/*.md`, `hooks/*` and diff each file list against the corresponding README.md table rows. Flag rows whose file is gone, files on disk with no row, and renamed entries (row and file differ by name only). Report only — README edits stay manual.
 
 ## Step 3: Auto-Fix
 

@@ -10,6 +10,8 @@ metadata:
   category: planning
 ---
 
+# Vocabulary
+
 ### Process
 
 **Step 1: Gather terms**

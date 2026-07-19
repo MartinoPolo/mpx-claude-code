@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: code-review
 ---
 
@@ -32,13 +32,13 @@ Parse `$ARGUMENTS` as file/s or folder/s scope, then build meaningful module gro
 
 Rules:
 
-- Always spawn sub-agents for execution
+- Always spawn sub-agents for execution (agent types named in Steps 2-3)
 - If scope is a single folder, still create at least one grouped module context
 - If scope is a single file, expand to nearest logical module group (not file-only review)
 
 ### Step 2: Spawn Review Subagents per Group
 
-For each file group, spawn a review sub-agent.
+For each file group, spawn a `general-purpose` review sub-agent (finding duplication and judging risk needs judgment).
 
 Use this exact review prompt shape:
 
@@ -68,7 +68,7 @@ Required output:
 
 ### Step 3: Spawn Fix Subagents per Group
 
-For each reviewed group, spawn a fix sub-agent with approved findings.
+For each reviewed group, spawn an `mp-executor` sub-agent with approved findings. `mp-executor` runs Sonnet — the prompt must carry the full pre-analyzed plan with exact files and concrete changes, leaving only mechanical application. If a finding still needs judgment (unclear plan, cross-module tradeoffs), use a `general-purpose` sub-agent for that group instead.
 
 Use this exact fix prompt shape:
 
