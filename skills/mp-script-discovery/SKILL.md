@@ -3,16 +3,16 @@ name: mp-script-discovery
 description: 'Discover runnable scripts across package.json files and identify frontend/backend/database run commands. Use when: "find scripts", "how to run app", "detect dev server"'
 argument-hint: "[project-dir]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(bash $HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh*), Bash(cat *), Bash(node *)
+allowed-tools: Read, Glob, Grep, Bash(bash $HOME/.claude/scripts/detect-project-scripts.sh*), Bash(cat *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: utility
 ---
 
 # Script Discovery
 
-Wrap `$HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
+Wrap `$HOME/.claude/scripts/detect-project-scripts.sh`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
 
 ## Goal
 
@@ -27,7 +27,7 @@ Wrap `$HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh
 Script path:
 
 ```bash
-SCRIPT_DETECTOR="$HOME/.claude/skills/mp-script-discovery/scripts/detect-project-scripts.sh"
+SCRIPT_DETECTOR="$HOME/.claude/scripts/detect-project-scripts.sh"
 bash "$SCRIPT_DETECTOR"
 ```
 

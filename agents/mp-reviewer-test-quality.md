@@ -8,6 +8,8 @@ color: magenta
 
 # Reviewer: Test Quality
 
+First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+
 Evaluate new/modified test files for correctness, anti-patterns, and redundancy.
 For each test file in scope, also read the corresponding source file to understand public API vs internals.
 
@@ -48,13 +50,6 @@ Mock at system boundaries only. Decision rule: "Can I swap this dependency in pr
 - Does a new test duplicate an existing test in the same or another file?
 - Could multiple tests with identical setup consolidate into fewer, clearer tests?
 
-## Output
+## Role Note
 
-Before flagging, read the source file under test. Verify the issue is real — confirm the test actually couples to internals, or actually duplicates another. Only report issues with HIGH confidence.
-
-It's ok to report nothing if the tests are solid. Focus on actionable, specific feedback.
-
-## Output format per issue
-
-`[Critical|Important|Minor] title - file:line`
-`What & Why` + [optionally]`Suggested fix`
+Before flagging, read the source file under test — confirm the test actually couples to internals, or actually duplicates another.

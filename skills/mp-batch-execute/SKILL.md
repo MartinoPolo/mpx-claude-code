@@ -11,7 +11,7 @@ metadata:
 
 # mp-batch-execute
 
-Orchestrate a batch of small fixes: this session is the Opus orchestrator; each fix runs in a Sonnet sub-agent. See [BOARD_CONVENTION.md](../shared/BOARD_CONVENTION.md) for the board write-back, [PLAYWRIGHT_TESTING.md](../shared/PLAYWRIGHT_TESTING.md) for the visual verify contract, and [REFERENCE.md](REFERENCE.md) for the experimental `--parallel` worktree mode. $ARGUMENTS
+Orchestrate a batch of small fixes: this session is the Opus orchestrator; each fix runs in a Sonnet sub-agent. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board write-back format and lane layout. See `${CLAUDE_SKILL_DIR}/REFERENCE.md` for the experimental `--parallel` worktree mode. $ARGUMENTS
 
 ## Rules
 
@@ -87,7 +87,7 @@ Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent 
 
 ### 5c. Visual verification
 
-For UI-changed surfaces, run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST** ([PLAYWRIGHT_TESTING.md](../shared/PLAYWRIGHT_TESTING.md)), in fix-list order. Fix failures via a Sonnet fix sub-agent, up to 3 iterations; still failing → **hard blocker**.
+For UI-changed surfaces: Read `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` now, then run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST**, in fix-list order. Fix failures via a Sonnet fix sub-agent, up to 3 iterations; still failing → **hard blocker**.
 
 ## Step 6: Write back to the board
 

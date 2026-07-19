@@ -38,10 +38,12 @@ Repeat until all behaviors are covered.
 
 ## TDD Principles
 
-- [Good vs bad tests](../skills/mp-execute/tests.md)
-- [When to mock](../skills/mp-execute/mocking.md)
-- [Deep modules](../skills/mp-execute/deep-modules.md)
-- [Interface design for testability](../skills/mp-execute/interface-design.md)
+Read these via Bash when needed:
+
+- `cat $HOME/.claude/skills/mp-execute/tests.md` — good vs bad tests
+- `cat $HOME/.claude/skills/mp-execute/mocking.md` — when to mock
+- `cat $HOME/.claude/skills/shared/deep-modules.md` — deep modules
+- `cat $HOME/.claude/skills/shared/interface-design.md` — interface design for testability
 
 ## Rules
 

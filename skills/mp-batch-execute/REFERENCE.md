@@ -4,7 +4,7 @@ Extended detail for the verify gate and the experimental parallel mode. The main
 
 ## Playwright visual verification
 
-The verify gate runs raw-Playwright visual verification in a read-only Sonnet sub-agent (it asserts, it does not fix). The full reliability contract — stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`, per-surface PASS/FAIL — lives in [`shared/PLAYWRIGHT_TESTING.md`](../shared/PLAYWRIGHT_TESTING.md). Run checks in **fix-list order**; only surfaces whose UI actually changed need one.
+The verify gate runs raw-Playwright visual verification in a read-only Sonnet sub-agent (it asserts, it does not fix). The full reliability contract — stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`, per-surface PASS/FAIL — lives in `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md`. Run checks in **fix-list order**; only surfaces whose UI actually changed need one.
 
 ## Experimental `--parallel` mode (worktree isolation)
 

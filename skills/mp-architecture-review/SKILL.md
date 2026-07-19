@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(git *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: planning
 ---
 
@@ -15,7 +15,11 @@ Explore a codebase like an AI would, surface architectural friction, discover op
 
 A **deep module** (John Ousterhout, "A Philosophy of Software Design") has a small interface hiding a large implementation. Deep modules are more testable, more AI-navigable, and let you test at the boundary instead of inside.
 
-Reference material: [deep-modules.md](deep-modules.md), [interface-design.md](interface-design.md), [REFERENCE.md](REFERENCE.md)
+Before starting:
+
+1. Read `${CLAUDE_SKILL_DIR}/../shared/deep-modules.md` now — deep vs shallow module evaluation.
+2. Read `${CLAUDE_SKILL_DIR}/../shared/interface-design.md` now — interface design rules for testability.
+3. Read `${CLAUDE_SKILL_DIR}/REFERENCE.md` now — dependency categories and the issue template.
 
 ## Process
 
@@ -37,7 +41,7 @@ Present a numbered list of deepening opportunities. For each candidate, show:
 
 - **Cluster**: Which modules/concepts are involved
 - **Why they're coupled**: Shared types, call patterns, co-ownership of a concept
-- **Dependency category**: See [REFERENCE.md](REFERENCE.md) for the four categories
+- **Dependency category**: See `${CLAUDE_SKILL_DIR}/REFERENCE.md` for the four categories
 - **Test impact**: What existing tests would be replaced by boundary tests
 
 Do NOT propose interfaces yet. Ask the user: "Which of these would you like to explore?"
@@ -70,7 +74,7 @@ Each sub-agent outputs:
 1. Interface signature (types, methods, params)
 2. Usage example showing how callers use it
 3. What complexity it hides internally
-4. Dependency strategy (how deps are handled — see [REFERENCE.md](REFERENCE.md))
+4. Dependency strategy (how deps are handled — see `${CLAUDE_SKILL_DIR}/REFERENCE.md`)
 5. Trade-offs
 
 Present designs sequentially, then compare them in prose.
@@ -81,7 +85,7 @@ After comparing, give your own recommendation: which design you think is stronge
 
 ### 7. Create GitHub issue
 
-Create a refactor RFC as a GitHub issue. Use the template in [REFERENCE.md](REFERENCE.md). Do NOT ask the user to review before creating — just create it and share the URL.
+Create a refactor RFC as a GitHub issue. Use the template in `${CLAUDE_SKILL_DIR}/REFERENCE.md`. Do NOT ask the user to review before creating — just create it and share the URL.
 
 ```bash
 gh issue create --title "refactor: [module description]" --label "refactor" --body "$(cat <<'EOF'

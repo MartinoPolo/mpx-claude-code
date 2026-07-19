@@ -11,7 +11,7 @@ metadata:
 
 # mp-playwright-test
 
-Run reliable browser verification over a defined scope. This skill owns **scope → surfaces** and orchestration; the reliability rules (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`) live in [`shared/PLAYWRIGHT_TESTING.md`](../shared/PLAYWRIGHT_TESTING.md) and are followed verbatim. $ARGUMENTS
+Run reliable browser verification over a defined scope. This skill owns **scope → surfaces** and orchestration. Read `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` now — the reliability rules (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`) live there and are followed verbatim. $ARGUMENTS
 
 ## Rules
 
@@ -36,11 +36,11 @@ If mapping yields zero UI surfaces, stop and report that there is nothing to vis
 
 ## Step 3: Discover project specifics
 
-Per [`shared/PLAYWRIGHT_TESTING.md`](../shared/PLAYWRIGHT_TESTING.md) § *Discover project specifics*, read the project's `AGENTS.md` / `CLAUDE.md` / memory for: the Playwright runner/helper (e.g. `scripts/shot.mjs`), the dev-server start command and **exact port**, the sign-in API + seed users, and where credentials live (`.local/`, `.env.local`). If no runner script exists, the verifier writes a minimal one from the shared skeleton.
+Per `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` § *Discover project specifics*, read the project's `AGENTS.md` / `CLAUDE.md` / memory for: the Playwright runner/helper (e.g. `scripts/shot.mjs`), the dev-server start command and **exact port**, the sign-in API + seed users, and where credentials live (`.local/`, `.env.local`). If no runner script exists, the verifier writes a minimal one from the shared skeleton.
 
 ## Step 4: Verify in a sub-agent
 
-Spawn a read-only `claude` sub-agent (Sonnet) to run the verification. Give it: the surface list (with the route + what changed for each), the discovered runner/port/auth details, and the instruction to follow `shared/PLAYWRIGHT_TESTING.md` exactly — **stale-worktree sanity-gate FIRST**, then programmatic auth, explicit waits (never `networkidle`), one measured assertion per surface, a screenshot per surface under `test-results/`. It verifies every surface even if one fails, and returns the PASS/FAIL table — it does not fix anything.
+Spawn a read-only `claude` sub-agent (Sonnet) to run the verification. Give it: the surface list (with the route + what changed for each), the discovered runner/port/auth details, and the instruction to Read `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` and follow it exactly — **stale-worktree sanity-gate FIRST**, then programmatic auth, explicit waits (never `networkidle`), one measured assertion per surface, a screenshot per surface under `test-results/`. It verifies every surface even if one fails, and returns the PASS/FAIL table — it does not fix anything.
 
 The sanity-gate is load-bearing: if the running dev server does not reflect the code under test, the sub-agent must kill the stale server and start one bound to this checkout before verifying (see [`mp-continue`](../mp-continue/SKILL.md) for the port-zombie kill/restart pattern).
 

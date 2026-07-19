@@ -5,13 +5,18 @@ argument-hint: "[optional guidance]"
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: project-management
 ---
 
 # mp-board-to-issues
 
-Turn board notes into well-formed GitHub issues. See [BOARD_CONVENTION.md](../shared/BOARD_CONVENTION.md) for board format, content→type classification, and the four-lane pipeline (state lives in the lane, not the checkbox); issue bodies and labels follow [GITHUB_ISSUE_TEMPLATE.md](../shared/GITHUB_ISSUE_TEMPLATE.md). $ARGUMENTS
+Turn board notes into well-formed GitHub issues. $ARGUMENTS
+
+First:
+
+1. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board format, content→type classification, and the four-lane pipeline (state lives in the lane, not the checkbox).
+2. Read `${CLAUDE_SKILL_DIR}/../shared/GITHUB_ISSUE_TEMPLATE.md` now — issue bodies and labels follow it.
 
 ## Rules
 

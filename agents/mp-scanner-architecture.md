@@ -10,11 +10,11 @@ color: cyan
 
 Scan changed files for structural and architectural concerns. Flag issues — do not design solutions.
 
-Read these reference files before scanning:
+First run these via Bash and read the output before scanning:
 
-- `@skills/mp-architecture-review/deep-modules.md` — deep vs shallow module evaluation
-- `@skills/mp-architecture-review/interface-design.md` — testability rules
-- `@skills/mp-architecture-review/REFERENCE.md` — dependency categories
+- `cat $HOME/.claude/skills/shared/deep-modules.md` — deep vs shallow module evaluation
+- `cat $HOME/.claude/skills/shared/interface-design.md` — testability rules
+- `cat $HOME/.claude/skills/mp-architecture-review/REFERENCE.md` — dependency categories
 
 ## What to Scan For
 

@@ -93,17 +93,58 @@ AFK             — #0E8A16 (green)  — "Can be implemented autonomously"
 design needed   — #5319E7 (purple) — "Requires design (mockup + refine) before/with implementation"
 ```
 
+## Label Creation Commands
+
+Check existing labels, then create missing ones:
+
+```bash
+gh label list --limit 100
+gh label create "task" --description "Implementation task" --color "0E8A16" --force
+gh label create "HITL" --description "Requires human interaction" --color "FBCA04" --force
+gh label create "AFK" --description "Can be implemented autonomously" --color "0E8A16" --force
+gh label create "design needed" --description "Requires design (mockup + refine) before/with implementation" --color "5319E7" --force
+```
+
+Create area labels as needed (`area:api`, `area:ui`, `area:db`, etc.).
+
 ## Creation Command
 
 ```bash
-gh issue create \
+ISSUE_URL=$(gh issue create \
   --title "Short descriptive title" \
   --label "task,AFK,area:api" \
   --assignee @me \
   --body "$(cat <<'EOF'
 [issue body using template above]
 EOF
-)"
+)")
 ```
 
-Always assign to `@me`.
+Always assign to `@me`. Add `--milestone "Name"` when a linked PRD has a milestone.
+
+## Linking as PRD Sub-Issue
+
+Get owner/repo and the PRD's GraphQL node ID:
+
+```bash
+OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+PRD_NODE_ID=$(gh api graphql -f query="{ repository(owner: \"${OWNER_REPO%/*}\", name: \"${OWNER_REPO#*/}\") { issue(number: $PRD_NUMBER) { id } } }" --jq '.data.repository.issue.id')
+```
+
+Link a created issue (using `ISSUE_URL` captured above) as a native sub-issue of the PRD:
+
+```bash
+gh api graphql -f query="
+  mutation {
+    addSubIssue(input: {
+      issueId: \"$PRD_NODE_ID\",
+      subIssueUrl: \"$ISSUE_URL\"
+    }) {
+      issue { number }
+      subIssue { number }
+    }
+  }
+"
+```
+
+If blocking relationships reference issues not yet created (forward references), update issue bodies after all issues exist.

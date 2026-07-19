@@ -2,10 +2,10 @@
 name: mp-issue-create
 description: 'Create GitHub issues with optional PRD linking. Use when: "create issue", "create github issue"'
 argument-hint: "<description> [--prd <number>]"
-allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent, Bash(git *), Bash(gh *)
+allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: utility
 ---
 
@@ -13,9 +13,11 @@ metadata:
 
 Create a well-structured GitHub issue using the canonical template. Links to a PRD as a native sub-issue — either from `--prd <number>` or auto-discovered. $ARGUMENTS
 
-Issue body format: @skills/shared/GITHUB_ISSUE_TEMPLATE.md
-
 ## Workflow
+
+### Step 0: Load Template
+
+Read `${CLAUDE_SKILL_DIR}/../shared/GITHUB_ISSUE_TEMPLATE.md` now. It defines the issue body format, section rules, HITL/AFK classification, labels, label creation commands, and PRD sub-issue linking used below.
 
 ### Step 1: Parse Intent
 
@@ -47,12 +49,7 @@ gh issue view <prd_number> --json title,body,milestone,labels
 
 Extract from the PRD: requirements, milestone name, existing sub-issues (for blocking relationships).
 
-Get owner/repo and PRD node ID for sub-issue linking:
-
-```bash
-OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-PRD_NODE_ID=$(gh api graphql -f query="{ repository(owner: \"${OWNER_REPO%/*}\", name: \"${OWNER_REPO#*/}\") { issue(number: $PRD_NUMBER) { id } } }" --jq '.data.repository.issue.id')
-```
+Fetch owner/repo and the PRD node ID using the template's "Linking as PRD Sub-Issue" commands.
 
 List existing sub-issues to determine blocking relationships:
 
@@ -70,57 +67,15 @@ Search for affected code using Grep/Glob:
 
 ### Step 4: Classify HITL vs AFK
 
-Determine whether the issue requires human interaction:
-
-- **HITL**: has unanswered questions or uncertain decisions that require asking the user. Examples: unclear API contract, ambiguous business rule, multiple valid approaches needing a decision. NOT for: visual inspection, manual testing, code review, QA verification
-- **AFK**: well-defined scope, clear acceptance criteria, no open design questions
-
-When all questions have been resolved upfront, the issue should be AFK.
-
-If HITL: list the specific unanswered questions in the blockquote.
+Classify per the template's "HITL vs AFK Classification" rules. If HITL: list the specific unanswered questions in the blockquote.
 
 ### Step 5: Ensure Labels Exist
 
-```bash
-gh label list --limit 100
-```
-
-Create missing labels:
-
-```bash
-gh label create "task" --description "Implementation task" --color "0E8A16" --force
-gh label create "HITL" --description "Requires human interaction" --color "FBCA04" --force
-gh label create "AFK" --description "Can be implemented autonomously" --color "0E8A16" --force
-gh label create "design needed" --description "Requires design (mockup + refine) before/with implementation" --color "5319E7" --force
-```
-
-Create area labels as needed (`area:api`, `area:ui`, `area:db`, etc.).
-
-Add `design needed` when the issue involves new UI components, significant visual changes, complex layouts, or user-facing workflows that need design exploration. Do NOT add for purely backend work, bug fixes, or minor UI tweaks.
+Run the template's "Label Creation Commands". Apply `design needed` per the template's label rules.
 
 ### Step 6: Build Issue Body
 
-Use the canonical template from `@skills/shared/GITHUB_ISSUE_TEMPLATE.md`.
-
-**For HITL issues**, start with the blockquote:
-
-```markdown
-> **Unanswered questions:**
->
-> - [Specific question that needs answering before/during implementation]
-
-## Description
-
-...
-```
-
-**For AFK issues**, start directly with Description:
-
-```markdown
-## Description
-
-...
-```
+Use the canonical template loaded in Step 0. HITL issues start with the unanswered-questions blockquote; AFK issues start directly with `## Description`.
 
 **Requirements section:**
 
@@ -134,37 +89,11 @@ Use the canonical template from `@skills/shared/GITHUB_ISSUE_TEMPLATE.md`.
 
 ### Step 7: Create Issue
 
-```bash
-ISSUE_URL=$(gh issue create \
-  --title "Short descriptive title" \
-  --label "task,AFK,area:api" \
-  --assignee @me \
-  --milestone "Milestone Name" \
-  --body "$(cat <<'EOF'
-[body from Step 6]
-EOF
-)")
-```
-
-Include `--milestone` only when a PRD was resolved and it has a milestone.
+Use the template's "Creation Command". Include `--milestone` only when a PRD was resolved and it has a milestone.
 
 ### Step 8: Link to PRD (if PRD resolved)
 
-Link as a native sub-issue of the PRD:
-
-```bash
-gh api graphql -f query="
-  mutation {
-    addSubIssue(input: {
-      issueId: \"$PRD_NODE_ID\",
-      subIssueUrl: \"$ISSUE_URL\"
-    }) {
-      issue { number }
-      subIssue { number }
-    }
-  }
-"
-```
+Link as a native sub-issue of the PRD using the template's "Linking as PRD Sub-Issue" mutation.
 
 If blocking relationships reference issues not yet created (forward references), note them for later update.
 

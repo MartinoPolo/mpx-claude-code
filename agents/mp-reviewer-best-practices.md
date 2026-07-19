@@ -8,6 +8,8 @@ color: magenta
 
 # Reviewer: Best Practices
 
+First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+
 Validate tech-specific conventions and idioms within provided scope.
 
 ## Checkpoints
@@ -29,14 +31,3 @@ Detect frameworks from file extensions in the diff. Read ONLY the relevant guide
 - `.rs` → Read `agents/references/rust-review.md`
 
 Only read guides for frameworks present in the changed files. Apply patterns from the guide to flag judgment-based issues not caught by linting.
-
-## Output
-
-Before flagging, verify each issue is real: check if handled elsewhere, search for existing patterns. Only report issues with HIGH confidence after understanding context.
-It's ok not to report any issues if the code looks solid. Focus on actionable, specific feedback.
-2-5 lines per issue with clear explanation and references.
-
-## Output format per issue
-
-`[Critical|Important|Minor] title - file:line`
-`What & Why` + [optionally]`Suggested fix`

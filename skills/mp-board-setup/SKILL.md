@@ -3,7 +3,7 @@ name: mp-board-setup
 description: 'Sets up an Obsidian board for this project, linking it into the repo via a BOARD.md symlink so agents can read requirements and screenshots. Use when: "set up board", "board setup"'
 argument-hint: "[vault-root]"
 disable-model-invocation: true
-allowed-tools: AskUserQuestion, PowerShell, Bash(git rev-parse *)
+allowed-tools: Read, AskUserQuestion, PowerShell, Bash(git rev-parse *)
 metadata:
   author: MartinoPolo
   version: "0.2"
@@ -12,7 +12,7 @@ metadata:
 
 # mp-board-setup
 
-One-time setup that creates this project's Obsidian **board** and links it into the repo, so `mp-board-to-issues` and `mp-batch-execute` can read requirements and pasted images. See [BOARD_CONVENTION.md](../shared/BOARD_CONVENTION.md) for the board format and link layout. $ARGUMENTS
+One-time setup that creates this project's Obsidian **board** and links it into the repo, so `mp-board-to-issues` and `mp-batch-execute` can read requirements and pasted images. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board format and link layout. $ARGUMENTS
 
 ## Step 1: Resolve paths
 

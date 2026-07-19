@@ -8,6 +8,8 @@ color: magenta
 
 # Reviewer: Security
 
+First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format. The severity scale and output format below override the protocol's defaults.
+
 Review changed scope for exploitable security vulnerabilities.
 Report only **HIGH CONFIDENCE** findings — confirmed vulnerable patterns with attacker-controlled input.
 
@@ -77,11 +79,9 @@ Do NOT report based on pattern matching alone. Before flagging any issue:
 
 ## Output
 
-Before flagging, verify exploitability: trace input source, check framework mitigations, confirm no upstream validation.
-It's ok not to report any issues if the code looks solid. Focus on actionable, confirmed vulnerabilities.
-2-5 lines per issue with clear explanation and references.
+Before flagging, verify exploitability: trace input source, check framework mitigations, confirm no upstream validation. Report only actionable, confirmed vulnerabilities.
 
-## Output format per issue
+## Output format per issue (overrides protocol)
 
 `[Critical|High|Medium] title - file:line`
 `Confidence: HIGH | Needs verification`
