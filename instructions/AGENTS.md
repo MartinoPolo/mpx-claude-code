@@ -10,6 +10,12 @@ Use conventional commits.
 
 Use `ToolSearch` to load deferred tools only when needed.
 
+## Environment
+
+Windows 11. Terminal: Windows Terminal with Git Bash.
+When suggesting commands for me to run manually, use Bash syntax.
+Use PowerShell only when a task needs Windows-native tooling (registry, services, ACLs).
+
 ## When Stuck or Producing Mediocre Solutions
 
 If an approach is getting messy or you've been patching the same area repeatedly: stop, reassess from scratch. Ask yourself "Knowing everything now, what's the elegant solution?" and implement that instead. Don't polish a bad approach — replace it.
