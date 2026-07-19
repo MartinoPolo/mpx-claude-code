@@ -1,7 +1,7 @@
 /**
  * PreToolUse hook (matcher: Bash)
  * Blocks git commit and git push when fallow audit returns verdict fail.
- * Port of the fallow-generated fallow-gate.sh to Node.js for Windows compatibility.
+ * Node.js port of the prior fallow-generated shell gate hook, for Windows compatibility.
  * Runtime errors fail open (exit 0) with a stderr notice so skips stay visible.
  * Exit 0 = allow, Exit 2 = block
  */
