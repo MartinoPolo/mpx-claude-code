@@ -1,62 +1,55 @@
 # Session Handoff
 
-Date: 2026-07-19
+Date: 2026-07-19 (evening — continuation after session-limit interruption)
 
-Full repository audit session (6 parallel Sonnet sub-agent audits + research + implementation). All fixes are **uncommitted in the working tree** — review, then commit with `/mp-commit` (conventional commits, likely split into a few logical commits).
+Audit session part 2: all agreed next steps EXECUTED via parallel sub-agent workstreams. Part-1 audit fixes are committed (`97a20af`..`40ac793` + Grovekeeper `2ca198c`). Part-2 work is committed in four follow-up commits (dedup / orchestrator redesign / hardening / docs). Nothing pushed anywhere.
 
 ## Progress This Session
 
-**Audit** covered: symlink topology (.claude / .claude-work), all 43 skills, 21 agents, 12 hooks, settings, scripts, rules, instructions, README, plus fetched official skill/hook/memory/plugin best practices.
+1. **Committed part-1 audit fixes** — 5 commits in mpx (hooks, deprecated/, tauri-tester move, skills, docs; tests 105/105) + `mp-tauri-tester` commit in Grovekeeper.
+2. **Dedup system implemented** (`skills/shared/` reference library, ADOPTED convention: imperative step "Read `${CLAUDE_SKILL_DIR}/../shared/FILE.md` now"):
+   - `GIT_COMMIT_WORKFLOW.md` — canonical commit/push/PR phases; consumers mp-commit (0.4), mp-commit-push (0.4), mp-commit-push-pr (0.5), mp-pr (0.4).
+   - `GITHUB_ISSUE_TEMPLATE.md` — extended with label commands + PRD sub-issue linking; consumers mp-issue-create (0.5), mp-to-issues (0.8), mp-board-to-issues (0.4). Dangling `@skills/shared` refs fixed. mp-bug-report intentionally separate.
+   - `REVIEWER_PROTOCOL.md` — shared scope/verify/output boilerplate; all 7 `agents/mp-reviewer-*.md` load it via mandatory `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` first step; role-specific judgment kept inline.
+   - `deep-modules.md` + `interface-design.md` — moved from mp-architecture-review (0.3); mp-execute's fork deleted; mp-scanner-architecture + mp-tdd-executor repointed.
+   - `detect-project-scripts.sh` single-sourced under `scripts/`; mp-script-discovery (0.2) calls it via `$HOME`.
+   - Broken bare `../shared/` refs fixed in mp-batch-execute (+REFERENCE.md), mp-board-setup, mp-playwright-test.
+   - allowed-tools hygiene: broad `Bash(git *)`/`Bash(gh *)` dropped from mp-issue-create, mp-pr, mp-commit, mp-commit-push, mp-commit-push-pr (narrow sets cover the bodies; rare escalation commands will prompt — accepted).
+3. **Orchestrator redesign for the 140k ceiling** (mp-execute 1.16→**2.0**, 377→263 lines; mp-ship 0.1→0.2, 225→196):
+   - Review-fix + test-fix loops → ONE nested general-purpose orchestrator driven by `skills/shared/VERIFY_FIX_ORCHESTRATOR.md` (mp-checker → parallel mp-reviewer-* → analyze in own context → mp-executor with concrete fixes → re-verify, ≤3 iterations). Returns ONLY bounded JSON {status, iterations_used, files_changed, summary≤10 lines, blockers, unresolved_findings}.
+   - CI failures → sub-agent driven by `skills/shared/CI_FIX_AGENT.md`; main never reads `gh run view --log-failed`.
+   - Merge conflicts → sub-agent (resolve, verify, push), 5-line JSON return.
+   - mp-ship: base sync delegated to the `mp-sync-base` skill; CI fix shares CI_FIX_AGENT.md.
+   - Stays in main: parsing, mp-issue-analyzer, user gates, loop counters, committer/PR spawns, final report. Projected main context ~10-18k/run (was 60-100k+).
+4. **Hardening/leftovers**: mp-skill-audit 0.4 — 12 checks now incl. spawned-agent-exists, allowed-tools paths exist, dead grants, ≤200-line cap (runnable), README-sync. mp-check-fix trigger phrases; mp-vocabulary H1; mp-code-clean 0.2 names exact agents (general-purpose review / mp-executor fixes). Stale `~/.claude` residue deleted (CudFnWfu, CuyAtjA7, settings.pre-symlink-backup.json — all verified stale); `~/.claude/.git` is a 0-byte GitKraken remnant (harmless, delete anytime).
+5. **README.md fully synced** (pipeline diagram for 2.0, Shared References table with all 10 files, repointed links, trigger descriptions, 12 audit rules).
 
-**Implemented (uncommitted, ~63 changed paths, `npm test` 105/105 green):**
+## Key Decisions
 
-- Deleted `hooks/gh-transform.js` (+ its test + settings registration) — it force-drafted every PR against the "PRs normal by default" convention. `hooks/compact-context.js` no longer teaches draft PRs; `mp-pr`/`mp-commit-push-pr` cleaned of gh-transform mentions.
-- Replaced dead agent spawns with scripts: `mp-review` + `mp-sync-base` now run `node $HOME/.claude/scripts/detect-base-branch.js` (was archived `mp-base-branch-detector`); `mp-suppression-audit` runs `bash $HOME/.claude/scripts/detect-check-scripts.sh` (was archived `mp-checks-detector`). Versions bumped.
-- Fixed hook timeout inversions in `settings.json`: pre-commit-gate 60→130s (internal 120s), format-lint-file 15→50s (internal worst 45s).
-- `mp-harvest-decisions`: detection signal now `mp-grill`/`mp-hitl`/`mp-architecture-review` (was nonexistent `gk-design-*`).
-- `mp-gemini-fetch`: install fixed to `@google/gemini-cli`. `mp-execute`: dead allowed-tools script grant removed.
-- `scripts/init-repo.sh`: next-steps now current pipeline (`/mp-grill → /mp-to-prd → /mp-to-issues → /mp-execute`); `ln -s` advice replaced with WINDOWS-SETUP PowerShell symlink procedure.
-- **Deprecation unified**: single top-level `deprecated/{skills,agents}/`; `_archive/` and `skills/deprecated/` removed; `mp-docs-updater` agent deprecated (orphaned); `mp-skill-audit` glob simplified.
-- `mp-tauri-tester` moved to `C:\_MP_projects\Grovekeeper\.claude\agents\` (staged there, uncommitted).
-- Templates fork fixed: `~/.claude/templates` + `~/.claude-work/templates` are now junctions to the repo (were a stale real copy / missing); `mp-init-repo`'s stale gitignore.template overwritten with canonical content (file-symlink needs admin, skipped). WINDOWS-SETUP.md setup blocks corrected (adds settings.local.json, WINDOWS-SETUP.md, templates).
-- Permissions hygiene: removed stale bootstrap grants from `.claude/settings.local.json` (`rm settings.json`, mklink, `cmd.exe:*`) and one leftover entry from root `settings.local.json`.
-- Context diet: `disable-model-invocation: true` added to mp-fallow-fix, mp-suppression-audit, mp-skill-audit, mp-harvest-decisions, mp-components-audit, mp-yoursafe-overview, mp-publish-obsidian-plugin; 12 long descriptions trimmed to one sentence + 2 triggers. Always-loaded skill-description context roughly halved.
-- `hooks/fallow-gate.sh` deleted (dead duplicate of the .js port).
-- README.md synced: mp-executor→Sonnet, 4 missing agents added, mp-docs-updater removed, mp-prd-review/mp-ship/mp-yoursafe-overview skills added, review dimensions 7 full / 4 partial, hooks table corrected (accurate dangerous-command-guard description, "4 of 9 hooks tested"), pipeline flags fixed (`--full-review`, `--no-auto-merge`; dropped nonexistent `--dry-run`).
-
-**Memories saved** (auto-memory, this project): `project_readme_sync` (every repo edit updates README in same change), `feedback_context_budget_orchestration` (140k main-context ceiling, orchestrate via sub-agents, scripts>agents, 1-2 trigger descriptions).
-
-## Key Decisions (and where each takes effect)
-
-1. **PRs are normal, never draft** → effected: gh-transform hook deleted repo-wide.
-2. **Scripts over agents for deterministic steps** → effected in mp-review/mp-sync-base/mp-suppression-audit; standing rule for future skills.
-3. **One deprecation home: top-level `deprecated/`** (outside junctioned dirs so nothing gets discovered/loaded) → effected; `_archive` gone.
-4. **Settings stay shared between .claude and .claude-work for now** → no change made; known tradeoff: work account can't diverge.
-5. **herdr hook stays as-is** (unused but planned) — including its hardcoded `C:\Users\snapy` registration path.
-6. **Context diet**: maintenance/personal skills are user-invoke-only; descriptions = 1 sentence + 2 triggers → effected.
-7. **Reference-path convention (PENDING adoption)**: research verdict — SKILL.md has NO `@import` (closed as not-planned, anthropics/claude-code#22505); bare relative paths resolve against project cwd (broken, #56325). Reliable forms: `${CLAUDE_SKILL_DIR}/../shared/FILE.md` in prose (harness-substituted — verified live this session), `$HOME/...` inside Bash commands, selector scripts for deterministic conditionals. Lazy loading is real: referenced files enter context only when actually Read, so conditional half/full-reference loading works.
-8. **Agent strategy (PENDING)**: research recommends skills + generic inline-prompt sub-agent spawns (context isolation preserved; portable degradation), keeping shared prompt text in `shared/` via `${CLAUDE_SKILL_DIR}`; named agents only where hard tool-restriction matters. Named `.claude/agents/*.md` is Claude-Code-only; SKILL.md is the Agent Skills open standard (agentskills.io, Linux Foundation) adopted by Codex CLI, Gemini CLI, Cursor, Copilot, etc. Model fields: omit `model:` (→ inherit) for portability; request tiers in prose at spawn time.
+1. Reference convention ADOPTED: `${CLAUDE_SKILL_DIR}/../shared/FILE.md` imperative Read steps (no @import; bare relative paths broken; lazy loading verified). Effect: all shared/ consumers.
+2. Agent strategy: nested orchestrators use generic `general-purpose` spawns with shared prompt files; named agents kept where tool restriction matters (7 read-only reviewers) or role contracts exist (mp-executor, mp-checker, mp-git-committer, mp-pr-manager). Full agent-elimination migration remains OPTIONAL/undecided.
+3. mp-execute 2.0 contract: main = orchestrator only; anything verbose (findings, test failures, CI logs, conflicts) lives and dies in sub-agent context; bounded JSON is the only thing that returns.
+4. Broad-grant policy: allowed-tools list only commands the body actually uses.
 
 ## Next Steps
 
-1. **Review + commit the working tree** (mpx repo, ~63 paths; also commit the staged `mp-tauri-tester.md` in Grovekeeper). Suggest splitting: fix(hooks), fix(skills), refactor(deprecated), docs(readme+windows-setup), chore(settings).
-2. **Decide the dedup system** (discussion pending with the analysis in hand). Proposed: keep `skills/shared/` as canonical home; migrate all cross-references to `${CLAUDE_SKILL_DIR}/../shared/...`; fix the two inert `@skills/shared/...` refs (mp-issue-create, mp-to-issues); then dedupe the clusters: commit triplet → `shared/GIT_COMMIT_WORKFLOW.md`; mp-ship → delegate to mp-sync-base; deep-modules/interface-design fork → `shared/`; detect-project-scripts.sh fork → symlink; issue-template trifurcation → all through `shared/GITHUB_ISSUE_TEMPLATE.md`; 7× reviewer boilerplate → shared reference.
-3. **Execution-skill redesign for the 140k ceiling** (analysis complete, implementation pending). Core: mp-execute Steps 5/6 (review+fix, test+fix) move into a nested verify-fix orchestrator sub-agent (opus reasons, sonnet applies — same convention, different context); Step 10b CI-fix loop → dedicated sub-agent (never `gh run view --log-failed` in main); Step 9d conflicts → copy mp-ship's sync-base sub-agent pattern; bounded JSON return contracts ({status, iterations_used, files_changed, summary≤10 lines, blockers, unresolved_findings}). mp-ship Step 6 has the same CI-log leak — fix both via one shared pattern. Projected main context: ~10-20k typical (from 60-100k+).
-4. **mp-skill-audit hardening**: add checks — spawned agent exists in `agents/`, allowed-tools paths exist, allowed-tools entries used in body, 200-line cap (mp-ship 224, mp-setup-react-native 237, mp-execute 377 violate), README tables in sync.
-5. Remaining smaller audit items not yet acted on: mp-check-fix description lacks "Use when" triggers; mp-vocabulary missing H1; mp-code-clean unnamed sub-agent spawns; broad+narrow allowed-tools redundancy (mp-issue-create, mp-pr); stale `~/.claude` residue (CudFnWfu/, CuyAtjA7/, .git/gk, settings.pre-symlink-backup.json) — safe to delete manually.
+1. **Push when ready** — mpx `main` is ahead by 9+ commits, Grovekeeper by 1; nothing pushed.
+2. **Uncommitted user edits left in tree** (intentionally): `instructions/AGENTS.md` (+Environment section: Git Bash syntax for manual commands) and `settings.json` (model → sonnet). Commit these yourself, e.g. `chore: add environment section, switch default model to sonnet`.
+3. **Field-test mp-execute 2.0** on a real small issue; watch that the verify-fix orchestrator returns valid bounded JSON and main context stays ~10-20k. Same for mp-ship's CI path.
+4. Run `/mp-skill-audit` once to exercise the 12 checks against the freshly refactored repo.
+5. Optional/deferred: full agent-elimination migration; mp-ship's mp-sync-base runs in main context (complex conflicts land there) — revisit if it bloats.
 
 ## Critical Files
 
-- `README.md`, `WINDOWS-SETUP.md`, `settings.json` — heavily edited, review first.
-- `deprecated/` — new single deprecation home (30 skills/agents).
-- `skills/mp-review/SKILL.md`, `skills/mp-sync-base/SKILL.md`, `skills/mp-suppression-audit/SKILL.md` — script-replacement edits.
-- `skills/mp-execute/SKILL.md` — target of the pending orchestrator redesign (Steps 5, 6, 9d, 10b).
-- `skills/shared/` — future canonical dedup home.
+- `skills/shared/` — 10-file reference library (workflows, protocols, sub-agent prompts). The dedup backbone.
+- `skills/mp-execute/SKILL.md` (2.0) + `skills/shared/VERIFY_FIX_ORCHESTRATOR.md` + `skills/shared/CI_FIX_AGENT.md` — the new orchestrator model.
+- `README.md` — synced inventory of record; keep it in sync with every change (memory rule).
 
 ## Working Memory
 
-- Junctions are whole-directory: repo edits are LIVE in both `.claude` and `.claude-work` instantly; settings.json edits affect the next session.
-- `.claude-work` executes hooks from `$HOME/.claude/...` paths — works only because both point at the same repo; don't remove/rename `~/.claude`.
-- `${CLAUDE_SKILL_DIR}` substitution verified working in this harness (observed live in a Skill args expansion).
-- Skill discovery is one level (`skills/*/SKILL.md`); nothing under `deprecated/` loads. Windows `mklink` via Git Bash mangles paths — use PowerShell `New-Item -ItemType Junction/SymbolicLink`; file symlinks need admin.
-- Version-bump rule: bump `metadata.version` for non-trivial skill edits; description-only/one-line changes exempt.
+- Junctions are live: repo edits take effect in `~/.claude` and `~/.claude-work` instantly; settings.json on next session. Don't remove/rename `~/.claude`.
+- `${CLAUDE_SKILL_DIR}` substitution is harness-guaranteed and verified live; bare relative paths in SKILL.md resolve to project cwd (broken).
+- Skill discovery = `skills/*/SKILL.md`; `skills/shared/` has no SKILL.md on purpose — never add one.
+- Version-bump rule: bump `metadata.version` for non-trivial skill edits; 1-liners exempt.
+- Windows: `mklink` via Git Bash mangles paths — PowerShell `New-Item -ItemType Junction`; file symlinks need admin.
+- mp-executor is Sonnet: always pass concrete pre-analyzed fix instructions, never "fix the issues".

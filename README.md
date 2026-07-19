@@ -41,7 +41,7 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
         │
         ▼
 /mp-execute                ◄── Orchestrate TDD, checks, review, unresolved triage,
-                            commit, push, and PR creation for issue-driven work
+                            commit, push, PR, and CI-green auto-merge for issue-driven work
 ```
 
 `/mp-commit-push-pr` and `/mp-pr` remain available as standalone Git workflows when implementation is already done and you only want to prepare or update a PR.
@@ -85,30 +85,35 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                               --no-tdd? yes -> skip to 5
                                       │
          ┌─────────────────────────▼──────────────────────────────────────┐
-         │ 5) Review + Check Loop (up to 3 iterations)                   │
-         │   parallel: mp-checker + 3 reviewers                           │
-         │   --full-review adds: security + performance + error-handling  │
-         │   findings/confidence > 65 -> mp-executor fixes -> re-run      │
+         │ 5) Verify-Fix Loop (one nested orchestrator sub-agent)         │
+         │   shared/VERIFY_FIX_ORCHESTRATOR.md: static checks + tests +   │
+         │   4 reviewers (--full-review: 7) + optional browser verify;    │
+         │   fixes dispatched inside; returns bounded JSON only           │
          └─────────────────────────┬──────────────────────────────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 6) Frontend Verify      │  if UI files changed ->
-                        │    (conditional)        │  mp-playwright-tester
-                        └────────────┬────────────┘
-                                      │
-                        ┌────────────▼────────────┐
-                        │ 7) Unresolved Triage    │  issues only,
+                        │ 6) Unresolved Triage    │  issues only,
                         │    (conditional)        │  mp-unresolved-issue-tracker
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 8) Commit               │  conventional commit
+                        │ 7) Commit + Push        │  mp-git-committer,
                         │                         │  refs/fixes #N
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 9) Push + PR            │  issues only,
-                        │                         │  create or update PR
+                        │ 8) PR + Mergeable       │  issues only, mp-pr-manager;
+                        │                         │  conflict resolution delegated
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 9) CI Green Gate        │  fix loop delegated per
+                        │                         │  shared/CI_FIX_AGENT.md
+                        └────────────┬────────────┘
+                                      │
+                        ┌────────────▼────────────┐
+                        │ 10) Finalize            │  report as PR comment,
+                        │                         │  auto-merge (default)
                         └─────────────────────────┘
 ```
 
@@ -118,14 +123,18 @@ Pipeline summary:
 2. Analyze issue context via `mp-issue-analyzer` (issues only)
 3. Detect checks via `detect-check-scripts.sh` (supports `CHECK_ALL` fallback logic)
 4. Execute TDD via `mp-tdd-executor` (unless `--no-tdd`)
-5. Run review + check loop with `mp-checker` and reviewers (up to 3 iterations)
-6. Run conditional frontend verification with `mp-playwright-tester`
-7. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
-8. Commit, then push and create/update PR (issues only)
+5. Verify-fix loop in one nested orchestrator sub-agent (`skills/shared/VERIFY_FIX_ORCHESTRATOR.md`): static checks, tests, reviewers, optional browser verify — fixes applied inside
+6. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
+7. Commit and push via `mp-git-committer`
+8. Create/update PR via `mp-pr-manager`, then ensure mergeable (conflict resolution delegated)
+9. CI green gate — failures fixed by a sub-agent per `skills/shared/CI_FIX_AGENT.md`
+10. Finalize: post the report as a PR comment, then auto-merge (default)
 
-**Flags:** `--no-tdd` skips TDD for trivial work, `--full-review` adds security/performance/error-handling reviewers (6 total), `--no-review` skips reviewer sub-agents, `--no-auto-merge` leaves the PR open instead of auto-merging after CI is green.
+Since 2.0, the main agent is a pure orchestrator: the review-fix, test-fix, and CI-fix loops run inside nested sub-agents that return bounded JSON — main never reads raw findings, test failures, or CI logs.
 
-**TDD principles:** tests are still mandatory by default. `mp-execute` now delegates TDD execution to `mp-tdd-executor`, which enforces red-before-green and minimal implementation. See `skills/mp-execute/` for [test quality](skills/mp-execute/tests.md), [mocking strategy](skills/mp-execute/mocking.md), [deep modules](skills/mp-execute/deep-modules.md), and [interface design](skills/mp-execute/interface-design.md).
+**Flags:** `--no-tdd` skips TDD for trivial work, `--full-review` adds security/performance/error-handling reviewers (7 total), `--no-review` skips reviewer sub-agents, `--no-auto-merge` leaves the PR open instead of auto-merging after CI is green.
+
+**TDD principles:** tests are still mandatory by default. `mp-execute` now delegates TDD execution to `mp-tdd-executor`, which enforces red-before-green and minimal implementation. See `skills/mp-execute/` for [test quality](skills/mp-execute/tests.md) and [mocking strategy](skills/mp-execute/mocking.md), and `skills/shared/` for [deep modules](skills/shared/deep-modules.md) and [interface design](skills/shared/interface-design.md).
 
 ## Planning System (Hybrid)
 
@@ -149,6 +158,23 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 
 ## Skills Reference
 
+### Shared References (`skills/shared/`)
+
+Cross-skill reference library — plain reference files, no SKILL.md, not runnable. Skills load them at run time via `${CLAUDE_SKILL_DIR}/../shared/<FILE>.md`:
+
+| File                       | Purpose                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `BOARD_CONVENTION.md`      | Obsidian board format, content→type map, four-lane pipeline                    |
+| `CI_FIX_AGENT.md`          | CI-fix sub-agent contract with bounded JSON return (mp-execute, mp-ship)       |
+| `deep-modules.md`          | Deep vs shallow module design (Ousterhout)                                     |
+| `DOCUMENTATION_STRATEGY.md`| `.mpx/` CONTEXT.md + DECISIONS.md formats and skill responsibilities           |
+| `GIT_COMMIT_WORKFLOW.md`   | Phased commit/push/PR delegation shared by the git skills                      |
+| `GITHUB_ISSUE_TEMPLATE.md` | Canonical issue body format, labels, HITL/AFK classification                   |
+| `interface-design.md`      | Interface design rules for testability                                         |
+| `PLAYWRIGHT_TESTING.md`    | Raw-Playwright reliability contract (sanity-gate, assert-don't-eyeball, auth)  |
+| `REVIEWER_PROTOCOL.md`     | Verification discipline + report format for the 7 `mp-reviewer-*` agents       |
+| `VERIFY_FIX_ORCHESTRATOR.md`| Nested verify-fix orchestrator contract (checks/reviewers/tests, bounded JSON)|
+
 ### Planning Skills
 
 | Skill              | Description                                                                                        |
@@ -158,7 +184,7 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 | `/mp-to-issues`    | Break PRD into vertical-slice sub-issues with HITL/AFK classification and blocking                 |
 | `/mp-hitl`         | Resolve HITL issues into AFK-ready by grilling decisions (`lowest` or `most-blocking` order)       |
 | `/mp-vocabulary`   | Create/update `.mpx/CONTEXT.md` § Domain Language — canonical domain terms, aliases, relationships |
-| `/mp-issue-create` | Create well-structured GitHub issues (feature, chore, docs) with codebase context                  |
+| `/mp-issue-create` | Create well-structured GitHub issues (feature, chore, docs) with optional PRD linking              |
 | `/mp-bug-report`   | Investigate root cause → TDD fix plan → GitHub issue (labeled bug). Accepts multiple bugs          |
 | `/mp-prd-review`   | Comprehensive PRD-end review: code quality, architecture, cleanup, docs, unresolved items           |
 
@@ -166,7 +192,7 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 
 | Skill         | Description                                                                                                                                          |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/mp-execute` | Orchestrate issue execution: TDD via `mp-tdd-executor`, reviewers/checks, unresolved triage, commit, push, and PR creation. `--no-tdd` to skip tests |
+| `/mp-execute` | Orchestrate issue execution: TDD via `mp-tdd-executor`, verify-fix loop, unresolved triage, commit, push, PR, CI green gate, auto-merge. `--no-tdd` to skip tests |
 
 ### Board Workflow (Obsidian)
 
@@ -190,7 +216,7 @@ Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into Git
 
 | Skill           | Description                                                                                              |
 | --------------- | -------------------------------------------------------------------------------------------------------- |
-| `/mp-check-fix` | Auto-detect and fix checks, preferring `CHECK_ALL` when available; otherwise typecheck/lint/format/build |
+| `/mp-check-fix` | Deterministically detect and run check scripts, then fix failures — `CHECK_ALL` first, else typecheck/lint/format/build ("check fix", "run checks and fix") |
 | `/mp-review`    | Unified code review (scope: PR, branch, changes)                                                         |
 
 ### Periodic Maintenance Skills
@@ -202,7 +228,7 @@ Run after larger chunks of work (milestone end, PRD completion, or on a regular 
 | `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code. Creates PR with findings.                        |
 | `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc. Auto-fixes + creates PR.       |
 | `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Removes duplicates, tightens language. Fully automatic.                |
-| `/mp-skill-audit`         | All skills        | Low       | Checks 8 consistency rules, auto-fixes drift. Creates report.          |
+| `/mp-skill-audit`         | All skills        | Low       | Checks 12 consistency rules, auto-fixes drift. Creates report.         |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
 | `/mp-components-audit`    | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
 | `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |
@@ -228,6 +254,8 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | `/mp-commit-push-pr` | Full workflow — commit, push, create/update PR (`draft` arg optional) |
 | `/mp-sync-base`      | Merge target branch into current branch                               |
 | `/mp-ship`           | Ship finished work: sync base, commit, push, PR, wait for CI green, merge |
+
+`/mp-ship` delegates base sync to the `/mp-sync-base` skill and runs its CI-fix loop in a delegated sub-agent per `skills/shared/CI_FIX_AGENT.md` — it watches CI green explicitly before merging (never `gh pr merge --auto` as the gate).
 
 ### Deprecated Skills
 
@@ -258,7 +286,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
-| `/mp-script-discovery`        | Discover runnable scripts and dev servers                                                   |
+| `/mp-script-discovery`        | Discover runnable scripts and dev servers (wraps `scripts/detect-project-scripts.sh`, single-sourced there) |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 | `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
@@ -288,6 +316,8 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | mp-scanner-architecture     | Sonnet | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
+
+All 7 `mp-reviewer-*` agents read the shared `skills/shared/REVIEWER_PROTOCOL.md` (verification discipline + report format); role-specific judgment criteria stay in each agent file.
 
 ### Language-Specific Review References
 
