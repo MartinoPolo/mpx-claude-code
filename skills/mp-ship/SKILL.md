@@ -2,7 +2,6 @@
 name: mp-ship
 description: 'Ship finished work: sync base, commit, push, PR, wait for CI green, merge. Use when: "ship it", "ship and merge", "ship this"'
 argument-hint: "[base-branch]"
-disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
