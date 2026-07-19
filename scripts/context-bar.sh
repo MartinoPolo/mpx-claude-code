@@ -198,8 +198,13 @@ _cfg_tag="${_cfg_tag//[^A-Za-z0-9]/_}"
 USAGE_CACHE="$CACHE_DIR/claude-usage-cache-${_cfg_tag}.json"
 USAGE_ATTEMPT="$CACHE_DIR/claude-usage-attempt-${_cfg_tag}"
 USAGE_LOCK="$CACHE_DIR/claude-usage-lock-${_cfg_tag}"
-USAGE_CACHE_TTL=120  # seconds — endpoint rate-limits at ~1 req/2min
+USAGE_RETRY_FILE="$CACHE_DIR/claude-usage-retry-${_cfg_tag}"  # epoch until which the server (Retry-After) forbids fetching
+# The /oauth/usage endpoint has a low hourly request budget. Polling every ~2min
+# (~30 req/hr) sits OVER it, so each cooldown expiry gets re-tripped for another
+# ~1h — a permanent lockout. Poll every 4min (~15 req/hr) to stay under budget.
+USAGE_CACHE_TTL=240  # seconds between fetch attempts
 USAGE_STALE_SECS=300 # seconds — data older than this is flagged stale on-screen
+USAGE_RETRY_CAP=3600 # seconds — clamp for a server Retry-After we honor
 
 fetch_usage_json() {
     local token="$1"
@@ -208,7 +213,7 @@ fetch_usage_json() {
     local now cache_mtime age
     now=$(date +%s)
 
-    # Return cached data if fresh enough
+    # 1) Return cached data if fresh enough (no network).
     if [[ -f "$USAGE_CACHE" ]]; then
         cache_mtime=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
         if [[ -n "$cache_mtime" ]]; then
@@ -220,9 +225,21 @@ fetch_usage_json() {
         fi
     fi
 
-    # Gate on last ATTEMPT (success or failure), not just last success —
-    # otherwise a persistent error never advances the backoff clock and
-    # every status line render re-fires a request with no cooldown.
+    # 2) Honor the server's Retry-After. During the cooldown we make ZERO
+    #    requests so the rolling-hour budget drains and the endpoint recovers
+    #    cleanly at the deadline instead of being re-tripped by our polling.
+    if [[ -f "$USAGE_RETRY_FILE" ]]; then
+        local retry_until
+        retry_until=$(cat "$USAGE_RETRY_FILE" 2>/dev/null)
+        if [[ "$retry_until" =~ ^[0-9]+$ && $now -lt $retry_until ]]; then
+            [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
+            return
+        fi
+    fi
+
+    # 3) Gate on last ATTEMPT (success or failure), not just last success —
+    #    otherwise a persistent error never advances the backoff clock and
+    #    every status line render re-fires a request with no cooldown.
     if [[ -f "$USAGE_ATTEMPT" ]]; then
         local attempt_mtime attempt_age
         attempt_mtime=$(stat -c %Y "$USAGE_ATTEMPT" 2>/dev/null || stat -f %m "$USAGE_ATTEMPT" 2>/dev/null)
@@ -235,8 +252,8 @@ fetch_usage_json() {
         fi
     fi
 
-    # Serialize concurrent sessions so they don't all fetch at once. Stale
-    # locks (>10s, i.e. a prior fetch that never cleaned up) are reclaimed.
+    # 4) Serialize concurrent sessions so they don't all fetch at once. Stale
+    #    locks (>10s, i.e. a prior fetch that never cleaned up) are reclaimed.
     if ! mkdir "$USAGE_LOCK" 2>/dev/null; then
         local lock_mtime lock_age
         lock_mtime=$(stat -c %Y "$USAGE_LOCK" 2>/dev/null || stat -f %m "$USAGE_LOCK" 2>/dev/null)
@@ -251,28 +268,41 @@ fetch_usage_json() {
 
     : > "$USAGE_ATTEMPT"
 
-    # Fetch fresh data
-    local resp
-    resp=$(curl -s --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
+    # 5) Fetch fresh data (headers + body, so we can read Retry-After on 429).
+    local resp http retry_after body err
+    resp=$(curl -s -i --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer $token" \
         -H "anthropic-beta: oauth-2025-04-20" \
         -H "User-Agent: claude-code/2.1.69" 2>/dev/null)
+    http=$(printf '%s' "$resp" | head -1 | tr -d '\r' | awk '{print $2}')
+    retry_after=$(printf '%s' "$resp" | grep -i '^retry-after:' | head -1 | tr -d '\r' | awk '{print $2}')
+    body=$(printf '%s' "$resp" | awk 'b{print} /^\r?$/{b=1}')
 
-    # Only cache successful responses (no error field)
-    local err
-    err=$(echo "$resp" | jq -r '.error.type // empty' 2>/dev/null)
-    if [[ -z "$err" && -n "$resp" ]]; then
-        echo "$resp" > "$USAGE_CACHE"
-    elif [[ -f "$USAGE_CACHE" ]]; then
+    err=$(printf '%s' "$body" | jq -r '.error.type // empty' 2>/dev/null)
+
+    if [[ "$http" == "200" && -z "$err" && -n "$body" ]]; then
+        printf '%s\n' "$body" > "$USAGE_CACHE"
+        rm -f "$USAGE_RETRY_FILE"  # recovered — clear any cooldown
         rmdir "$USAGE_LOCK" 2>/dev/null
-        # Rate-limited or error — return stale cache instead of nothing
-        cat "$USAGE_CACHE"
+        printf '%s\n' "$body"
         return
     fi
 
+    # Failure. If the server told us when to retry, record the deadline so every
+    # session stops fetching until it passes (see step 2).
+    if [[ "$retry_after" =~ ^[0-9]+$ && $retry_after -gt 0 ]]; then
+        [[ $retry_after -gt $USAGE_RETRY_CAP ]] && retry_after=$USAGE_RETRY_CAP
+        echo $((now + retry_after)) > "$USAGE_RETRY_FILE"
+    fi
+
     rmdir "$USAGE_LOCK" 2>/dev/null
-    echo "$resp"
+    # Serve stale cache if we have it; otherwise surface the error body.
+    if [[ -f "$USAGE_CACHE" ]]; then
+        cat "$USAGE_CACHE"
+    else
+        printf '%s\n' "$body"
+    fi
 }
 
 CZK_CACHE="$CACHE_DIR/claude-czk-cache.txt"

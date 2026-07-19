@@ -12,6 +12,8 @@ metadata:
 
 Full workflow to submit an Obsidian plugin to `obsidianmd/obsidian-releases`. $ARGUMENTS
 
+Docs: fetch Obsidian plugin API docs via Context7 MCP — `context7.com/websites/obsidian_md_plugins`, `context7.com/obsidianmd/obsidian-sample-plugin`.
+
 ## Critical Rules
 
 - Description in `manifest.json` **MUST** end with `.` `?` `!` or `)` — bot rejects otherwise

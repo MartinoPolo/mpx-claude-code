@@ -1,4 +1,4 @@
-# Windows Symlinks & Junctions Reference
+﻿# Windows Symlinks & Junctions Reference
 
 ## Prerequisites
 
@@ -243,3 +243,23 @@ cmd //c 'mklink "C:\path\link.md" "C:\path\target.md"'
 | Junction shows as empty folder | Target path doesn't exist | Verify target path with `dir` |
 | `del` on junction deleted target files | Used `del` instead of `rmdir` | Always `rmdir` for directory links |
 | "Syntax is incorrect" from Git Bash | Nested quote mangling | Drop inner quotes or use native cmd.exe |
+| `yarn`/`npm`/`pnpm`/`docker` produce no output in Claude Code | TTY detection bug on Windows | Wrap with Node: `node -e "require('child_process').execSync('yarn lint', {stdio:'inherit'})"` — use `stdio:'inherit'` for live output, `encoding:'utf8'` + `console.log()` to capture as string. Apply whenever expected output is silently missing |
+| chrome-devtools-mcp / `/chrome` can't connect under WSL | WSL↔Windows Chrome bridge | No fix — run Claude Code natively on Windows (WSL abandoned for this reason) |
+
+## Windows Terminal Keybindings
+
+Remaps needed for Claude Code usability (Windows Terminal → `Ctrl+,` → Open JSON file, or directly `%LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json`):
+
+1. Shift+Enter → newline (must send `\r- `, a lone whitespace doesn't work)
+2. Ctrl+Backspace → delete whole word
+
+```json
+"actions": [
+    { "command": { "action": "sendInput", "input": "\r- " }, "id": "User.sendInput.945C32C5" },
+    { "command": { "action": "sendInput", "input": "\u0017" }, "id": "User.sendInput.817164EE" }
+]
+```
+
+## Native Install
+
+Switched from npm install to native install (2026-01-22). Executable lives in `C:\Users\<user>\.local\bin` — must be added to the PATH environment variable manually.
