@@ -5,7 +5,7 @@ argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or check
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "1.16"
+  version: "2.0"
   category: project-management
 ---
 
@@ -13,13 +13,13 @@ metadata:
 
 Unified execution skill with TDD methodology. Accepts GitHub issues, milestones, or inline tasks.
 
+**The main agent is a pure orchestrator.** It parses input, sets up context, spawns sub-agents, routes their bounded JSON results, and gates on user decisions. Review findings, test failures, and CI logs are handled inside sub-agents — main only ever sees the return contracts. Never ask a sub-agent for its raw findings or logs.
+
 ## Communication Style
 
 Use compressed output throughout execution: drop articles, filler, pleasantries, hedging. Fragments OK. Use abbreviations (DB/auth/config) and arrows (X → Y). Pattern: `[thing] [action] [reason]. [next step].` Keep technical terms exact, code blocks intact, error messages verbatim.
 
-When reading sub-agent results, extract only actionable findings — ignore verbose prose.
-
-**Exception:** Step 11 final report uses normal professional prose (it's posted as a PR comment and read by humans).
+**Exception:** Step 10 final report uses normal professional prose (it's posted as a PR comment and read by humans).
 
 ## Usage
 
@@ -28,7 +28,7 @@ When reading sub-agent results, extract only actionable findings — ignore verb
 /mp-execute milestone:"Epic 2"        # Pick one open, unblocked issue from milestone
 /mp-execute "add dark mode toggle"    # Inline task (no GitHub issue)
 /mp-execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
-/mp-execute --full-review #42         # Single issue with 6-reviewer full review
+/mp-execute --full-review #42         # Full reviewer set
 /mp-execute --no-review #42           # Simple task — skip reviewer sub-agents
 /mp-execute --no-auto-merge #42       # Stop after CI green; leave PR open
 ```
@@ -43,27 +43,10 @@ When reading sub-agent results, extract only actionable findings — ignore verb
 
 Detect input type from `$ARGUMENTS`:
 
-### GitHub Issue: `#42`
-
-```bash
-gh issue view <number> --json title,body,labels,comments,state,milestone,url
-```
-
-Extract: goal, constraints, acceptance criteria, blocking relationships.
-
-### Milestone: `milestone:"Epic 2"`
-
-```bash
-gh issue list --milestone "Epic 2" --state open --json number,title,labels,body
-```
-
-Select exactly one open, unblocked issue from milestone order and execute only that issue in this run. If none are unblocked, report blockers and stop.
-
-### Inline Tasks: `"add dark mode toggle, fix header spacing"`
-
-Parse comma-separated tasks or markdown checklist items. No GitHub issue — just execute with TDD.
-
-If no `$ARGUMENTS`: ask user what to execute.
+- **GitHub issue** `#42` → `gh issue view <n> --json title,body,labels,comments,state,milestone,url`. Extract goal, constraints, acceptance criteria, blocking relationships.
+- **Milestone** `milestone:"Epic 2"` → `gh issue list --milestone "Epic 2" --state open --json number,title,labels,body`. Select exactly one open, unblocked issue in milestone order; execute only that issue this run. None unblocked → report blockers, stop.
+- **Inline tasks** `"add dark mode toggle, fix header spacing"` → parse comma-separated tasks or markdown checklist items. No GitHub issue — just execute with TDD.
+- No `$ARGUMENTS` → ask user what to execute.
 
 ## Step 2: Analyze (GitHub issues only)
 
@@ -74,13 +57,9 @@ Spawn `mp-issue-analyzer` sub-agent to explore + analyze + plan:
 >
 > 1. Explore the codebase to understand relevant areas
 > 2. Classify issue type (bug/task/feature) with rationale
-> 3. Create execution plan with:
->    - Files to modify/create
->    - Behaviors to test (for TDD)
->    - Acceptance criteria mapped to test cases
->    - Risk areas and open questions
+> 3. Create execution plan: files to modify/create, behaviors to test (TDD), acceptance criteria mapped to test cases, risk areas and open questions
 > 4. If external library behavior is uncertain, note it for Context7 lookup
-> 5. If issue body/comments reference design files (e.g. `designs/<slug>/*.html`, `SUMMARY.md`, design brief), read them and extract layout + intent. Map to the existing design system per **Design Mapping** below; record the mapping decisions in the plan as implementation constraints.
+> 5. If issue body/comments reference design files (e.g. `designs/<slug>/*.html`, `SUMMARY.md`, design brief), read them and extract layout + intent. Map to the existing design system per **Design Mapping** below; record mapping decisions in the plan as implementation constraints.
 
 If analyzer identifies open questions → ask user (clarification gate).
 
@@ -88,23 +67,19 @@ If analyzer identifies external library uncertainty → spawn `mp-context7-docs-
 
 ### Design Mapping (when issue references mockups)
 
-Mockups are **inspiration, not source of truth.** When the issue body or comments link design files (HTML mockups, `SUMMARY.md`, design brief):
+Mockups are **inspiration, not source of truth.** When the issue links design files:
 
 - Read the linked files before planning.
 - **Layout** — match the mockup.
 - **Colors** — match intent, but always use existing semantic/theme tokens. Never hardcode mockup hex/OKLCH values when a token exists.
-- **Components** — reuse existing custom components + variants (e.g. `Button`) instead of inlining raw elements. If the mockup needs a significantly different variant → add a new variant to the custom component, don't inline raw elements.
-- Pass these mapping decisions to the TDD executor (Step 4) as implementation constraints.
+- **Components** — reuse existing custom components + variants (e.g. `Button`) instead of inlining raw elements. Significantly different look → add a variant to the custom component, don't inline raw elements.
+- Pass these mapping decisions to the TDD executor (Step 4) and verify-fix orchestrator (Step 5) as implementation constraints.
 
 ## Step 3: Detect Available Checks
 
-```bash
-bash $HOME/.claude/scripts/detect-check-scripts.sh
-```
+Run `bash $HOME/.claude/scripts/detect-check-scripts.sh` and parse the key=value output. Store static check commands (`CHECK_ALL`, `TYPECHECK`, `LINT`, `FORMAT`, `BUILD`) and test commands (`TEST`, `TEST_UNIT`, `TEST_E2E`) — passed verbatim to sub-agents in Steps 5, 8d, 9.
 
-Parse output key=value pairs. Store all detected commands — both check-style (`CHECK_ALL`, `TYPECHECK`, `LINT`, `FORMAT`, `BUILD`) and test-style (`TEST`, `TEST_UNIT`, `TEST_E2E`) — for use in Step 5 and Step 6.
-
-**Treat test commands as first-class checks.** They are the CI parity gate: if CI runs them, this skill must run them locally before push.
+**Test commands are first-class checks** — the CI parity gate: if CI runs them, they must pass locally before push.
 
 ## Step 4: TDD Execution Loop
 
@@ -112,10 +87,7 @@ Execute the selected issue/task using **red-green-refactor**:
 
 ### 4a. Confirm Behaviors to Test
 
-From the analyzer output (or inline task description), list the behaviors that need tests:
-
-- Each acceptance criterion becomes one or more test cases
-- Ask user to confirm if the list seems incomplete
+From the analyzer output (or inline task description), list behaviors that need tests. Each acceptance criterion becomes one or more test cases. Ask user to confirm if the list seems incomplete.
 
 ### 4b. Execute TDD
 
@@ -124,78 +96,45 @@ Spawn `mp-tdd-executor` sub-agent with:
 - The confirmed behaviors list from 4a
 - Project context (test framework, file structure, relevant source files)
 - Acceptance criteria from the issue/task
-- Design Mapping constraints from Step 2 (layout, semantic-token colors, custom-component/variant reuse) when the issue references mockups
+- Design Mapping constraints from Step 2 when the issue references mockups
+- Module design reference paths: `${CLAUDE_SKILL_DIR}/../shared/deep-modules.md`, `${CLAUDE_SKILL_DIR}/../shared/interface-design.md`
 
 The executor handles the full red-green-refactor cycle for each behavior.
 
-## Step 5: Review + Static Check Loop (up to 3 iterations)
+## Step 5: Verify-Fix Loop (delegated)
 
-After TDD execution, always spawn `mp-checker` with detected **static** check commands from Step 3 (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`). Static checks always run — they are part of the CI-parity gate.
+All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn a `general-purpose` sub-agent:
 
-Unless `--no-review` is set, also spawn these sonnet reviewer sub-agents in parallel:
+> First Read `${CLAUDE_SKILL_DIR}/../shared/VERIFY_FIX_ORCHESTRATOR.md` and follow it exactly.
+>
+> Inputs:
+>
+> - check_commands: [static check commands from Step 3]
+> - test_commands: [test commands from Step 3]
+> - reviewers: [list per flags — see below]
+> - context: [issue/task summary, acceptance criteria, Design Mapping constraints from Step 2]
+> - changed_scope: [branch + files changed in Step 4]
+> - browser_verification: [true only for UI-heavy changes where e2e doesn't cover the interaction]
+>
+> Return ONLY the JSON contract defined in that file.
 
-- `mp-reviewer-code-quality`
-- `mp-reviewer-best-practices`
-- `mp-reviewer-spec-alignment`
-- `mp-reviewer-test-quality`
+Reviewer list by flags:
 
-If `--full-review` is set, additionally spawn in parallel:
+- Default: `mp-reviewer-code-quality`, `mp-reviewer-best-practices`, `mp-reviewer-spec-alignment`, `mp-reviewer-test-quality`
+- `--full-review`: add `mp-reviewer-security`, `mp-reviewer-performance`, `mp-reviewer-error-handling`
+- `--no-review`: empty list (static checks + tests still run — CI parity)
 
-- `mp-reviewer-security`
-- `mp-reviewer-performance`
-- `mp-reviewer-error-handling`
+**Route the returned JSON:**
 
-### Resolve Findings
+- `"clean"` → continue to Step 6
+- `"issues_remaining"` → carry `unresolved_findings` (verbatim) into Step 6 triage; continue
+- `"blocked"` → **do not push.** Report `blockers` + `summary` to user and stop. Hard blocker, not an unresolved item.
 
-If reviewers or checker report issues (confidence > 65):
+## Step 6: Unresolved Triage (GitHub issues only)
 
-1. Collect all findings into a scoped fix list
-2. **Analyze each finding and determine the concrete fix** — identify exact file paths, lines, and the specific code change needed. The calling agent (opus) does all the thinking here.
-3. Spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions: for each finding, pass the file path, current code, and exact change to apply. Do not pass raw findings for the executor to interpret.
-4. Re-run ONLY the failed reviewers/checks
-5. Repeat up to 3 iterations total
+Collect items that remain unresolved: `unresolved_findings` from Step 5, open questions from Step 2 that couldn't be clarified, edge cases discovered during implementation but out of current issue's scope.
 
-If still failing after 3 iterations → collect remaining issues as **unresolved items** for triage in Step 7.
-
-## Step 6: Test Execution Gate (mandatory — CI parity)
-
-**This step runs the project's own test suites exactly as CI does.** This is the mandatory CI-parity gate and must pass before commit/push.
-
-### 6a. Run All Detected Test Commands
-
-Using the test commands detected in Step 3 (`TEST`, `TEST_UNIT`, `TEST_E2E`), spawn `mp-checker` with:
-
-- `TEST` or `TEST_UNIT` (unit tests — fast, always run)
-- `TEST_E2E` (e2e/browser tests — run when any of the following changed: source files, route files, component files, e2e spec files, build config, or dependencies)
-
-If no test commands were detected → skip to Step 6c.
-
-### 6b. Fix Loop (up to 3 iterations)
-
-If any test command fails:
-
-1. Collect failures with file:line, error message, and failing test name
-2. **Diagnose each failure and determine the exact fix** — decide whether the implementation or the test is wrong relative to acceptance criteria (never change a test just to make it pass — see Rules). Identify the file, line, root cause, and concrete code change.
-3. Spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions: for each failure, pass the file path, root cause, and exact change to apply. The executor applies fixes — it does not diagnose.
-4. Re-run ONLY the failed test commands
-5. Repeat up to 3 iterations
-
-If tests still fail after 3 iterations → **do not push**. Report failures to user and stop. This is a hard blocker, not an unresolved item.
-
-### 6c. Interactive Manual Verification (optional, frontend only)
-
-When changes are UI-heavy and e2e tests don't cover the specific interaction, optionally spawn `mp-playwright-tester` sub-agent for exploratory browser-based verification. This is in addition to `TEST_E2E`, never a replacement for it.
-
-## Step 7: Unresolved Triage (GitHub issues only)
-
-After review and frontend verification, collect any items that remain unresolved:
-
-- Review persisting findings (from Step 5)
-- Open questions from analysis that couldn't be clarified (from Step 2)
-- Edge cases discovered during implementation but out of current issue's scope
-- Frontend verification issues persisting after 3 iterations (from Step 6)
-
-**If no unresolved items → skip to Step 8.**
+**If no unresolved items → skip to Step 7.**
 
 Spawn `mp-unresolved-issue-tracker` sub-agent:
 
@@ -207,7 +146,7 @@ Spawn `mp-unresolved-issue-tracker` sub-agent:
 
 The agent finds the parent PRD, scans sibling issues for scope match (appends to sibling body if fits), and creates/updates an `Unresolved: [PRD title]` tracking issue (labeled `HITL`) for remaining items. See `agents/mp-unresolved-issue-tracker.md` for full logic.
 
-## Step 8: Commit and Push
+## Step 7: Commit and Push
 
 Spawn `mp-git-committer` sub-agent to stage, commit, and push:
 
@@ -217,13 +156,13 @@ Spawn `mp-git-committer` sub-agent to stage, commit, and push:
 
 **Handle result:**
 
-- **OK** → continue to Step 9 (GitHub issues) or Step 11 (inline tasks)
+- **OK** → continue to Step 8 (GitHub issues) or Step 10 (inline tasks)
 - **SKIP** → report "Nothing to commit" — check if push needed
-- **FAIL** → diagnose error from agent output. If pre-commit hook failed, fix the issue (use sonnet sub-agent) and re-spawn commiter agent. Up to 2 retries before escalating to user.
+- **FAIL** → diagnose error from agent output. If pre-commit hook failed, spawn `mp-executor` (sonnet) with the concrete fix and re-spawn committer. Up to 2 retries before escalating to user.
 
-## Step 9: Create PR (GitHub issues only)
+## Step 8: Create PR (GitHub issues only)
 
-For inline tasks (no GitHub issue): skip to Step 11.
+For inline tasks (no GitHub issue): skip to Step 10.
 
 Spawn `mp-pr-manager` sub-agent to create or update the PR:
 
@@ -232,60 +171,51 @@ Spawn `mp-pr-manager` sub-agent to create or update the PR:
 
 **Handle result:**
 
-- **OK** → continue to Step 9d
-- **FAIL** → diagnose error, fix (use sonnet sub-agent), re-spawn (up to 2 retries). If still failing → escalate to user.
+- **OK** → continue to Step 8d
+- **FAIL** → diagnose error, fix (spawn `mp-executor` with concrete instructions), re-spawn (up to 2 retries). If still failing → escalate to user.
 
-### 9d. Ensure Mergeable (resolve merge conflicts)
+### 8d. Ensure Mergeable (resolve merge conflicts — delegated)
 
-After creating/updating the PR, check mergeability:
+Check: `gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'`
 
-```bash
-gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'
-```
+If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent:
 
-If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved. Do not assume CI is pending or rate-limited — merge conflicts are the most common reason for missing CI checks.
+> Merge origin/<base> into <branch> and resolve all conflicts.
+>
+> 1. `git fetch origin <base>` then `git merge origin/<base>`
+> 2. Resolve conflicts: prefer the feature branch's version for code just written for issue #N; incorporate base-only changes where they don't conflict with that work
+> 3. Verify the resolution: spawn `mp-checker` with [static + test commands from Step 3]; fix regressions before committing
+> 4. Spawn `mp-git-committer` with push: true, commit_hint: "merge conflict resolution with <base>"
+> 5. Return ONLY JSON: `{"status": "clean"|"blocked", "summary": "≤5 lines", "conflicts_resolved": ["file", ...]}`
 
-1. Fetch and merge the base branch locally:
-   ```bash
-   git fetch origin <base_branch>
-   git merge origin/<base_branch>
-   ```
-2. Resolve all conflicts (prefer the feature branch's version for code this skill just wrote; incorporate base-only changes where they don't conflict with the current work)
-3. Run Step 5 (static checks) + Step 6 (tests) locally to verify the merge resolution
-4. Spawn `mp-git-committer` sub-agent with push: true, commit_hint: "merge conflict resolution with <base>"
-5. Re-check mergeability — repeat if still conflicting (up to 2 iterations)
+Re-check mergeability. Repeat if still conflicting (up to 2 iterations), then escalate to user.
 
-If still conflicting after 2 iterations → escalate to user.
+## Step 9: CI Green Gate (mandatory — completion gate)
 
-## Step 10: CI Green Gate (mandatory — completion gate)
+**The skill is not done until CI is green.** Local Step 5 is not a substitute — CI environment differences (OS, headless browsers, timing, secrets, build flags) can still produce divergent results.
 
-**The skill is not done until CI is green.** Local Step 6 is not a substitute — CI environment differences (OS, headless browsers, timing, secrets, build flags) can still produce divergent results.
+### 9a. Watch CI
 
-### 10a. Watch CI
+After push (and after confirming PR is mergeable per Step 8d): `gh pr checks <pr_number> --watch`
 
-After push (and after confirming PR is mergeable per Step 9d), watch checks until they complete:
+### 9b. Fix Loop (delegated — main never reads CI logs)
 
-```bash
-gh pr checks <pr_number> --watch
-```
+If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent:
 
-### 10b. Fix Loop (up to 3 iterations)
+> First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
+> Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.
+> Local verify commands: [static + test commands from Step 3].
+> Return ONLY the JSON contract defined in that file.
 
-If any CI check fails:
+The agent fetches logs, diagnoses, fixes, commits+pushes, and re-watches CI — up to 3 attempts internally.
 
-1. Pull the failed run logs:
-   ```bash
-   gh run view <run_id> --log-failed
-   ```
-2. Diagnose root cause from logs (file:line, error, failing test name)
-3. Apply fix (source code, test, or config — whichever is wrong)
-4. Re-run Step 5 (static checks) + Step 6 (tests) locally to verify
-5. Commit + push + watch CI again
-6. Repeat up to 3 iterations
+**Route the returned JSON:**
 
-If CI still fails after 3 iterations → escalate to user with full log summary. **Do not declare completion.**
+- `"clean"` → confirm with `gh pr checks <pr_number>`; continue to 9c
+- `"issues_remaining"` → CI green; route `unresolved_findings` through Step 6 triage, then continue
+- `"blocked"` → escalate to user with the agent's `summary` + `blockers`. **Do not declare completion.**
 
-### 10c. Completion Criteria
+### 9c. Completion Criteria
 
 The skill is done **only when all of these are true**:
 
@@ -294,62 +224,17 @@ The skill is done **only when all of these are true**:
 - `gh pr checks <pr>` shows **all checks passed**
 - No uncommitted changes remain
 
-## Step 11: Finalization
+## Step 10: Finalization
 
 After CI is green:
 
-1. Compose the final report (the same text that will be the final report of this run) covering:
-
-- Issue/task completed
-- Tests added/modified
-- Files changed
-- PR URL(s) created
-- CI run URL (green)
-- Any remaining blockers
-- Unresolved items triaged (routed to sibling issues or tracking issue)
-- Review findings summary
-
-2. Post the final report as a PR comment (GitHub issues only). Write the composed text to a temp file and post it:
-
-```bash
-gh pr comment <pr_number> --body-file <temp_file>
-```
-
-The comment must be byte-identical to the text output as the final report of this run, so the PR carries a complete audit trail.
-
-3. Unless `--no-auto-merge` is set, merge the PR and sync the main worktree:
-
-**3a. Check PR state** (auto-merge may have already merged it):
-
-```bash
-gh pr view <pr_number> --json state --jq '.state'
-```
-
-**3b. Merge if still open** (without `--delete-branch` — it fails in worktree contexts):
-
-If state is `OPEN`:
-
-```bash
-gh pr merge <pr_number> --squash --auto
-```
-
-If state is `MERGED`, skip.
-
-**3c. Delete the remote feature branch** (idempotent):
-
-```bash
-git push origin --delete <branch_name> 2>/dev/null || true
-```
-
-**3d. Pull merged changes into the main worktree:**
-
-```bash
-MAIN_REPO=$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")
-git -C "$MAIN_REPO" pull
-```
-
-Skip 3d if not in a worktree (i.e., `git rev-parse --git-common-dir` returns `.git`).
-
+1. Compose the final report: issue/task completed, tests added/modified, files changed (from sub-agent `files_changed` lists), PR URL(s), CI run URL (green), remaining blockers, unresolved items triaged, review summary (from Step 5 `summary`).
+2. Post it as a PR comment (GitHub issues only): write the composed text to a temp file, then `gh pr comment <pr_number> --body-file <temp_file>`. The comment must be byte-identical to the final report output — the PR carries a complete audit trail.
+3. Unless `--no-auto-merge` is set, merge and sync:
+   - **3a.** Check state (auto-merge may have already merged): `gh pr view <pr_number> --json state --jq '.state'`
+   - **3b.** If `OPEN`: `gh pr merge <pr_number> --squash --auto` (without `--delete-branch` — it fails in worktree contexts). If `MERGED`: skip.
+   - **3c.** Delete remote branch (idempotent): `git push origin --delete <branch_name> 2>/dev/null || true`
+   - **3d.** Pull merged changes into the main worktree: `MAIN_REPO=$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")` then `git -C "$MAIN_REPO" pull`. Skip when not in a worktree (`git rev-parse --git-common-dir` returns `.git`).
 4. Output the same composed text as the final report of this run.
 
 ## Rules
@@ -364,14 +249,15 @@ Skip 3d if not in a worktree (i.e., `git rev-parse --git-common-dir` returns `.g
 - **Minimal green** — write only enough code to pass the test
 - **Commit after each issue** — one commit per issue
 - **CI is the completion gate** — a run ends when `gh pr checks` shows green, not when local checks pass
+- **Main stays out of findings** — raw reviewer output, test failures, and CI logs live in sub-agents; main routes bounded JSON only
 
 ## Flags
 
 Auto-merge is the **default** behavior: after CI is green and the final-report comment is posted, the PR is squash-merged and the branch deleted. Use `--no-auto-merge` to opt out.
 
-| Flag              | Effect                                                                          |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `--full-review`   | Add security, performance, and error-handling reviewers (6 reviewers total)     |
-| `--no-review`     | Skip all reviewer sub-agents in Step 5 (static checks still run for CI parity)  |
-| `--no-tdd`        | Skip TDD loop, implement directly (for trivial changes like config updates)     |
-| `--no-auto-merge` | Stop after CI green + final-report comment; leave PR open instead of merging it |
+| Flag              | Effect                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| `--full-review`   | Add security, performance, and error-handling reviewers to Step 5 (7 total)        |
+| `--no-review`     | Skip reviewer sub-agents in Step 5 (static checks + tests still run for CI parity) |
+| `--no-tdd`        | Skip TDD loop, implement directly (for trivial changes like config updates)        |
+| `--no-auto-merge` | Stop after CI green + final-report comment; leave PR open instead of merging it    |

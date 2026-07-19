@@ -2,10 +2,10 @@
 name: mp-ship
 description: 'Ship finished work: sync base, commit, push, PR, wait for CI green, merge. Use when: "ship it", "ship and merge", "ship this"'
 argument-hint: "[base-branch]"
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(gh *), Bash(node *)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: git-workflow
 ---
 
@@ -13,14 +13,16 @@ metadata:
 
 Full workflow from finished execution to merged PR. $ARGUMENTS
 
+**The main agent is a pure orchestrator.** It detects state, invokes skills/sub-agents, routes their bounded results, and gates the merge on CI green. CI logs and fix work are handled inside sub-agents — main never reads them.
+
 ## Flow Overview
 
 1. **State detection** — skip completed steps
-2. **Sync base** — merge target branch into current (Sonnet agent)
+2. **Sync base** — invoke `mp-sync-base` skill
 3. **Commit + push** — stage, commit, push (Haiku agent)
 4. **Create/update PR** — find issue, create PR (Haiku agent)
 5. **Watch CI** — `gh pr checks --watch` (do NOT merge yet)
-6. **CI fix loop** — diagnose + fix failures (max 3 attempts)
+6. **CI fix loop** — delegated CI-fix sub-agent (max 3 attempts inside it)
 7. **Merge on green** — `gh pr merge --squash` only after CI is fully green
 8. **Post-merge** — comment, pull main repo
 
@@ -51,20 +53,9 @@ gh pr list --head <current-branch> --json number,state,url --jq '.[0]'
 
 ## Step 2: Sync Base Branch
 
-Determine target branch: use `$ARGUMENTS` if provided, otherwise run `node $HOME/.claude/scripts/detect-base-branch.js`.
+Invoke the `mp-sync-base` skill (Skill tool), passing `$ARGUMENTS` as the base branch if provided. It detects the base deterministically via `node $HOME/.claude/scripts/detect-base-branch.js`, fetches, merges, resolves conflicts (asks the user on complex ones), and pushes.
 
-Spawn a **Sonnet** `general-purpose` sub-agent with sync-base instructions:
-
-> **Task:** Merge origin/<target> into current branch.
->
-> 1. `git fetch origin <target>`
-> 2. `git log HEAD..origin/<target> --oneline` — if empty, report "already synced" and stop
-> 3. `git merge origin/<target>`
-> 4. If conflicts: list conflicted files (`git diff --name-only --diff-filter=U`), read each, resolve simple conflicts (non-overlapping, clear intent) with Edit tool + `git add`. For complex/ambiguous conflicts, show both sides and ask the user.
-> 5. After all resolved: `git commit` (accept default merge message)
-> 6. Report: commits merged, conflicts resolved (if any)
-
-**If the Sonnet agent cannot resolve conflicts** (complex overlapping logic): take over at Opus level, resolve manually, then continue.
+If it reports "already up-to-date" → continue to Step 3.
 
 ## Step 3: Commit and Push
 
@@ -112,39 +103,20 @@ If the PR has **no checks at all** (`gh pr checks` exits non-zero with "no check
 
 > Do not merge here. The merge happens only in Step 7, after green.
 
-## Step 6: CI Fix Loop (max 3 attempts)
+## Step 6: CI Fix Loop (delegated — main never reads CI logs)
 
-On CI failure:
+On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent:
 
-### 6a. Fetch failure details
+> First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
+> Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.
+> Return ONLY the JSON contract defined in that file.
 
-```bash
-gh run list --branch <branch> --limit 1 --json databaseId,conclusion --jq '.[0]'
-gh run view <run_id> --log-failed
-```
+The agent fetches failed logs, diagnoses (lint/type → fix; test failure → impl vs test, harden flaky tests; infra flake → `gh run rerun --failed`), applies fixes directly or via `mp-executor`, commits+pushes via `mp-git-committer`, and re-watches CI — up to 3 attempts internally.
 
-### 6b. Diagnose
+**Route the returned JSON:**
 
-Analyze failure logs. Classify:
-
-- **Lint/format/type error** → fix code directly
-- **Test failure** → determine if implementation or test is wrong, fix accordingly. A test that only fails intermittently is **flaky** — harden it (focus/settle guards, generous `waitFor` timeouts) rather than blindly rerunning; a green rerun of a flaky test is not a fix.
-- **Infrastructure/flaky-by-environment** → rerun failed jobs: `gh run rerun <run_id> --failed`
-
-### 6c. Fix and re-push
-
-For code fixes:
-1. Apply fix at Opus level
-2. Spawn `mp-git-committer` sub-agent (Haiku) with push: true, commit_hint: "fix: CI failure — <summary>"
-3. Return to Step 5 (watch CI again). Still do NOT merge until green.
-
-For flaky/infra reruns:
-1. `gh run rerun <run_id> --failed`
-2. Return to Step 5 (watch CI again).
-
-### 6d. Escalation
-
-After 3 fix attempts: report full failure summary to user and stop. **Do not merge.**
+- `"clean"` → confirm with `gh pr checks <pr_number>`; go to Step 7
+- `"blocked"` → report the agent's `summary` + `blockers` to user and stop. **Do not merge.**
 
 ## Step 7: Merge on Green
 
@@ -219,6 +191,6 @@ After completion, display:
 - Sync status (commits merged, conflicts resolved)
 - Commit hash and message
 - PR URL and number
-- CI status (green, attempts needed)
+- CI status (green, fix-agent attempts if any)
 - Merge confirmation
 - Main repo pull status
