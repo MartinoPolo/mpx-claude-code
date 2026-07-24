@@ -691,6 +691,7 @@
     font-size: 12px; font-weight: 700; color: var(--text-3);
     transition: all .25s ease;
   }
+  .option .marker > * { grid-area: 1 / 1; }
   .option .marker svg { width: 14px; height: 14px; opacity: 0; transform: scale(.4); transition: all .25s cubic-bezier(.2,1.4,.4,1); }
   .option .opt-letter { transition: opacity .2s; }
   .option:hover:not(:disabled) { border-color: var(--accent-1); background: color-mix(in srgb, var(--accent-1) 7%, var(--surface-2)); transform: translateX(2px); }
@@ -705,7 +706,7 @@
   }
   .option.correct .marker { border-color: var(--ok); background: var(--ok); color: #fff; }
   .option.correct .marker .ok-svg { opacity: 1; transform: scale(1); }
-  .option.correct .opt-letter { opacity: 0; position: absolute; }
+  .option.correct .opt-letter { opacity: 0; }
   .option.wrong {
     border-color: var(--err);
     background: color-mix(in srgb, var(--err) 12%, transparent);
@@ -713,7 +714,7 @@
   }
   .option.wrong .marker { border-color: var(--err); background: var(--err); color: #fff; }
   .option.wrong .marker .err-svg { opacity: 1; transform: scale(1); }
-  .option.wrong .opt-letter { opacity: 0; position: absolute; }
+  .option.wrong .opt-letter { opacity: 0; }
   .option.dimmed { opacity: .5; }
   @keyframes rightPulse { 0%{ transform: scale(1);} 40%{ transform: scale(1.02);} 100%{ transform: scale(1);} }
   @keyframes shake { 0%,100%{ transform: translateX(0);} 20%{ transform: translateX(-6px);} 40%{ transform: translateX(6px);} 60%{ transform: translateX(-4px);} 80%{ transform: translateX(4px);} }
