@@ -1,0 +1,15 @@
+{
+  "name": "mp-tutorial-create-compiler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Compiles compact tutorial source markdown into self-contained interactive HTML pages",
+  "scripts": {
+    "compile": "node scripts/compile.js"
+  },
+  "dependencies": {
+    "shiki": "^3.0.0",
+    "yaml": "^2.5.0"
+  },
+  "optionalDependencies": {}
+}

@@ -255,6 +255,7 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 | Skill                         | Description                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
+| `/mp-tutorial-create`         | Generate interactive self-contained HTML tutorials (topic or code-showcase) from compact markdown source, compiled to `OneDrive/tutorials/<category>/` with dashboard index |
 | `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
