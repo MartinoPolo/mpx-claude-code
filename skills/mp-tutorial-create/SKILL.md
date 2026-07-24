@@ -5,7 +5,7 @@ argument-hint: "<topic or code-showcase description> [--type topic|code-showcase
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Agent, WebSearch, WebFetch
 metadata:
   author: MartinoPolo
-  version: "1.0.0"
+  version: "1.1.0"
   category: utility
 ---
 
@@ -37,6 +37,7 @@ Authoring rules:
 - **Links everywhere**: every external concept links to canonical docs (MDN, framework docs) inline; every referenced local file is a clickable `file:///` link (rendered with 📁) both inline and in the `references` frontmatter.
 - Every section ends with a `:::recap`. Use annotated code or a walkthrough for the core code idea; prefer a Mermaid diagram wherever a visual helps.
 - Glossary: define recurring jargon in frontmatter `glossary`, mark occurrences with `((term))`.
+- **Playground restraint**: `:::playground` only for layout/visual-CSS topics (flexbox, grid, positioning, transitions); max ONE per tutorial; 2-4 challenges. Challenge targets must be achievable with the declared controls. Ghost-matching is geometric, so alternate solutions win legitimately — that is intended.
 
 ### Step 4: Compile
 

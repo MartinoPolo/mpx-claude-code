@@ -205,7 +205,115 @@ function parseContainer(name, arg, inner) {
   if (name === "walkthrough") {
     return parseWalkthrough(inner);
   }
+  if (name === "playground") {
+    return parsePlayground(inner);
+  }
   fail(`unknown container :::${name}`);
+}
+
+/* ---------------- playground parsing ---------------- */
+
+const PLAYGROUND_LABEL_POOL = ["A", "B — wide", "C", "D — wider still", "E", "F — wide"];
+const PLAYGROUND_MIN_ITEMS = 2;
+const PLAYGROUND_MAX_ITEMS = 6;
+
+function parsePlaygroundControls(raw) {
+  const controls = {};
+  for (const [prop, value] of Object.entries(raw || {})) {
+    const text = String(value).trim();
+    const range = text.match(/^(-?\d+)\.\.(-?\d+)(?: +step +(\d+))?$/);
+    if (range) {
+      controls[prop] = {
+        type: "range",
+        min: Number(range[1]),
+        max: Number(range[2]),
+        step: range[3] ? Number(range[3]) : 1,
+        unit: prop === "gap" ? "px" : "",
+        default: Number(range[1]),
+      };
+    } else {
+      const values = text.split("|").map((v) => v.trim()).filter(Boolean);
+      if (values.length < 2) fail(`playground: control "${prop}" needs "a | b" enum or "min..max" range, got: ${text}`);
+      controls[prop] = { type: "enum", values, default: values[0] };
+    }
+  }
+  return controls;
+}
+
+function validatePlaygroundTarget(scope, controls, target, challengeTitle) {
+  const out = {};
+  for (const [prop, value] of Object.entries(target || {})) {
+    const control = controls[prop];
+    if (!control) fail(`playground challenge "${challengeTitle}": target uses undeclared ${scope} control "${prop}"`);
+    if (control.type === "enum") {
+      if (!control.values.includes(String(value))) {
+        fail(`playground challenge "${challengeTitle}": ${prop}: ${value} is not among declared values`);
+      }
+      out[prop] = String(value);
+    } else {
+      const num = Number(value);
+      if (Number.isNaN(num) || num < control.min || num > control.max) {
+        fail(`playground challenge "${challengeTitle}": ${prop}: ${value} outside range ${control.min}..${control.max}`);
+      }
+      out[prop] = num;
+    }
+  }
+  return out;
+}
+
+function clampItemCount(n, fallback) {
+  const num = Number(n);
+  if (!num) return fallback;
+  return Math.min(PLAYGROUND_MAX_ITEMS, Math.max(PLAYGROUND_MIN_ITEMS, num));
+}
+
+function parsePlayground(inner) {
+  let raw;
+  try {
+    raw = parseYaml(inner.join("\n"));
+  } catch (error) {
+    fail(`playground: invalid YAML — ${error.message}`);
+  }
+  if (!raw || typeof raw !== "object") fail("playground: empty config");
+
+  const container = parsePlaygroundControls(raw.container);
+  const item = parsePlaygroundControls(raw.item);
+  if (!Object.keys(container).length) fail("playground: needs at least one container control");
+
+  const itemCount = clampItemCount(raw.items, 3);
+  const authoredLabels = typeof raw["item-labels"] === "string"
+    ? raw["item-labels"].split("|").map((s) => s.trim()).filter(Boolean)
+    : [];
+  const itemLabels = [];
+  for (let i = 0; i < PLAYGROUND_MAX_ITEMS; i++) itemLabels.push(authoredLabels[i] || PLAYGROUND_LABEL_POOL[i]);
+
+  const challenges = (raw.challenges || []).map((challenge, index) => {
+    if (!challenge || !challenge.title || !challenge.target) fail(`playground challenge ${index + 1}: needs title and target`);
+    const target = challenge.target;
+    const nested = Boolean(target.container) || Object.keys(target).some((k) => /^item-\d+$/.test(k));
+    const targetContainer = validatePlaygroundTarget("container", container, nested ? target.container : target, challenge.title);
+    const targetItems = {};
+    const count = clampItemCount(challenge.items, itemCount);
+    if (nested) {
+      for (const [key, value] of Object.entries(target)) {
+        if (key === "container") continue;
+        const match = key.match(/^item-(\d+)$/);
+        if (!match) fail(`playground challenge "${challenge.title}": unknown target key "${key}"`);
+        const n = Number(match[1]);
+        if (n < 1 || n > count) fail(`playground challenge "${challenge.title}": item-${n} outside 1..${count}`);
+        targetItems[n] = validatePlaygroundTarget("item", item, value, challenge.title);
+      }
+    }
+    return {
+      title: String(challenge.title),
+      brief: String(challenge.brief || ""),
+      hint: challenge.hint ? String(challenge.hint) : "",
+      items: count,
+      target: { container: targetContainer, items: targetItems },
+    };
+  });
+
+  return { kind: "playground", config: { itemCount, itemLabels, container, item, challenges } };
 }
 
 function parseWalkthrough(inner) {
@@ -427,10 +535,202 @@ function renderReveal(block) {
   );
 }
 
-async function renderBlock(block, nextBlock) {
+/* ---------------- playground rendering ---------------- */
+
+function shikiTokenSpan(color, text) {
+  const escaped = escapeHtml(text);
+  return color ? `<span style="color:${color}">${escaped}</span>` : escaped;
+}
+
+/**
+ * Highlights one CSS line whose [valueStart, valueEnd) range is a mutable value.
+ * The value range is re-emitted as a single <span class="pg-slot"> (fixed color)
+ * so runtime JS can swap textContent without losing highlighting.
+ */
+function renderSlotLine(lineTokens, valueStart, valueEnd, slotId, rawValue) {
+  let column = 0;
+  let before = "";
+  let after = "";
+  let slotColor = null;
+  for (const token of lineTokens) {
+    const start = column;
+    const end = column + token.content.length;
+    column = end;
+    if (end <= valueStart) {
+      before += shikiTokenSpan(token.color, token.content);
+    } else if (start >= valueEnd) {
+      after += shikiTokenSpan(token.color, token.content);
+    } else {
+      if (start < valueStart) before += shikiTokenSpan(token.color, token.content.slice(0, valueStart - start));
+      if (!slotColor) slotColor = token.color || null;
+      if (end > valueEnd) after += shikiTokenSpan(token.color, token.content.slice(valueEnd - start));
+    }
+  }
+  const colorAttr = slotColor ? ` style="color:${slotColor}"` : "";
+  return `${before}<span class="pg-slot" data-slot="${slotId}"${colorAttr}>${escapeHtml(rawValue)}</span>${after}`;
+}
+
+function controlValueText(control, value) {
+  return String(value) + (control.unit || "");
+}
+
+/** Builds the Shiki-highlighted CSS readout with slot spans and rule/decl metadata. */
+function renderPlaygroundReadout(config) {
+  const cssLines = [];
+  const lineMeta = [];
+  const pushLine = (text, meta) => {
+    cssLines.push(text);
+    lineMeta.push(meta || {});
+  };
+
+  pushLine(".container {");
+  pushLine("  display: flex;");
+  for (const [prop, control] of Object.entries(config.container)) {
+    const value = controlValueText(control, control.default);
+    pushLine(`  ${prop}: ${value};`, { slot: `c:${prop}`, value });
+  }
+  pushLine("}");
+
+  const itemProps = Object.entries(config.item);
+  if (itemProps.length) {
+    for (let n = 1; n <= PLAYGROUND_MAX_ITEMS; n++) {
+      pushLine("", { rule: n, hidden: true });
+      pushLine(`.item:nth-child(${n}) {`, { rule: n, hidden: true });
+      for (const [prop, control] of itemProps) {
+        const value = controlValueText(control, control.default);
+        pushLine(`  ${prop}: ${value};`, { rule: n, hidden: true, slot: `i${n}:${prop}`, decl: `i${n}:${prop}`, value });
+      }
+      pushLine("}", { rule: n, hidden: true });
+    }
+  }
+
+  const cssText = cssLines.join("\n");
+  let tokenLines;
+  if (highlighter && "css" in bundledLanguages) {
+    tokenLines = highlighter.codeToTokens(cssText, { lang: "css", theme: SHIKI_THEME }).tokens;
+  } else {
+    tokenLines = cssLines.map((line) => [{ content: line, color: null }]);
+  }
+
+  const htmlLines = cssLines.map((line, index) => {
+    const meta = lineMeta[index];
+    const tokens = tokenLines[index] || [];
+    let inner;
+    if (meta.slot) {
+      const valueStart = line.indexOf(": ") + 2;
+      const valueEnd = valueStart + meta.value.length;
+      inner = renderSlotLine(tokens, valueStart, valueEnd, meta.slot, meta.value);
+    } else if (!tokens.length || !line) {
+      inner = " ";
+    } else {
+      inner = tokens.map((t) => shikiTokenSpan(t.color, t.content)).join("");
+    }
+    const classes = ["cl"];
+    if (meta.hidden) classes.push("pg-line-hidden");
+    const ruleAttr = meta.rule ? ` data-pgrule="${meta.rule}"` : "";
+    const declAttr = meta.decl ? ` data-pgdecl="${meta.decl}"` : "";
+    return `<span class="${classes.join(" ")}"${ruleAttr}${declAttr}>${inner}</span>`;
+  });
+
+  return (
+    `<div class="code-block pg-readout">${codeTopbar("playground.css", "css")}` +
+    `<pre class="code"><code>${htmlLines.join("")}</code></pre></div>`
+  );
+}
+
+function renderPlaygroundControlRow(scope, prop, control) {
+  const label = `<span class="pg-ctrl-label"><code>${escapeHtml(prop)}</code></span>`;
+  if (control.type === "enum") {
+    const buttons = control.values
+      .map(
+        (value) =>
+          `<button type="button" class="pg-seg-btn" data-value="${escapeHtml(value)}" aria-pressed="${value === control.default}">${escapeHtml(value)}</button>`
+      )
+      .join("");
+    return `<div class="pg-ctrl" data-scope="${scope}" data-prop="${escapeHtml(prop)}" data-kind="enum">${label}<div class="pg-seg" role="group" aria-label="${escapeHtml(prop)}">${buttons}</div></div>`;
+  }
+  return (
+    `<div class="pg-ctrl" data-scope="${scope}" data-prop="${escapeHtml(prop)}" data-kind="range">${label}` +
+    `<div class="pg-step"><button type="button" class="pg-step-btn" data-dir="-1" aria-label="Decrease ${escapeHtml(prop)}">−</button>` +
+    `<span class="pg-step-val">${controlValueText(control, control.default)}</span>` +
+    `<button type="button" class="pg-step-btn" data-dir="1" aria-label="Increase ${escapeHtml(prop)}">+</button></div></div>`
+  );
+}
+
+function renderPlayground(block, sectionSlug) {
+  const config = { section: sectionSlug, ...block.config };
+  const uid = `pg-${sectionSlug}`;
+
+  const tabs = [
+    `<button type="button" class="pg-tab active" data-mode="explore" aria-pressed="true">Explore</button>`,
+    ...config.challenges.map(
+      (challenge, i) =>
+        `<button type="button" class="pg-tab" data-mode="challenge" data-challenge="${i}" aria-pressed="false">` +
+        `<span class="pg-tab-num">${i + 1}</span>${escapeHtml(challenge.title)}<span class="pg-tab-check" hidden>✓</span></button>`
+    ),
+  ].join("");
+
+  const challengeInfos = config.challenges
+    .map((challenge, i) => {
+      const hint = challenge.hint
+        ? `<div class="pg-hint"><button type="button" class="reveal-btn" data-show-label="Show hint" data-hide-label="Hide hint" aria-expanded="false" aria-controls="${uid}-hint-${i}">${SVG.chevron}<span class="rb-label">Show hint</span></button>` +
+          `<div class="reveal-ans" id="${uid}-hint-${i}">${renderInline(challenge.hint)}</div></div>`
+        : "";
+      const next = i + 1 < config.challenges.length
+        ? `<button type="button" class="pg-next" data-next="${i + 1}">Next challenge →</button>`
+        : "";
+      return (
+        `<div class="pg-chal-info" data-chal-info="${i}" hidden>` +
+        `<p class="pg-brief"><span class="pg-brief-num">${i + 1}</span>${renderInline(challenge.brief)}</p>${hint}` +
+        `<div class="pg-success" hidden>${SVG.checkThin}<span>Solved — the ghosts agree.</span>${next}</div></div>`
+      );
+    })
+    .join("");
+
+  const containerRows = Object.entries(config.container)
+    .map(([prop, control]) => renderPlaygroundControlRow("container", prop, control))
+    .join("");
+  const itemRows = Object.entries(config.item)
+    .map(([prop, control]) => renderPlaygroundControlRow("item", prop, control))
+    .join("");
+  const itemGroup = itemRows
+    ? `<div class="pg-ctrl-group pg-item-group"><div class="pg-ctrl-title">Item <span class="pg-item-which"></span></div>` +
+      `<div class="pg-item-hint">Select an item in the preview to adjust it.</div>` +
+      `<div class="pg-item-ctrls" hidden>${itemRows}</div></div>`
+    : "";
+
+  const realItems = Array.from(
+    { length: config.itemCount },
+    (_, i) => `<button type="button" class="pg-item">${escapeHtml(config.itemLabels[i])}</button>`
+  ).join("");
+
+  const configJson = JSON.stringify(config).replace(/</g, "\\u003c");
+
+  return (
+    `<div class="pg-region" data-pg-section="${sectionSlug}" data-mode="explore">` +
+    `<script type="application/json" class="pg-config">${configJson}</script>` +
+    `<div class="pg-tabs" role="group" aria-label="Playground mode">${tabs}</div>` +
+    challengeInfos +
+    `<div class="pg-body">` +
+    `<div class="pg-controls">` +
+    `<div class="pg-ctrl-group"><div class="pg-ctrl-title">Container</div>${containerRows}</div>` +
+    itemGroup +
+    `<div class="pg-actions">` +
+    `<button type="button" class="pg-action-btn pg-add">+ item</button>` +
+    `<button type="button" class="pg-action-btn pg-remove">− item</button>` +
+    `<button type="button" class="pg-action-btn pg-reset">Reset</button>` +
+    `</div></div>` +
+    `<div class="pg-stage">` +
+    `<div class="pg-canvas"><div class="pg-flex pg-ghost" aria-hidden="true"></div><div class="pg-flex pg-real">${realItems}</div></div>` +
+    renderPlaygroundReadout(config) +
+    `</div></div></div>`
+  );
+}
+
+async function renderBlock(block, nextBlock, sectionSlug) {
   switch (block.kind) {
     case "p": {
-      const introNext = nextBlock && ["annotated-code", "code", "walkthrough", "mermaid"].includes(nextBlock.kind);
+      const introNext = nextBlock && ["annotated-code", "code", "walkthrough", "mermaid", "playground"].includes(nextBlock.kind);
       return `<p${introNext ? ' class="intro-line"' : ""}>${renderInline(block.text)}</p>`;
     }
     case "code":
@@ -445,6 +745,8 @@ async function renderBlock(block, nextBlock) {
       return renderRecap(block);
     case "reveal":
       return renderReveal(block);
+    case "playground":
+      return renderPlayground(block, sectionSlug);
     case "mermaid":
       return await renderMermaid(block.code);
     default:
@@ -456,7 +758,7 @@ async function renderSection(section, index) {
   const num = String(index + 1).padStart(2, "0");
   const parts = [];
   for (let i = 0; i < section.blocks.length; i++) {
-    parts.push(await renderBlock(section.blocks[i], section.blocks[i + 1]));
+    parts.push(await renderBlock(section.blocks[i], section.blocks[i + 1], section.slug));
   }
   return `    <section class="section" id="${section.slug}" data-slug="${section.slug}">
       <div class="section-head">
@@ -820,6 +1122,7 @@ async function main() {
     for (const block of section.blocks) {
       if (block.kind === "code" || block.kind === "annotated-code") langs.push(block.lang);
       if (block.kind === "walkthrough") langs.push(block.code.lang);
+      if (block.kind === "playground") langs.push("css");
     }
   }
   await initHighlighter(langs);

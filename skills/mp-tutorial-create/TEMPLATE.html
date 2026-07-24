@@ -1065,6 +1065,212 @@
   pre.code .cl.wt-dim { opacity: .3; filter: saturate(.55); }
   pre.code .cl.wt-hot { background: linear-gradient(90deg, rgba(124,92,255,.20), rgba(124,92,255,.03) 85%); }
 
+  /* ---------- Playground ---------- */
+  .pg-region { margin-top: 18px; }
+  .pg-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .pg-tab {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-family: inherit; font-size: 13px; font-weight: 650;
+    cursor: pointer;
+    transition: all .2s cubic-bezier(.16,1,.3,1);
+  }
+  .pg-tab:hover { border-color: var(--accent-1); color: var(--accent-1); background: color-mix(in srgb, var(--accent-1) 8%, var(--surface-2)); }
+  .pg-tab:active { transform: scale(.96); }
+  .pg-tab:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  .pg-tab.active { background: var(--accent-grad); border-color: transparent; color: #fff; box-shadow: 0 6px 20px -6px rgba(124,92,255,.7); }
+  .pg-tab-num {
+    display: grid; place-items: center;
+    width: 19px; height: 19px; flex: none;
+    border-radius: 6px;
+    background: var(--surface-3); color: var(--text-3);
+    font-size: 11px; font-weight: 800;
+  }
+  .pg-tab.active .pg-tab-num { background: rgba(255,255,255,.22); color: #fff; }
+  .pg-tab-check { color: var(--ok); font-weight: 800; }
+  .pg-tab.active .pg-tab-check { color: #d5ffe9; }
+
+  .pg-chal-info {
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+  }
+  .pg-brief { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 14.5px; color: var(--text-2); }
+  .pg-brief code { font-family: var(--mono); font-size: .9em; background: var(--surface-3); padding: 1px 5px; border-radius: 5px; color: var(--accent-1); }
+  .pg-brief-num {
+    display: grid; place-items: center;
+    width: 22px; height: 22px; flex: none;
+    border-radius: 7px;
+    background: var(--accent-grad); color: #fff;
+    font-size: 12px; font-weight: 800;
+    align-self: flex-start;
+    margin-top: 1px;
+  }
+  .pg-hint .reveal-btn { margin: 10px 0 0; }
+  .pg-hint .reveal-ans { padding: 0; border-top: none; }
+  .pg-hint .reveal-ans.open { padding: 10px 0 2px; border-top: none; }
+  .pg-success {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--ok) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+    color: var(--ok);
+    font-size: 13.5px; font-weight: 650;
+    animation: slideIn .3s ease;
+  }
+  .pg-success[hidden] { display: none; }
+  .pg-success svg { width: 16px; height: 16px; flex: none; }
+  .pg-next {
+    margin-left: auto;
+    padding: 6px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--ok);
+    background: transparent; color: var(--ok);
+    font-family: inherit; font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, transform .12s ease;
+  }
+  .pg-next:hover { background: color-mix(in srgb, var(--ok) 12%, transparent); }
+  .pg-next:active { transform: scale(.96); }
+  .pg-next:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+
+  .pg-body { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .pg-controls { display: flex; flex-direction: column; gap: 14px; }
+  .pg-ctrl-group {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    padding: 14px;
+  }
+  .pg-ctrl-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); }
+  .pg-item-hint { margin-top: 8px; font-size: 13px; color: var(--text-3); }
+  .pg-ctrl { margin-top: 12px; }
+  .pg-ctrl-label code { font-family: var(--mono); font-size: 12px; background: var(--surface-3); padding: 1px 6px; border-radius: 5px; color: var(--accent-1); }
+  .pg-seg {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    margin-top: 7px;
+    padding: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .pg-seg-btn {
+    flex: 1 1 auto;
+    padding: 5px 8px;
+    border: none; border-radius: 7px;
+    background: transparent; color: var(--text-3);
+    font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, transform .1s ease;
+  }
+  .pg-seg-btn:hover { color: var(--text); background: var(--surface-3); }
+  .pg-seg-btn:active { transform: scale(.95); }
+  .pg-seg-btn:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 1px; }
+  .pg-seg-btn[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--accent-1) 15%, transparent);
+    color: var(--accent-1);
+    font-weight: 750;
+  }
+  .pg-step {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 7px;
+    padding: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .pg-step-btn {
+    display: grid; place-items: center;
+    width: 27px; height: 27px;
+    border: none; border-radius: 7px;
+    background: transparent; color: var(--text-2);
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, transform .1s ease;
+  }
+  .pg-step-btn:hover:not(:disabled) { color: var(--accent-1); background: color-mix(in srgb, var(--accent-1) 10%, transparent); }
+  .pg-step-btn:active:not(:disabled) { transform: scale(.9); }
+  .pg-step-btn:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 1px; }
+  .pg-step-btn:disabled { opacity: .35; cursor: default; }
+  .pg-step-val { min-width: 46px; text-align: center; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .pg-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pg-action-btn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2); color: var(--text-2);
+    font-family: inherit; font-size: 13px; font-weight: 650;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .pg-action-btn:hover:not(:disabled) { border-color: var(--accent-1); color: var(--accent-1); background: color-mix(in srgb, var(--accent-1) 8%, var(--surface-2)); }
+  .pg-action-btn:active:not(:disabled) { transform: scale(.96); }
+  .pg-action-btn:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  .pg-action-btn:disabled { opacity: .45; cursor: default; }
+
+  .pg-stage { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .pg-canvas {
+    position: relative;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .pg-flex { display: flex; padding: 14px; }
+  .pg-real { position: relative; z-index: 2; height: 280px; }
+  .pg-ghost {
+    position: absolute; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    transition: opacity .5s ease;
+  }
+  .pg-region[data-mode="explore"] .pg-ghost { display: none; }
+  .pg-ghost.pg-ghost-out { opacity: 0; }
+  .pg-item {
+    appearance: none;
+    font: inherit;
+    font-size: 13.5px; font-weight: 650; line-height: 1.4;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow-card);
+    min-width: 0;
+    transition: border-color .18s ease, opacity .3s ease;
+  }
+  button.pg-item { cursor: pointer; }
+  button.pg-item:hover { border-color: color-mix(in srgb, var(--accent-1) 55%, var(--border)); }
+  button.pg-item:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  button.pg-item.selected { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  .pg-region[data-mode="challenge"] .pg-real .pg-item { opacity: .78; }
+  .pg-ghost .pg-item {
+    background: transparent;
+    border: 1px dashed color-mix(in srgb, var(--accent-1) 65%, transparent);
+    color: color-mix(in srgb, var(--text-3) 55%, transparent);
+    box-shadow: none;
+  }
+  .pg-canvas.pg-win { animation: pgWin .9s ease; }
+  @keyframes pgWin {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); border-color: var(--ok); }
+    100% { box-shadow: 0 0 0 16px transparent; border-color: var(--border); }
+  }
+  .pg-readout .pg-line-hidden { display: none; }
+  .pg-slot { border-radius: 4px; }
+  .pg-slot.pg-flash { animation: pgFlash .7s ease; }
+  @keyframes pgFlash {
+    0% { background: color-mix(in srgb, var(--accent-1) 55%, transparent); }
+    100% { background: transparent; }
+  }
+
   /* ---------- Responsive ---------- */
   @media (max-width: 1100px) {
     .shell { grid-template-columns: 1fr; gap: 24px; padding-top: 20px; }
@@ -1081,6 +1287,10 @@
     .wt-code-col { order: -1; position: static; margin-bottom: 0; }
     .wt-code .code-block { max-height: 42vh; display: flex; flex-direction: column; }
     .wt-code pre.code { min-height: 0; overflow: auto; }
+
+    /* Playground: controls stack above the preview */
+    .pg-body { grid-template-columns: minmax(0, 1fr); }
+    .pg-real { height: auto; min-height: 220px; }
   }
   @media (max-width: 620px) {
     .sidebar-inner { flex-direction: column; }
@@ -1453,6 +1663,7 @@
     if (!lines.length) return pre.innerText;
     var out = [];
     lines.forEach(function (l) {
+      if (l.classList.contains('pg-line-hidden')) return; // playground readout: copy only current CSS
       var clone = l.cloneNode(true);
       clone.querySelectorAll('.note-badge').forEach(function (b) { b.remove(); });
       out.push(clone.textContent);
@@ -1553,7 +1764,316 @@
       var open = ans.classList.toggle('open');
       btn.setAttribute('aria-expanded', String(open));
       var label = btn.querySelector('.rb-label');
-      if (label) label.textContent = open ? 'Hide answer' : 'Reveal answer';
+      if (label) label.textContent = open ? (btn.dataset.hideLabel || 'Hide answer') : (btn.dataset.showLabel || 'Reveal answer');
+    });
+  });
+
+  /* ---------- PLAYGROUND (Explore + challenge mode, per .pg-region) ---------- */
+  var CHALLENGE_STORE_KEY = 'tutorial-challenges:{{SLUG}}';
+  function loadChallengeStore() {
+    try { return JSON.parse(localStorage.getItem(CHALLENGE_STORE_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveChallengeStore(store) {
+    try { localStorage.setItem(CHALLENGE_STORE_KEY, JSON.stringify(store)); } catch (e) {}
+  }
+
+  document.querySelectorAll('.pg-region').forEach(function (region) {
+    var cfg;
+    try { cfg = JSON.parse(region.querySelector('.pg-config').textContent); } catch (e) { return; }
+    var sectionSlug = region.dataset.pgSection;
+    var canvas = region.querySelector('.pg-canvas');
+    var real = region.querySelector('.pg-real');
+    var ghost = region.querySelector('.pg-ghost');
+    var readout = region.querySelector('.pg-readout');
+    var tabs = Array.prototype.slice.call(region.querySelectorAll('.pg-tab'));
+    var itemCtrls = region.querySelector('.pg-item-ctrls');
+    var itemHint = region.querySelector('.pg-item-hint');
+    var itemWhich = region.querySelector('.pg-item-which');
+    var addBtn = region.querySelector('.pg-add');
+    var removeBtn = region.querySelector('.pg-remove');
+    var resetBtn = region.querySelector('.pg-reset');
+    var itemProps = Object.keys(cfg.item || {});
+    var MAX_ITEMS = 6, MIN_ITEMS = 2;
+
+    // mode: -1 = explore, >= 0 = challenge index
+    var state = { mode: -1, count: cfg.itemCount, container: {}, items: [], selected: -1, solved: false };
+
+    function controlDefaults(controls) {
+      var out = {};
+      Object.keys(controls).forEach(function (p) { out[p] = controls[p].default; });
+      return out;
+    }
+    function withUnit(controls, prop, value) { return String(value) + (controls[prop].unit || ''); }
+    function itemValue(values, prop) {
+      return values && values[prop] !== undefined ? values[prop] : cfg.item[prop].default;
+    }
+    function isItemDefault(prop, value) { return String(value) === String(cfg.item[prop].default); }
+
+    function buildItems(host, count, isGhost) {
+      host.innerHTML = '';
+      for (var i = 0; i < count; i++) {
+        var el = document.createElement(isGhost ? 'span' : 'button');
+        if (!isGhost) el.type = 'button';
+        el.className = 'pg-item';
+        el.textContent = cfg.itemLabels[i];
+        host.appendChild(el);
+      }
+    }
+
+    function applyFlexStyles(containerEl, containerValues, itemValueList) {
+      Object.keys(cfg.container).forEach(function (p) {
+        containerEl.style.setProperty(p, withUnit(cfg.container, p, containerValues[p]));
+      });
+      for (var i = 0; i < containerEl.children.length; i++) {
+        var values = itemValueList[i] || {};
+        for (var j = 0; j < itemProps.length; j++) {
+          var p = itemProps[j];
+          containerEl.children[i].style.setProperty(p, withUnit(cfg.item, p, itemValue(values, p)));
+        }
+      }
+    }
+
+    /* ---- code readout sync (build-time Shiki slots; runtime textContent swaps) ---- */
+    function setSlot(id, text, flash) {
+      var el = readout.querySelector('.pg-slot[data-slot="' + id + '"]');
+      if (!el || el.textContent === text) return;
+      el.textContent = text;
+      if (flash) { el.classList.remove('pg-flash'); void el.offsetWidth; el.classList.add('pg-flash'); }
+    }
+    function syncReadout(flash) {
+      Object.keys(cfg.container).forEach(function (p) {
+        setSlot('c:' + p, withUnit(cfg.container, p, state.container[p]), flash);
+      });
+      for (var n = 1; n <= MAX_ITEMS; n++) {
+        var present = n <= state.count;
+        var values = state.items[n - 1] || {};
+        var anyCustom = false;
+        for (var j = 0; j < itemProps.length; j++) {
+          var p = itemProps[j];
+          var value = itemValue(values, p);
+          var isDefaultValue = isItemDefault(p, value);
+          if (!isDefaultValue) anyCustom = true;
+          setSlot('i' + n + ':' + p, withUnit(cfg.item, p, value), flash);
+          var decl = readout.querySelector('[data-pgdecl="i' + n + ':' + p + '"]');
+          if (decl) decl.classList.toggle('pg-line-hidden', isDefaultValue);
+        }
+        readout.querySelectorAll('[data-pgrule="' + n + '"]').forEach(function (line) {
+          if (line.dataset.pgdecl) return; // decl lines own their visibility
+          line.classList.toggle('pg-line-hidden', !present || !anyCustom);
+        });
+        if (!present || !anyCustom) {
+          readout.querySelectorAll('[data-pgrule="' + n + '"][data-pgdecl]').forEach(function (line) {
+            line.classList.add('pg-line-hidden');
+          });
+        }
+      }
+    }
+
+    /* ---- controls sync ---- */
+    function syncControls() {
+      region.querySelectorAll('.pg-ctrl').forEach(function (ctrl) {
+        var scope = ctrl.dataset.scope;
+        var prop = ctrl.dataset.prop;
+        var controls = scope === 'container' ? cfg.container : cfg.item;
+        var value;
+        if (scope === 'container') value = state.container[prop];
+        else if (state.selected >= 0) value = itemValue(state.items[state.selected], prop);
+        else return;
+        if (ctrl.dataset.kind === 'enum') {
+          ctrl.querySelectorAll('.pg-seg-btn').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.dataset.value === String(value)));
+          });
+        } else {
+          var c = controls[prop];
+          ctrl.querySelector('.pg-step-val').textContent = withUnit(controls, prop, value);
+          ctrl.querySelector('[data-dir="-1"]').disabled = Number(value) <= c.min;
+          ctrl.querySelector('[data-dir="1"]').disabled = Number(value) >= c.max;
+        }
+      });
+    }
+    function syncSelection() {
+      for (var i = 0; i < real.children.length; i++) {
+        real.children[i].classList.toggle('selected', i === state.selected);
+      }
+      var hasSelection = state.selected >= 0;
+      if (itemCtrls) itemCtrls.hidden = !hasSelection;
+      if (itemHint) itemHint.hidden = hasSelection;
+      if (itemWhich) itemWhich.textContent = hasSelection ? String(state.selected + 1) : '';
+    }
+    function syncActionButtons() {
+      var challenge = state.mode >= 0;
+      addBtn.disabled = challenge || state.count >= MAX_ITEMS;
+      removeBtn.disabled = challenge || state.count <= MIN_ITEMS;
+    }
+
+    /* ---- challenge geometry check (ghost-matching, 2px tolerance) ---- */
+    var checkScheduled = false;
+    function scheduleCheck() {
+      if (checkScheduled || state.mode < 0 || state.solved) return;
+      checkScheduled = true;
+      requestAnimationFrame(function () { checkScheduled = false; runCheck(); });
+    }
+    function runCheck() {
+      if (state.mode < 0 || state.solved) return;
+      var realItems = real.children, ghostItems = ghost.children;
+      if (realItems.length !== ghostItems.length) return;
+      var realBase = real.getBoundingClientRect();
+      var ghostBase = ghost.getBoundingClientRect();
+      for (var i = 0; i < realItems.length; i++) {
+        var a = realItems[i].getBoundingClientRect();
+        var b = ghostItems[i].getBoundingClientRect();
+        if (Math.abs((a.left - realBase.left) - (b.left - ghostBase.left)) > 2 ||
+            Math.abs((a.top - realBase.top) - (b.top - ghostBase.top)) > 2 ||
+            Math.abs(a.width - b.width) > 2 ||
+            Math.abs(a.height - b.height) > 2) return;
+      }
+      succeed();
+    }
+    function succeed() {
+      state.solved = true;
+      ghost.classList.add('pg-ghost-out');
+      canvas.classList.remove('pg-win'); void canvas.offsetWidth; canvas.classList.add('pg-win');
+      var tab = tabs[state.mode + 1];
+      if (tab) { var check = tab.querySelector('.pg-tab-check'); if (check) check.hidden = false; }
+      var info = region.querySelector('.pg-chal-info[data-chal-info="' + state.mode + '"]');
+      if (info) { var banner = info.querySelector('.pg-success'); if (banner) banner.hidden = false; }
+      var store = loadChallengeStore();
+      var done = store[sectionSlug] || [];
+      if (done.indexOf(state.mode) < 0) {
+        done.push(state.mode);
+        done.sort();
+        store[sectionSlug] = done;
+        saveChallengeStore(store);
+      }
+    }
+
+    /* ---- state transitions ---- */
+    function applyAll(flash) {
+      applyFlexStyles(real, state.container, state.items);
+      syncReadout(flash);
+      scheduleCheck();
+    }
+    function resetState() {
+      state.container = controlDefaults(cfg.container);
+      state.count = state.mode >= 0 ? cfg.challenges[state.mode].items : cfg.itemCount;
+      state.items = [];
+      for (var i = 0; i < state.count; i++) state.items.push({});
+      state.selected = -1;
+      state.solved = false;
+      buildItems(real, state.count, false);
+      syncSelection();
+      syncControls();
+      syncActionButtons();
+      if (state.mode >= 0) ghost.classList.remove('pg-ghost-out');
+      applyAll(false);
+    }
+    function setMode(mode) {
+      state.mode = mode;
+      region.dataset.mode = mode < 0 ? 'explore' : 'challenge';
+      tabs.forEach(function (t) {
+        var isActive = mode < 0 ? t.dataset.mode === 'explore' : Number(t.dataset.challenge) === mode;
+        t.classList.toggle('active', isActive);
+        t.setAttribute('aria-pressed', String(isActive));
+      });
+      region.querySelectorAll('.pg-chal-info').forEach(function (panel) {
+        panel.hidden = Number(panel.dataset.chalInfo) !== mode;
+        var banner = panel.querySelector('.pg-success');
+        if (banner) banner.hidden = true;
+        var hintAns = panel.querySelector('.reveal-ans');
+        var hintBtn = panel.querySelector('.reveal-btn');
+        if (hintAns) hintAns.classList.remove('open');
+        if (hintBtn) {
+          hintBtn.setAttribute('aria-expanded', 'false');
+          var label = hintBtn.querySelector('.rb-label');
+          if (label) label.textContent = hintBtn.dataset.showLabel || 'Show hint';
+        }
+      });
+      resetState();
+      if (mode >= 0) {
+        var challenge = cfg.challenges[mode];
+        buildItems(ghost, challenge.items, true);
+        var ghostContainer = controlDefaults(cfg.container);
+        Object.keys(challenge.target.container).forEach(function (p) { ghostContainer[p] = challenge.target.container[p]; });
+        var ghostItems = [];
+        for (var i = 0; i < challenge.items; i++) ghostItems.push(challenge.target.items[String(i + 1)] || {});
+        applyFlexStyles(ghost, ghostContainer, ghostItems);
+      }
+    }
+
+    /* ---- events ---- */
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function () {
+        setMode(t.dataset.mode === 'explore' ? -1 : Number(t.dataset.challenge));
+      });
+    });
+    region.querySelectorAll('.pg-next').forEach(function (b) {
+      b.addEventListener('click', function () { setMode(Number(b.dataset.next)); });
+    });
+    region.querySelectorAll('.pg-ctrl').forEach(function (ctrl) {
+      var scope = ctrl.dataset.scope;
+      var prop = ctrl.dataset.prop;
+      var controls = scope === 'container' ? cfg.container : cfg.item;
+      function setValue(value) {
+        if (scope === 'container') state.container[prop] = value;
+        else {
+          if (state.selected < 0) return;
+          if (!state.items[state.selected]) state.items[state.selected] = {};
+          state.items[state.selected][prop] = value;
+        }
+        applyAll(true);
+        syncControls();
+      }
+      if (ctrl.dataset.kind === 'enum') {
+        ctrl.querySelectorAll('.pg-seg-btn').forEach(function (b) {
+          b.addEventListener('click', function () { setValue(b.dataset.value); });
+        });
+      } else {
+        ctrl.querySelectorAll('.pg-step-btn').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var c = controls[prop];
+            var current = scope === 'container' ? state.container[prop] : itemValue(state.items[state.selected], prop);
+            setValue(Math.min(c.max, Math.max(c.min, Number(current) + Number(b.dataset.dir) * c.step)));
+          });
+        });
+      }
+    });
+    real.addEventListener('click', function (e) {
+      var item = e.target.closest('.pg-item');
+      if (!item || !itemProps.length) return;
+      state.selected = Array.prototype.indexOf.call(real.children, item);
+      syncSelection();
+      syncControls();
+    });
+    addBtn.addEventListener('click', function () {
+      if (state.mode >= 0 || state.count >= MAX_ITEMS) return;
+      state.count++;
+      state.items.push({});
+      buildItems(real, state.count, false);
+      syncSelection();
+      syncActionButtons();
+      applyAll(false);
+    });
+    removeBtn.addEventListener('click', function () {
+      if (state.mode >= 0 || state.count <= MIN_ITEMS) return;
+      state.count--;
+      state.items.length = state.count;
+      if (state.selected >= state.count) { state.selected = -1; syncControls(); }
+      buildItems(real, state.count, false);
+      syncSelection();
+      syncActionButtons();
+      applyAll(false);
+    });
+    resetBtn.addEventListener('click', function () {
+      resetState();
+      if (state.mode >= 0) applyAll(false);
+    });
+    window.addEventListener('resize', scheduleCheck);
+
+    /* ---- init: explore mode + restore completed-challenge checkmarks ---- */
+    setMode(-1);
+    (loadChallengeStore()[sectionSlug] || []).forEach(function (i) {
+      var tab = tabs[i + 1];
+      if (tab) { var check = tab.querySelector('.pg-tab-check'); if (check) check.hidden = false; }
     });
   });
 
