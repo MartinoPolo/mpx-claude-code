@@ -170,7 +170,7 @@ graph LR
 ```
 ````
 
-Compiled to inline SVG when `@mermaid-js/mermaid-cli` is installed; otherwise the build prints a "diagram skipped" warning and omits it.
+Compiled to inline SVG in two theme variants (light `neutral`, dark `dark`) — the page shows the one matching the active theme. Requires `@mermaid-js/mermaid-cli` (installed via the skill's `npm install`); otherwise the build prints a "diagram skipped" warning and omits it.
 
 ## Compile
 

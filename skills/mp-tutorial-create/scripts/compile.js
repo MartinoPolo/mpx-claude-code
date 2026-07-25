@@ -424,6 +424,32 @@ async function getMermaidRenderer() {
   return mermaidRenderer;
 }
 
+const MERMAID_THEMES = {
+  light: { theme: "neutral" },
+  dark: { theme: "dark" },
+};
+
+async function renderMermaidVariant(renderer, code, workDir, variant) {
+  const input = join(workDir, `diagram-${mermaidCounter}-${variant}.mmd`);
+  const output = join(workDir, `diagram-${mermaidCounter}-${variant}.svg`);
+  writeFileSync(input, code, "utf8");
+  await renderer.run(input, output, {
+    quiet: true,
+    outputFormat: "svg",
+    puppeteerConfig: { headless: "new" },
+    parseMMDOptions: {
+      backgroundColor: "transparent",
+      svgId: `mermaid-${mermaidCounter}-${variant}`,
+      mermaidConfig: {
+        ...MERMAID_THEMES[variant],
+        fontFamily: '"Segoe UI", system-ui, sans-serif',
+        flowchart: { nodeSpacing: 30, rankSpacing: 36 },
+      },
+    },
+  });
+  return readFileSync(output, "utf8").replace(/^<\?xml[^>]*\?>\s*/, "");
+}
+
 async function renderMermaid(code) {
   const renderer = await getMermaidRenderer();
   if (!renderer) {
@@ -433,13 +459,10 @@ async function renderMermaid(code) {
   mermaidCounter++;
   const workDir = join(tmpdir(), `mp-tutorial-mermaid-${process.pid}`);
   mkdirSync(workDir, { recursive: true });
-  const input = join(workDir, `diagram-${mermaidCounter}.mmd`);
-  const output = join(workDir, `diagram-${mermaidCounter}.svg`);
   try {
-    writeFileSync(input, code, "utf8");
-    await renderer.run(input, output, { quiet: true, outputFormat: "svg", puppeteerConfig: { headless: "new" } });
-    const svg = readFileSync(output, "utf8").replace(/^<\?xml[^>]*\?>\s*/, "");
-    return `<figure class="diagram">${svg}</figure>`;
+    const lightSvg = await renderMermaidVariant(renderer, code, workDir, "light");
+    const darkSvg = await renderMermaidVariant(renderer, code, workDir, "dark");
+    return `<figure class="diagram"><div class="diagram-light">${lightSvg}</div><div class="diagram-dark">${darkSvg}</div></figure>`;
   } catch (error) {
     console.warn(`[compile] WARNING: diagram skipped — mermaid render failed: ${error.message}`);
     return "<!-- mermaid diagram skipped: render failed -->";

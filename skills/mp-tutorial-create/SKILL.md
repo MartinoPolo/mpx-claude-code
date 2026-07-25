@@ -5,7 +5,7 @@ argument-hint: "<topic or code-showcase description> [--type topic|code-showcase
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Agent, WebSearch, WebFetch
 metadata:
   author: MartinoPolo
-  version: "1.1.0"
+  version: "1.2.0"
   category: utility
 ---
 
@@ -45,7 +45,7 @@ Authoring rules:
 cd ${CLAUDE_SKILL_DIR} && node scripts/compile.js "C:\Users\snapy\OneDrive\tutorials\<category>\<slug>.source.md"
 ```
 
-First run only: `npm install` in `${CLAUDE_SKILL_DIR}` (Shiki + yaml; offline afterwards). Mermaid rendering additionally needs `npm install @mermaid-js/mermaid-cli` — without it the build prints a "diagram skipped" warning and still succeeds.
+First run only: `npm install` in `${CLAUDE_SKILL_DIR}` (Shiki + yaml + @mermaid-js/mermaid-cli; offline afterwards). Mermaid blocks compile to inline SVG in light and dark variants; if mermaid-cli is missing the build prints a "diagram skipped" warning and still succeeds.
 
 The compiler writes `<slug>.html` beside the source and regenerates `C:\Users\snapy\OneDrive\tutorials\index.html` (dashboard with per-tutorial progress). Editing TEMPLATE.html and recompiling preserves reader progress — section slugs are the storage keys.
 

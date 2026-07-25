@@ -8,8 +8,8 @@
     "compile": "node scripts/compile.js"
   },
   "dependencies": {
+    "@mermaid-js/mermaid-cli": "^11.16.0",
     "shiki": "^3.0.0",
     "yaml": "^2.5.0"
-  },
-  "optionalDependencies": {}
+  }
 }
