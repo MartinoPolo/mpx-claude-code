@@ -1,11 +1,11 @@
 ---
 name: mp-suppression-audit
-description: 'Repository-wide audit of code quality suppressions (eslint-disable, fallow-ignore, ts-ignore) that fixes unjustified ones and opens a PR. Use when: "audit suppressions", "suppression audit"'
+description: "Repo-wide audit of code-quality suppressions (eslint-disable, ts-ignore, fallow-ignore) that fixes unjustified ones and opens a PR."
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: code-quality
 ---
 
@@ -32,7 +32,7 @@ Run `bash $HOME/.claude/scripts/detect-check-scripts.sh` (optionally pass a proj
 
 ### Step 2: Scan for All Suppressions
 
-Use `Grep` to find every suppression comment in source files (exclude `node_modules`, `dist`, `.svelte-kit`, lock files). For each match, record:
+Spawn an `Explore` sub-agent (breadth: very thorough, no `model` param) to find every suppression comment in source files (exclude `node_modules`, `dist`, `.svelte-kit`, lock files). For each match, have it record:
 
 - File path and line number
 - Suppression type and rule name
@@ -40,7 +40,7 @@ Use `Grep` to find every suppression comment in source files (exclude `node_modu
 
 ### Step 3: Scan Config Files
 
-Find and read all lint config files (`eslint.config.*`, `.eslintrc.*`, `.oxlintrc.*`, `oxlint.json`). For each:
+Spawn an `Explore` sub-agent (breadth: medium, no `model` param) to find and read all lint config files (`eslint.config.*`, `.eslintrc.*`, `.oxlintrc.*`, `oxlint.json`). Have it, for each:
 
 1. List every rule explicitly set to `"off"`, `"warn"`, or `0`
 2. Check git history for recent changes (last 2 weeks): `git log --since="2 weeks ago" -p -- <config-file>`

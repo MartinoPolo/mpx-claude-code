@@ -1,12 +1,12 @@
 ---
 name: mp-clean-pc
-description: 'Full-disk cleanup sweep across caches, Docker/WSL, build output, apps, screenshots, duplicates, installers and system reclaim, with per-group approval and visual review. Use when: "clean my pc", "disk cleanup", "free up space"'
+description: "Full-disk cleanup sweep across caches, Docker/WSL, build output, apps, duplicates and installers, with per-group approval."
 argument-hint: "[domain] [drive]"
 disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Agent, Artifact, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 

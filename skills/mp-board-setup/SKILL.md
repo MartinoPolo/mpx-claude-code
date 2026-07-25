@@ -1,12 +1,12 @@
 ---
 name: mp-board-setup
-description: 'Sets up an Obsidian board for this project, linking it into the repo via a BOARD.md symlink so agents can read requirements and screenshots. Use when: "set up board", "board setup"'
+description: "Sets up an Obsidian board for the project and links it into the repo through a BOARD.md symlink."
 argument-hint: "[vault-root]"
 disable-model-invocation: true
 allowed-tools: Read, AskUserQuestion, PowerShell, Bash(git rev-parse *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: setup
 ---
 

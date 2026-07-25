@@ -1,15 +1,21 @@
 ---
 name: mp-skill-create
-description: 'Create new Claude Code skills with structured conventions, progressive disclosure, and review checklist. Use when: "create skill", "new skill", "write a skill", "skill create"'
+description: "Creates a new Claude Code skill following this repo's conventions, then audits it."
+when_to_use: "User asks to create, write, or add a new skill."
 argument-hint: "[skill name or description]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.5"
   category: utility
 ---
 
 Create a new Claude Code skill following project conventions.
+
+Read [`../shared/AUTHORING.md`](../shared/AUTHORING.md) now — naming, descriptions,
+positive phrasing, explicit references, paths, size limits, and versioning live there.
+If the skill will spawn sub-agents, read
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) too.
 
 ## Process
 
@@ -59,8 +65,10 @@ skills/<skill-name>/
 ```yaml
 ---
 name: <skill-name>
-description: '<What it does in third person>. Use when: "<trigger phrases>"'
+description: "<What it does, 1-2 sentences, third person>"
+when_to_use: "<1-3 short trigger sentences>" # omit when not model-invocable
 argument-hint: "[argument description]"
+disable-model-invocation: true # omit only if Claude must reach for this unprompted
 allowed-tools: <comma-separated tool list>
 metadata:
   author: MartinoPolo
@@ -69,12 +77,18 @@ metadata:
 ---
 ```
 
-**Description rules:**
+Other valid frontmatter fields, used only when needed: `arguments`, `user-invocable`,
+`disallowed-tools`, `model`, `effort`, `context`, `agent`, `background`, `hooks`,
+`paths`, `shell`. `metadata` is this repo's own bookkeeping — the platform ignores it.
 
-- Max 1024 characters
-- Write in third person
-- First sentence (optional): what it does
-- Second sentence: `Use when: "trigger1", "trigger2", "trigger3"`
+**Description rules** — full rationale in
+[`../shared/AUTHORING.md`](../shared/AUTHORING.md) § Descriptions and discoverability:
+
+- `description` is 1–2 sentences, third person, on what the skill does
+- `when_to_use` carries the triggers, in 1–3 short sentences
+- The two are concatenated and truncated together at 1,536 chars, so use case first
+- Both sit in **every session's context**. A skill you always invoke by name sets
+  `disable-model-invocation: true` and costs nothing.
 
 **Body structure:**
 
@@ -83,19 +97,23 @@ metadata:
 - Include code blocks for commands that should be run
 - End with output/report section
 
-**Instruction style — prefer positive:**
+**Spawning sub-agents** — rules and evidence in
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md):
 
-- Tell the agent what TO do, not what NOT to do
-- If a positive instruction is clear, the negative counterpart is noise
-- Only use negatives for genuinely surprising constraints (e.g., "Do NOT ask user to review before creating")
+- `allowed-tools` includes `Agent` if the skill spawns anything
+- Name the exact agent type: "Spawn `mp-issue-analyzer` sub-agent". A spawn instruction
+  that names no type leaves tools and model to chance
+- Pass `model` **only** for types that declare none — `general-purpose`, `claude`,
+  `Plan`, `fork`. Omit it for every `mp-*` agent and for `Explore`
+- Never name a model in prose. "Spawn a Sonnet sub-agent" is measured at 0% obeyed —
+  it reads like an instruction and does nothing
+- Delegate codebase searches to `Explore` with the breadth stated
+  ([`../shared/EXPLORATION.md`](../shared/EXPLORATION.md))
 
 **Explicit tool references (mandatory):**
 
-- `allowed-tools` must include `Agent` if the skill spawns sub-agents
-- Agent spawning: name the exact type (e.g., "Spawn `mp-issue-analyzer` sub-agent")
 - GitHub CLI: specify exact `gh` command (e.g., `gh issue create`, `gh pr create`)
 - Bash commands: name the exact command/script
-- Omit `model` when spawning agents that define their own model in frontmatter
 - Use `gh` CLI for all GitHub operations
 
 **Size rules:**
@@ -138,7 +156,8 @@ If the guidelines suggest improvements beyond what this skill's conventions cove
 
 Run `mp-skill-audit` against the newly created skill to catch convention drift:
 
-> Spawn a sub-agent with the prompt: "Run `/mp-skill-audit skills/<skill-name>/SKILL.md`"
+> Spawn a `general-purpose` sub-agent with `model: "sonnet"` and the prompt:
+> "Run `/mp-skill-audit skills/<skill-name>/SKILL.md`"
 
 Apply any auto-fixes. Note remaining issues for user review in Step 6.
 
@@ -167,4 +186,9 @@ Before finalizing, verify:
 - [ ] allowed-tools list matches what the skill actually uses
 - [ ] Category is set correctly in metadata
 - [ ] All tool references are explicit (exact agent names, `gh` commands, script paths)
+- [ ] Every spawn instruction names an agent type
+- [ ] `model` passed only to `general-purpose`, `claude`, `Plan`, `fork` — omitted elsewhere
+- [ ] No model named in prose anywhere in the body
+- [ ] Codebase searches delegated to `Explore` rather than run in the main thread
+- [ ] Shared rules linked, not restated
 - [ ] Instructions are positive (say what to do, not what to avoid)

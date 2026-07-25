@@ -1,11 +1,12 @@
 ---
 name: mp-issue-create
-description: 'Create GitHub issues with optional PRD linking. Use when: "create issue", "create github issue"'
+description: "Creates GitHub issues in the repo's standard format, optionally linked to a PRD."
+when_to_use: "User asks to create or file a GitHub issue."
 argument-hint: "<description> [--prd <number>]"
 allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.8"
   category: utility
 ---
 
@@ -31,7 +32,7 @@ From `$ARGUMENTS`, extract:
 
 **If `--prd` is set**, use that number directly.
 
-**If `--prd` is not set**, spawn a sonnet sub-agent to find the most relevant open PRD:
+**If `--prd` is not set**, spawn an `Explore` sub-agent (breadth: medium) to find the most relevant open PRD:
 
 ```
 Agent task: Search open GitHub issues labelled "PRD" (gh issue list --label PRD --state open --json number,title,body --limit 50).
@@ -59,7 +60,7 @@ gh issue list --search "parent:$PRD_NUMBER" --json number,title,labels,state
 
 ### Step 3: Explore Codebase
 
-Search for affected code using Grep/Glob:
+Spawn `Explore` (medium breadth, see [EXPLORATION.md](../shared/EXPLORATION.md)) to find affected code:
 
 - Files related to the issue domain
 - Existing patterns or prior art

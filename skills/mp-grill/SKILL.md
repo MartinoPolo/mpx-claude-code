@@ -1,11 +1,12 @@
 ---
 name: mp-grill
-description: 'Interviews the user relentlessly about a plan, design, or requirements until reaching shared understanding, updating project docs with decisions. Use when: "grill me", "grill requirements"'
+description: "Interviews the user about a plan, design, or requirements until the design is settled, then records the decisions in project docs."
+when_to_use: "User asks to be grilled, or to pin down requirements or a design."
 argument-hint: "[topic, requirements text, or path to requirements file]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "2.1"
+  version: "2.3"
   category: planning
 ---
 
@@ -34,7 +35,7 @@ If none exist (or outside a repo), proceed as a pure conversational grill.
 
 Interview relentlessly. For each branch of the decision tree:
 
-1. If a question can be answered by exploring the codebase, spawn an `Explore` agent with `model: "sonnet"` instead of asking.
+1. Explore instead of asking — see [EXPLORATION.md](../shared/EXPLORATION.md).
 2. **Batch related questions** into thematic groups. Present each group in one round.
 3. **Only split into follow-up rounds** when answers to earlier questions would materially change later ones.
 4. **Provide a recommended answer** with each question.

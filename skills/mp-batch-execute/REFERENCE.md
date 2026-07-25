@@ -4,13 +4,13 @@ Extended detail for the verify gate and the experimental parallel mode. The main
 
 ## Playwright visual verification
 
-The verify gate runs raw-Playwright visual verification in a read-only Sonnet sub-agent (it asserts, it does not fix). The full reliability contract — stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`, per-surface PASS/FAIL — lives in `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md`. Run checks in **fix-list order**; only surfaces whose UI actually changed need one.
+The verify gate runs raw-Playwright visual verification in a read-only `claude` sub-agent with `model: "sonnet"` (it asserts, it does not fix). The full reliability contract — stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`, per-surface PASS/FAIL — lives in `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md`. Run checks in **fix-list order**; only surfaces whose UI actually changed need one.
 
 ## Experimental `--parallel` mode (worktree isolation)
 
 Default execution is **sequential on one shared branch** because all sub-agents share one working tree and parallel commits race the git index. `--parallel` trades that for speed by giving each fix sub-agent its own git worktree.
 
-**Mechanism.** Spawn each fix sub-agent via the Agent tool with `isolation: "worktree"` — the harness creates a temporary worktree per agent (auto-removed if unchanged), so agents edit and commit isolated copies concurrently. Because worktrees share the same `.git` object store, their commits are all visible from the main checkout.
+**Mechanism.** Spawn each fix sub-agent as a `claude` sub-agent via the Agent tool with `isolation: "worktree"` and `model: "sonnet"` — the harness creates a temporary worktree per agent (auto-removed if unchanged), so agents edit and commit isolated copies concurrently. Because worktrees share the same `.git` object store, their commits are all visible from the main checkout.
 
 **Integration.** After the parallel agents finish, integrate each item's commit onto the batch branch from the main checkout (`git merge --no-ff` or `git cherry-pick`). Small issues touch disjoint files, so conflicts are rare; resolve any that occur before the verify gate. The verify gate (Step 5) then runs **once** on the integrated branch — not per worktree.
 

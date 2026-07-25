@@ -1,11 +1,11 @@
 ---
 name: mp-init-repo
-description: 'Initialize git repo, push to GitHub, set up branch protection. Use when starting a new project.'
+description: "Initializes a git repo, pushes it to GitHub, and sets up branch protection."
 disable-model-invocation: true
 allowed-tools: Bash, Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: setup
 ---
 

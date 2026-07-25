@@ -1,20 +1,20 @@
 # mp-yoursafe-overview — reference
 
 Detailed inventory, design contract, and capture interpretation for the Yoursafe/Verotel onboarding page.
-Target document: `C:\_MP_work\Yoursafe\Yoursafe-Onboarding-Overview.html` (self-contained, offline, `file://` links).
+Target document: `$MPX_WORK\Yoursafe\Yoursafe-Onboarding-Overview.html` (self-contained, offline, `file://` links).
 
 ## Resource inventory (what to re-read)
 
 | Group | Paths | Live source |
 |---|---|---|
-| Wiki mirror | `C:\_MP_work\Yoursafe\wiki\*.md` (index, nastaveni-pracovniho-prostredi, git-ssh-gerrit, openvpn, oracle-v-dockeru, jak-funguje-gerrit-a-hudson, safeelements, yoursafe-flowguard, team-e, team-e-rotation-of-gitlab-tokens, uzitecne-snipety) | https://wiki.yoursafe.com/ (each file's frontmatter has its page URL) |
-| Obsidian | `C:\Users\snapy\OneDrive\Obsidian\ObsidianMP\Yoursafe\*.md` (Yoursafe General, AI tips, PCI školení) | — |
-| Slack summary | `C:\_MP_work\Yoursafe\team-e-private-summary*.txt` | Slack #team-e-private |
-| Repos | `C:\_MP_work\{yoursafe-components,verotel,safe-elements,safe-elements-api,flowguard-proxy}` — README, `package.json` scripts, `Makefile`/AGENTS.md | GitLab `bitsafe/*`; verotel on Gerrit |
-| Onboarding scripts | `C:\_MP_work\netsafe-setup\` (apply-nrpt.ps1, import-*, HANDOFF-*.md, onboarding-checklist.html), `C:\_MP_work\netsafe-ca\` (import-ca.ps1, *.crt), `C:\_MP_work\verotel\util\bin\devel-services-win.py`, `C:\_MP_work\verotel\devel\docker\hosts` | — |
+| Wiki mirror | `$MPX_WORK\Yoursafe\wiki\*.md` (index, nastaveni-pracovniho-prostredi, git-ssh-gerrit, openvpn, oracle-v-dockeru, jak-funguje-gerrit-a-hudson, safeelements, yoursafe-flowguard, team-e, team-e-rotation-of-gitlab-tokens, uzitecne-snipety) | https://wiki.yoursafe.com/ (each file's frontmatter has its page URL) |
+| Obsidian | `$MPX_OBSIDIAN_VAULT\Yoursafe\*.md` (Yoursafe General, AI tips, PCI školení) | — |
+| Slack summary | `$MPX_WORK\Yoursafe\team-e-private-summary*.txt` | Slack #team-e-private |
+| Repos | `$MPX_WORK\{yoursafe-components,verotel,safe-elements,safe-elements-api,flowguard-proxy}` — README, `package.json` scripts, `Makefile`/AGENTS.md | GitLab `bitsafe/*`; verotel on Gerrit |
+| Onboarding scripts | `$MPX_WORK\netsafe-setup\` (apply-nrpt.ps1, import-*, HANDOFF-*.md, onboarding-checklist.html), `$MPX_WORK\netsafe-ca\` (import-ca.ps1, *.crt), `$MPX_WORK\verotel\util\bin\devel-services-win.py`, `$MPX_WORK\verotel\devel\docker\hosts` | — |
 | Sessions (optional) | `~\.claude\projects\C--Users-snapy--claude\`, `~\.claude*\projects\C---MP-work-verotel\`, `…\C---MP-work-yoursafe-components\` | Claude Code transcripts |
 
-Always delegate reading to **Sonnet** `general-purpose` sub-agents (grep-first on session JSONL; never load whole large files).
+Always delegate reading to `general-purpose` sub-agents with `model: "sonnet"` (grep-first on session JSONL; never load whole large files).
 
 ## Design contract (must be preserved)
 

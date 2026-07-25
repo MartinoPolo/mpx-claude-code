@@ -1,11 +1,12 @@
 ---
 name: mp-to-issues
-description: 'Break a PRD GitHub issue into vertical-slice sub-issues with blocking relationships. Use when: "break down PRD", "create sub-issues", "PRD to issues", "to issues"'
+description: "Breaks a PRD issue into vertical-slice sub-issues with blocking relationships."
 argument-hint: <PRD issue URL or number>
+disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.8"
+  version: "0.10"
   category: project-management
 ---
 
@@ -65,7 +66,7 @@ Before any decomposition, review the PRD body and comments for ambiguous or cont
 
 ### Step 3: Explore the Codebase
 
-Use Glob/Grep to find files related to the PRD's domain. Identify existing patterns, services, components, data models, and architectural boundaries that inform slice design.
+Spawn `Explore` (medium breadth, see [EXPLORATION.md](../shared/EXPLORATION.md)) to find files related to the PRD's domain — existing patterns, services, components, data models, architectural boundaries that inform slice design.
 
 ### Step 4: Design Vertical Slices
 

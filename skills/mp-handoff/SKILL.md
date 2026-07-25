@@ -1,10 +1,11 @@
 ---
 name: mp-handoff
-description: 'Create or update HANDOFF.md with a general session progress summary. Use when: "handoff", "save progress", "end of session"'
+description: "Writes or updates HANDOFF.md with session progress and open threads."
+when_to_use: "User asks for a handoff or to save progress at the end of a session."
 allowed-tools: Read, Write, Edit, Glob, Grep, TaskList
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: project-management
 ---
 

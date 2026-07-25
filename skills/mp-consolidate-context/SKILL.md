@@ -1,12 +1,12 @@
 ---
 name: mp-consolidate-context
-description: 'Consolidate CONTEXT.md: remove duplicates, outdated items, tighten language. Use when: "consolidate context", "clean up context", "simplify context", "consolidate requirements"'
+description: "Consolidates CONTEXT.md by removing duplicates and outdated items and tightening the language."
 argument-hint: "[path to CONTEXT.md]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep
 metadata:
   author: MartinoPolo
-  version: "2.0"
+  version: "2.1"
   category: utility
 ---
 

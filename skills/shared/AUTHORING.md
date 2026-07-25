@@ -1,0 +1,168 @@
+# Authoring Conventions
+
+Rules shared by every skill and agent in this repo. `mp-skill-create`, `mp-agent-create`,
+and `mp-skill-audit` reference this file rather than each restating it.
+
+For anything about spawning sub-agents or choosing models, see
+[SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md).
+
+## Where things live
+
+| Artifact | Path | Frontmatter `name` |
+| ------------- | -------------------------- | ---------------------------------- |
+| Skill | `skills/<skill-name>/SKILL.md` | matches the directory name |
+| Agent | `agents/<agent-name>.md` | matches the filename |
+| Shared doc | `skills/shared/<NAME>.md` | none |
+
+Custom agents are named `mp-<role>`. An agent that overrides a built-in instead matches
+the built-in's name and capitalisation exactly — see SUBAGENT_PROTOCOL.md § 7.
+
+The two identities work differently. For a skill, the invocable command comes from the
+**directory name**; frontmatter `name` is only a display label. For an agent, `name` **is**
+the identity, and the filename need not match. Keep both aligned anyway — a mismatch
+reads as a bug to everyone who meets it later.
+
+## Descriptions and discoverability
+
+A skill's `description` and `when_to_use` are the only parts of it that sit in every
+session's context. Treat them as a context budget, not as a place to explain the skill.
+
+- **`description`** — 1–2 sentences on what the skill does. Third person.
+- **`when_to_use`** — 1–3 short sentences of trigger phrasing. Omit it on a skill that
+  is not model-invocable, where nothing reads it.
+- The two are concatenated in the skill listing and truncated **together** at 1,536
+  characters, so put the use case first.
+- **Agents** — one line, max 250 chars, front-loading the use cases.
+- Describe what the thing *does*, not how it works internally.
+
+Triggers belong in `when_to_use`. Do not stuff them into `description` as
+`Use when: "..."` — that was this repo's old convention and it wasted the field.
+
+### Default to `disable-model-invocation: true`
+
+| Frontmatter | You invoke | Claude invokes | Context cost |
+| -------------------------------- | ---------- | -------------- | ------------------------------- |
+| *(omitted)* | `/name` | yes | name + description + when_to_use |
+| `disable-model-invocation: true` | `/name` | no | **nothing** |
+
+A skill you always reach for by name gains nothing from being discoverable and costs
+context in every session, including sessions in unrelated repos. Set the flag unless
+Claude genuinely needs to reach for the skill unprompted.
+
+For a skill whose file you cannot edit, the settings-side equivalent is
+`skillOverrides: { "<name>": "user-invocable-only" }`. Plugin skills are unaffected by
+`skillOverrides` — manage those through `/plugin`.
+
+### Valid frontmatter fields
+
+`name`, `description`, `when_to_use`, `argument-hint`, `arguments`,
+`disable-model-invocation`, `user-invocable`, `allowed-tools`, `disallowed-tools`,
+`model`, `effort`, `context`, `agent`, `background`, `hooks`, `paths`, `shell`.
+
+`metadata` and `compatibility` are **not** platform fields; Claude Code ignores them.
+This repo keeps `metadata` as its own bookkeeping — do not expect it to change behaviour.
+
+## Positive instructions
+
+Say what to do. When the positive instruction is clear, its negative counterpart is
+noise that costs tokens and attention.
+
+Reserve a negative for a genuinely surprising constraint or an irreversible action —
+"deprecate means move to `deprecated/`, never delete" earns its `never`.
+
+## Explicit references
+
+Vagueness at a call site becomes a guess at runtime. Name things exactly:
+
+- **Sub-agents** — the exact type: "Spawn `mp-issue-analyzer`". A skill that spawns
+  anything lists `Agent` in `allowed-tools`.
+- **Models** — a real `model` parameter, or nothing at all. Prose is a no-op
+  (SUBAGENT_PROTOCOL.md § 1), and the parameter is omitted for agents that declare
+  their own model (§ 3).
+- **GitHub** — the exact `gh` command: `gh issue create`, `gh pr list`.
+- **Scripts and commands** — the exact path and invocation.
+- **Searches** — delegate to `Explore`, with the breadth stated
+  ([EXPLORATION.md](EXPLORATION.md)).
+
+## Paths
+
+This repo is symlinked as `~/.claude` and is **public on GitHub**. Personal absolute
+paths never appear in a committed file. Machine roots come from the `MPX_*` environment
+variables — see EXPLORATION.md § Paths outside the working directory.
+
+Only `${CLAUDE_SKILL_DIR}` and `${CLAUDE_PROJECT_DIR}` are interpolated in skill
+markdown (`skills.md:303`). Arbitrary environment variables are **not** interpolated in
+any markdown — not SKILL.md, not agent files, not CLAUDE.md. A written `$MPX_WORK` is
+literal text that the reading agent must resolve itself.
+
+## Size and progressive disclosure
+
+| File | Limit | On exceeding |
+| ------------- | --------- | ------------------------------------------------ |
+| `SKILL.md` | 200 lines | Split into `REFERENCE.md` / `EXAMPLES.md` |
+| Agent body | 100 lines | Tighten — agents are single-purpose |
+
+The upstream guidance is 500 lines for a SKILL.md. The 200-line cap here is a deliberate
+local tightening, not an upstream requirement.
+
+References stay one level deep: `SKILL.md` → `REFERENCE.md`, linked inline so they load
+on demand.
+
+A skill's content is read **once** and stays in context for the rest of the session — it
+is not re-read on later turns. Write standing instructions that hold for the whole task
+rather than one-time steps. Note also that `allowed-tools` grants are single-turn: they
+clear on the user's next message even though the skill's content persists.
+
+Prefer a script over prose when the operation is deterministic, repeatable, needs
+explicit error handling, or would otherwise be more than ~10 lines of inline bash.
+
+## Tool grants
+
+`allowed-tools` (skills) and `tools` (agents) are allowlists — grant exactly what the
+body actually uses, and no more. A grant with no corresponding usage in the body is dead
+and gets removed. Tool-grant semantics for agents are in SUBAGENT_PROTOCOL.md § 6.
+
+An agent that needs MCP tools lists none of them. Every name in `tools` is reprinted in
+the agent roster in **every** session: the retired `mp-playwright-tester` once spent 794
+characters there, seven of them naming Playwright tools that had since been renamed. Omit
+`tools` and subtract instead — `disallowedTools: Write, Edit, NotebookEdit, Agent`. That
+is what `Explore` does, it costs ~40 characters, and it cannot go stale when a server
+renames a tool.
+
+**Inline `mcpServers` in a sub-agent does not work on Claude Code 2.1.212 — do not design
+around it.** The field is documented for sub-agents (sub-agents.md, "Supported frontmatter
+fields") and promises that inline servers connect when the agent starts and disconnect when
+it finishes. Measured here, it is inert: an agent declaring a server with `--headless
+--isolated` got the session's headful, shared-profile browser instead, carrying page state
+from the main conversation, with no error or warning anywhere. Retested after a restart with
+a server name that collided with nothing — the declared tools never appeared under any
+prefix. Other frontmatter in the same file (`model`, `disallowedTools`) applied normally, so
+this is `mcpServers` specifically, not a parse failure.
+
+The practical consequence: **a sub-agent gets the session's MCP servers, so an MCP server's
+tool names are a whole-session cost.** Decide whether a server earns that on every session,
+and register it at user scope (`claude mcp add`) or not at all. `ENABLE_TOOL_SEARCH` keeps
+the bill to names only — measured at 1,041 characters (~260 tokens) for a 29-tool browser
+server, rather than the ~15–25k that full schemas would cost.
+
+Where the tools do come from still sets the prefix that `permissions.allow` must match: a
+user- or project-scope server named `chrome-devtools` yields `mcp__chrome-devtools__*`,
+while the same server reached through a *plugin* gets the longer
+`mcp__plugin_<plugin>_<server>__*`. An allow rule written for one form does not match the
+other, and under `defaultMode: "auto"` a dead rule goes unnoticed.
+
+Re-test the inline field before relying on it in a future version; if it starts working, an
+agent-scoped browser is worth revisiting.
+
+`AskUserQuestion` is stripped from every sub-agent regardless of frontmatter, so granting
+it to an agent is always dead.
+
+## Versioning and docs
+
+- Bump `metadata.version` in a skill's frontmatter on edit. Trivial changes — a
+  one-line fix, wording tweaks across two or three lines — are exempt.
+- Version format is **two-part** (`1.2`, `0.4`). A few skills carry three-part versions
+  from earlier drift; leave them rather than renumbering.
+- Update `README.md` in the same change as the edit that changes behaviour.
+- Use conventional commits.
+- **Deprecating means moving to `deprecated/`**, never deleting.

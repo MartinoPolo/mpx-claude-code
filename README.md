@@ -184,21 +184,45 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 
 ## Skills Reference
 
+### Discoverability policy
+
+A skill's `description` and `when_to_use` are the only parts of it that sit in **every**
+session's context, in every repo. `disable-model-invocation: true` removes them entirely
+while the skill stays invocable as `/name` — the documented behaviour is "description not
+in context, full skill loads when you invoke".
+
+Only these 12 skills stay model-invocable, because Claude benefits from reaching for them
+unprompted:
+
+`/mp-execute` · `/mp-review` · `/mp-check-fix` · `/mp-handoff` · `/mp-symlink` ·
+`/mp-ship` · `/mp-skill-create` · `/mp-grill` · `/mp-issue-create` ·
+`/mp-playwright-test` · `/mp-tutorial-create` · `/mp-podcast`
+
+The other 36 are `/`-only and cost nothing. `/mp-ship` carries the trigger phrasing for
+the whole git family, so `/mp-commit`, `/mp-commit-push`, `/mp-commit-push-pr`, `/mp-pr`
+and `/mp-sync-base` stay available by name without each paying for a description.
+
+Conventions for writing the two fields are in `skills/shared/AUTHORING.md`.
+
 ### Shared References (`skills/shared/`)
 
 Cross-skill reference library — plain reference files, no SKILL.md, not runnable. Skills load them at run time via `${CLAUDE_SKILL_DIR}/../shared/<FILE>.md`:
 
 | File                       | Purpose                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ |
+| `AUTHORING.md`             | Conventions shared by all skills and agents: naming, descriptions, size, versioning |
 | `BOARD_CONVENTION.md`      | Obsidian board format, content→type map, four-lane pipeline                    |
 | `CI_FIX_AGENT.md`          | CI-fix sub-agent contract with bounded JSON return (mp-execute, mp-ship)       |
 | `deep-modules.md`          | Deep vs shallow module design (Ousterhout)                                     |
 | `DOCUMENTATION_STRATEGY.md`| `.mpx/` CONTEXT.md + DECISIONS.md formats and skill responsibilities           |
+| `EXECUTOR_CONTRACT.md`     | Shared contract for `mp-executor` + `mp-tdd-executor`: role boundary, parent inputs, output |
+| `EXPLORATION.md`           | Canonical exploration policy: delegate to `Explore`, state breadth, `MPX_*` roots |
 | `GIT_COMMIT_WORKFLOW.md`   | Phased commit/push/PR delegation shared by the git skills                      |
 | `GITHUB_ISSUE_TEMPLATE.md` | Canonical issue body format, labels, HITL/AFK classification                   |
 | `interface-design.md`      | Interface design rules for testability                                         |
 | `PLAYWRIGHT_TESTING.md`    | Raw-Playwright reliability contract (sanity-gate, assert-don't-eyeball, auth)  |
 | `REVIEWER_PROTOCOL.md`     | Verification discipline + report format for the 7 `mp-reviewer-*` agents       |
+| `SUBAGENT_PROTOCOL.md`     | Verified rules for spawning sub-agents: model selection, tool grants, overrides |
 | `VERIFY_FIX_ORCHESTRATOR.md`| Nested verify-fix orchestrator contract (checks/reviewers/tests, bounded JSON)|
 
 ### Planning Skills
@@ -254,7 +278,7 @@ Run after larger chunks of work (milestone end, PRD completion, or on a regular 
 | `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code. Creates PR with findings.                        |
 | `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc. Auto-fixes + creates PR.       |
 | `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Removes duplicates, tightens language. Fully automatic.                |
-| `/mp-skill-audit`         | All skills        | Low       | Checks 12 consistency rules, auto-fixes drift. Creates report.         |
+| `/mp-skill-audit`         | All skills        | Low       | Checks 15 consistency rules, auto-fixes drift. Creates report.         |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
 | `/mp-components-audit`    | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
 | `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |

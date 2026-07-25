@@ -1,11 +1,11 @@
 ---
 name: mp-publish-obsidian-plugin
-description: 'Runs the full workflow to publish an Obsidian plugin to the community plugin directory, from manifest checks through PR submission. Use when: "publish plugin", "submit to community"'
+description: "Publishes an Obsidian plugin to the community directory, from manifest checks through PR submission."
 disable-model-invocation: true
 allowed-tools: Bash(npm run *), Bash(gh release *), Bash(gh repo *), Bash(gh pr *), Bash(gh api *), Bash(git *), Read, Grep, Glob, Write, Edit, WebFetch, AskUserQuestion, Agent, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: obsidian
 ---
 

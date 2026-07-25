@@ -1,12 +1,12 @@
 ---
 name: mp-script-discovery
-description: 'Discover runnable scripts across package.json files and identify frontend/backend/database run commands. Use when: "find scripts", "how to run app", "detect dev server"'
+description: "Discovers runnable scripts across package.json files and identifies the frontend, backend, and database run commands."
 argument-hint: "[project-dir]"
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(bash $HOME/.claude/scripts/detect-project-scripts.sh*), Bash(cat *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 

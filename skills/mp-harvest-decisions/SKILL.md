@@ -1,12 +1,12 @@
 ---
 name: mp-harvest-decisions
-description: 'Scan recent Claude Code sessions for grilling/design discussions, extract decisions, and update CONTEXT.md + DECISIONS.md. Use when: "harvest decisions", "extract decisions from sessions", "update docs from sessions", "sync decisions"'
+description: "Scans recent Claude Code sessions for design discussions and folds the decisions into CONTEXT.md and DECISIONS.md."
 argument-hint: "[days back to scan, default 30]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.2"
+  version: "1.4"
   category: planning
 ---
 
@@ -23,17 +23,17 @@ Scan Claude Code session transcripts for grilling and design-refinement discussi
 
 ## Step 2: Find Grill Sessions
 
-Search session JSONL files for actual skill invocations — not just mentions in available-skills lists.
+Spawn an `Explore` sub-agent (breadth: medium, no `model` param) to search session JSONL files for actual skill invocations — not just mentions in available-skills lists.
 
 **Primary signal** (high confidence): `"name":"Skill"` paired with `"mp-grill"` or `"mp-hitl"` or `"mp-architecture-review"` in the same file.
 
 **Secondary signal** (check if primary yields <5 results): Look for `AskUserQuestion` tool calls with option arrays containing design/architecture decisions.
 
-Record the file path and size for each matching session.
+Have the agent record and return the file path and size for each matching session.
 
 ## Step 3: Extract Decisions (Parallel)
 
-Spawn Sonnet sub-agents to read session files in parallel. Group ~3-4 sessions per agent.
+Spawn `general-purpose` sub-agents with `model: "sonnet"` to read session files in parallel. Group ~3-4 sessions per agent.
 
 Each agent's prompt:
 

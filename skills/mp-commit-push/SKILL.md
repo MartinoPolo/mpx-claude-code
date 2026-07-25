@@ -1,10 +1,11 @@
 ---
 name: mp-commit-push
-description: 'Stage, commit, and push changes (no PR). Use when: "commit and push", "push my changes", "push this"'
+description: "Stages, commits, and pushes changes without opening a PR."
+disable-model-invocation: true
 allowed-tools: Agent, Read, Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *), Bash(git push *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: git-workflow
 ---
 
