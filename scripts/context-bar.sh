@@ -3,90 +3,101 @@
 # Color theme: gray, orange, blue, teal, green, lavender, rose, gold, slate, cyan
 COLOR="blue"
 
-# Color codes
-C_RESET='[0m'
-C_GRAY='[38;5;245m'  # explicit gray for default text
-C_BAR_EMPTY='[38;5;238m'
+# Color codes — all use the $'\033[...' form so the file stays ASCII (no raw ESC
+# bytes to corrupt in an editor). The final printf '%b' emits them unchanged.
+C_RESET=$'\033[0m'
+C_GRAY=$'\033[38;5;245m'       # explicit gray for default text
+C_BAR_EMPTY=$'\033[38;5;238m'
 case "$COLOR" in
-    orange)   C_ACCENT='[38;5;173m' ;;
-    blue)     C_ACCENT='[38;5;74m' ;;
-    teal)     C_ACCENT='[38;5;66m' ;;
-    green)    C_ACCENT='[38;5;71m' ;;
-    lavender) C_ACCENT='[38;5;139m' ;;
-    rose)     C_ACCENT='[38;5;132m' ;;
-    gold)     C_ACCENT='[38;5;136m' ;;
-    slate)    C_ACCENT='[38;5;60m' ;;
-    cyan)     C_ACCENT='[38;5;37m' ;;
+    orange)   C_ACCENT=$'\033[38;5;173m' ;;
+    blue)     C_ACCENT=$'\033[38;5;74m' ;;
+    teal)     C_ACCENT=$'\033[38;5;66m' ;;
+    green)    C_ACCENT=$'\033[38;5;71m' ;;
+    lavender) C_ACCENT=$'\033[38;5;139m' ;;
+    rose)     C_ACCENT=$'\033[38;5;132m' ;;
+    gold)     C_ACCENT=$'\033[38;5;136m' ;;
+    slate)    C_ACCENT=$'\033[38;5;60m' ;;
+    cyan)     C_ACCENT=$'\033[38;5;37m' ;;
     *)        C_ACCENT="$C_GRAY" ;;  # gray: all same color
 esac
 
-# Warning color for stale/unreliable data (coral red). Uses \033 escape form —
-# interpreted by the final printf '%b'. Kept ESC-free here so it round-trips.
+# Warning color for stale/unreliable data (coral red).
 C_WARN=$'\033[38;5;203m'
+
+# Context-consumption escalation (absolute input tokens): the 🔥 token count
+# shifts yellow -> orange -> red as context fills, so a heavy session is
+# obvious at a glance. Thresholds in the line-4 build below.
+C_CTX_YELLOW=$'\033[38;5;220m'   # >=100k tokens
+C_CTX_ORANGE=$'\033[38;5;208m'   # >=140k tokens
+C_CTX_RED=$'\033[38;5;196m'      # >=180k tokens
+
+# Account colors — distinct from C_ACCENT and from each other, so
+# model/account/work-vs-personal all read as separate signals at a glance.
+C_PERSONAL=$'\033[38;5;71m'   # green
+C_WORK=$'\033[38;5;173m'      # orange
+
+# Line-edit colors: green additions, red deletions.
+C_ADD=$'\033[38;5;71m'        # green: + lines added
+C_DEL=$'\033[38;5;167m'       # red: - lines removed
+
+# Session name (line 1): lavender — distinct from the blue model line.
+C_SESSION=$'\033[38;5;141m'
 
 input=$(cat)
 
+# Field separator for packing jq output into `read`. Must be a NON-whitespace
+# byte: `read` with an IFS-whitespace delimiter (space/tab/newline) collapses
+# consecutive delimiters and strips leading/trailing ones, which silently drops
+# empty fields and shifts every later field. ASCII Unit Separator (0x1F) never
+# appears in the data, so empty fields are preserved and columns stay aligned.
+US=$'\037'
 
-# Extract model, directory, and cwd
-model=$(echo "$input" | jq -r '.model.display_name // .model.id // "?"')
-cwd=$(echo "$input" | jq -r '.cwd // empty')
+# --- Single-pass extraction of every stdin field (one jq call) ---------------
+# Spawning jq ~18× under Windows Git Bash cost ~2s/render and made Claude Code
+# kill the status line mid-work. One jq call keeps the whole render well under
+# the render budget. rate_limits (Claude Code >= 2.1.80) carries the 5h/7d quota
+# straight to us — no network, so no /api/oauth/usage 429s.
+IFS="$US" read -r session_name session_id model cwd max_context \
+    session_tokens_in context_used_pct session_cost_usd_raw lines_added lines_removed \
+    effort_level five_raw five_resets seven_raw seven_resets \
+    < <(printf '%s' "$input" | jq -j '[
+        (.session_name // ""),
+        (.session_id // ""),
+        (.model.display_name // .model.id // "?"),
+        (.cwd // ""),
+        (.context_window.context_window_size // 200000),
+        (.context_window.total_input_tokens // ""),
+        (.context_window.used_percentage // ""),
+        (.cost.total_cost_usd // ""),
+        (.cost.total_lines_added // ""),
+        (.cost.total_lines_removed // ""),
+        (.effort.level // ""),
+        (.rate_limits.five_hour.used_percentage // ""),
+        (.rate_limits.five_hour.resets_at // ""),
+        (.rate_limits.seven_day.used_percentage // ""),
+        (.rate_limits.seven_day.resets_at // "")
+    ] | map(tostring | gsub("[\n\r]"; " ")) | join("\u001f")' 2>/dev/null)
+
+[[ -z "$model" ]] && model="?"
+[[ "$max_context" =~ ^[0-9]+$ ]] || max_context=200000
+short_id="${session_id:0:8}"
+
 dir=$(basename "$cwd" 2>/dev/null || echo "?")
+
+# Account (work vs personal). `.claude-work` = work account (ccw/ccwd aliases);
+# anything else (default ~/.claude via cc/ccd) = personal. Used for the quota
+# cache key too, so the two accounts never read each other's numbers.
+account_cfg_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+case "$account_cfg_dir" in
+    *.claude-work*|*claude-work*) account_label="Work"; account_color="$C_WORK" ;;
+    *)                            account_label="Personal"; account_color="$C_PERSONAL" ;;
+esac
 
 # Git branch (compact)
 branch=""
 if [[ -n "$cwd" && -d "$cwd" ]]; then
     branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
 fi
-
-# Transcript path for context + last message
-transcript_path=$(echo "$input" | jq -r '.transcript_path // empty')
-
-# Context window size (accurate)
-max_context=$(echo "$input" | jq -r '.context_window.context_window_size // 200000')
-max_k=$((max_context / 1000))
-
-# --- Context % + bar (based on transcript; baseline fallback) ---
-baseline=20000
-bar_width=10
-pct_prefix=""
-
-if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
-    context_length=$(jq -s '
-        map(select(.message.usage and .isSidechain != true and .isApiErrorMessage != true)) |
-        last |
-        if . then
-            (.message.usage.input_tokens // 0) +
-            (.message.usage.cache_read_input_tokens // 0) +
-            (.message.usage.cache_creation_input_tokens // 0)
-        else 0 end
-    ' < "$transcript_path" 2>/dev/null)
-
-    if [[ "$context_length" -gt 0 ]]; then
-        pct=$((context_length * 100 / max_context))
-        pct_prefix=""
-    else
-        pct=$((baseline * 100 / max_context))
-        pct_prefix="~"
-    fi
-else
-    pct=$((baseline * 100 / max_context))
-    pct_prefix="~"
-fi
-
-[[ $pct -gt 100 ]] && pct=100
-
-ctx_bar=""
-for ((i=0; i<bar_width; i++)); do
-    bar_start=$((i * 10))
-    progress=$((pct - bar_start))
-    if [[ $progress -ge 8 ]]; then
-        ctx_bar+="${C_ACCENT}█${C_RESET}"
-    elif [[ $progress -ge 3 ]]; then
-        ctx_bar+="${C_ACCENT}▄${C_RESET}"
-    else
-        ctx_bar+="${C_BAR_EMPTY}░${C_RESET}"
-    fi
-done
 
 # --- Helpers ---
 progress_bar() {
@@ -123,10 +134,16 @@ round_n() {
 }
 
 time_until() {
-    local iso="$1"
-    [[ -z "$iso" || "$iso" == "null" ]] && return
+    # Accepts either a Unix epoch (stdin rate_limits.*.resets_at) or an ISO-8601
+    # string (endpoint fallback .*.resets_at). Prints a compact "1h 21m" / "5d 5h".
+    local v="$1"
+    [[ -z "$v" || "$v" == "null" ]] && return
     local reset_epoch now_epoch diff
-    reset_epoch=$(date -d "$iso" +%s 2>/dev/null) || return
+    if [[ "$v" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+        reset_epoch="${v%.*}"                       # epoch seconds
+    else
+        reset_epoch=$(date -d "$v" +%s 2>/dev/null) || return   # ISO string
+    fi
     now_epoch=$(date +%s)
     diff=$((reset_epoch - now_epoch))
     [[ $diff -le 0 ]] && return
@@ -187,164 +204,95 @@ get_oauth_token() {
             fi
         fi
     fi
-
 }
 
 CACHE_DIR="${TMPDIR:-/tmp}"
-# Key the usage cache to the active config dir so personal and work accounts
-# don't read each other's cached quota (they share one TMPDIR).
-_cfg_tag="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-_cfg_tag="${_cfg_tag//[^A-Za-z0-9]/_}"
-USAGE_CACHE="$CACHE_DIR/claude-usage-cache-${_cfg_tag}.json"
-USAGE_ATTEMPT="$CACHE_DIR/claude-usage-attempt-${_cfg_tag}"
-USAGE_LOCK="$CACHE_DIR/claude-usage-lock-${_cfg_tag}"
-USAGE_RETRY_FILE="$CACHE_DIR/claude-usage-retry-${_cfg_tag}"  # epoch until which the server (Retry-After) forbids fetching
-# The /oauth/usage endpoint has a low hourly request budget. Polling every ~2min
-# (~30 req/hr) sits OVER it, so each cooldown expiry gets re-tripped for another
-# ~1h — a permanent lockout. Poll every 4min (~15 req/hr) to stay under budget.
-USAGE_CACHE_TTL=240  # seconds between fetch attempts
-USAGE_STALE_SECS=300 # seconds — data older than this is flagged stale on-screen
-USAGE_RETRY_CAP=3600 # seconds — clamp for a server Retry-After we honor
+# Quota cache keyed by account (Personal/Work), NOT by config-dir path — the path
+# arrives in two forms (C:\Users\... vs /c/Users/...) which used to split one
+# account across two caches and double the fetch rate. TSV: five  five_resets  seven  seven_resets.
+USAGE_CACHE="$CACHE_DIR/claude-usage-${account_label}.tsv"
+USAGE_ATTEMPT="$CACHE_DIR/claude-usage-attempt-${account_label}"
+USAGE_RETRY_FILE="$CACHE_DIR/claude-usage-retry-${account_label}"
+USAGE_STALE_SECS=900    # 15 min: cached quota older than this gets a muted age note
+USAGE_WARN_SECS=1800    # 30 min: older than this is flagged coral (genuinely outdated)
+WARM_MIN_INTERVAL=300   # min seconds between background endpoint warm-fetches
+USAGE_RETRY_CAP=3600    # clamp for a server Retry-After we honor
 
-fetch_usage_json() {
-    local token="$1"
-    [[ -z "$token" ]] && return 1
-
-    local now cache_mtime age
-    now=$(date +%s)
-
-    # 1) Return cached data if fresh enough (no network).
-    if [[ -f "$USAGE_CACHE" ]]; then
-        cache_mtime=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
-        if [[ -n "$cache_mtime" ]]; then
-            age=$((now - cache_mtime))
-            if [[ $age -lt $USAGE_CACHE_TTL ]]; then
-                cat "$USAGE_CACHE"
-                return
-            fi
-        fi
-    fi
-
-    # 2) Honor the server's Retry-After. During the cooldown we make ZERO
-    #    requests so the rolling-hour budget drains and the endpoint recovers
-    #    cleanly at the deadline instead of being re-tripped by our polling.
-    if [[ -f "$USAGE_RETRY_FILE" ]]; then
-        local retry_until
-        retry_until=$(cat "$USAGE_RETRY_FILE" 2>/dev/null)
-        if [[ "$retry_until" =~ ^[0-9]+$ && $now -lt $retry_until ]]; then
-            [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
-            return
-        fi
-    fi
-
-    # 3) Gate on last ATTEMPT (success or failure), not just last success —
-    #    otherwise a persistent error never advances the backoff clock and
-    #    every status line render re-fires a request with no cooldown.
-    if [[ -f "$USAGE_ATTEMPT" ]]; then
-        local attempt_mtime attempt_age
-        attempt_mtime=$(stat -c %Y "$USAGE_ATTEMPT" 2>/dev/null || stat -f %m "$USAGE_ATTEMPT" 2>/dev/null)
-        if [[ -n "$attempt_mtime" ]]; then
-            attempt_age=$((now - attempt_mtime))
-            if [[ $attempt_age -lt $USAGE_CACHE_TTL ]]; then
-                [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
-                return
-            fi
-        fi
-    fi
-
-    # 4) Serialize concurrent sessions so they don't all fetch at once. Stale
-    #    locks (>10s, i.e. a prior fetch that never cleaned up) are reclaimed.
-    if ! mkdir "$USAGE_LOCK" 2>/dev/null; then
-        local lock_mtime lock_age
-        lock_mtime=$(stat -c %Y "$USAGE_LOCK" 2>/dev/null || stat -f %m "$USAGE_LOCK" 2>/dev/null)
-        lock_age=$((now - ${lock_mtime:-$now}))
-        if [[ $lock_age -lt 10 ]]; then
-            [[ -f "$USAGE_CACHE" ]] && cat "$USAGE_CACHE"
-            return
-        fi
-        rmdir "$USAGE_LOCK" 2>/dev/null
-        mkdir "$USAGE_LOCK" 2>/dev/null
-    fi
-
-    : > "$USAGE_ATTEMPT"
-
-    # 5) Fetch fresh data (headers + body, so we can read Retry-After on 429).
-    local resp http retry_after body err
-    resp=$(curl -s -i --max-time 3 "https://api.anthropic.com/api/oauth/usage" \
+# Endpoint fetch -> cache. Runs ONLY in the background (never blocks/kills the
+# render) and ONLY as a cold-start fallback when stdin has no rate_limits yet.
+warm_usage_cache() {
+    local token; token=$(get_oauth_token)
+    [[ -z "$token" ]] && return
+    local resp http body retry_after fr frs sr srs
+    resp=$(curl -s -i --max-time 4 "https://api.anthropic.com/api/oauth/usage" \
         -H "Accept: application/json" \
         -H "Authorization: Bearer $token" \
         -H "anthropic-beta: oauth-2025-04-20" \
-        -H "User-Agent: claude-code/2.1.69" 2>/dev/null)
+        -H "User-Agent: claude-code/2.1.206" 2>/dev/null)
     http=$(printf '%s' "$resp" | head -1 | tr -d '\r' | awk '{print $2}')
-    retry_after=$(printf '%s' "$resp" | grep -i '^retry-after:' | head -1 | tr -d '\r' | awk '{print $2}')
     body=$(printf '%s' "$resp" | awk 'b{print} /^\r?$/{b=1}')
-
-    err=$(printf '%s' "$body" | jq -r '.error.type // empty' 2>/dev/null)
-
-    if [[ "$http" == "200" && -z "$err" && -n "$body" ]]; then
-        printf '%s\n' "$body" > "$USAGE_CACHE"
-        rm -f "$USAGE_RETRY_FILE"  # recovered — clear any cooldown
-        rmdir "$USAGE_LOCK" 2>/dev/null
-        printf '%s\n' "$body"
-        return
-    fi
-
-    # Failure. If the server told us when to retry, record the deadline so every
-    # session stops fetching until it passes (see step 2).
-    if [[ "$retry_after" =~ ^[0-9]+$ && $retry_after -gt 0 ]]; then
-        [[ $retry_after -gt $USAGE_RETRY_CAP ]] && retry_after=$USAGE_RETRY_CAP
-        echo $((now + retry_after)) > "$USAGE_RETRY_FILE"
-    fi
-
-    rmdir "$USAGE_LOCK" 2>/dev/null
-    # Serve stale cache if we have it; otherwise surface the error body.
-    if [[ -f "$USAGE_CACHE" ]]; then
-        cat "$USAGE_CACHE"
+    if [[ "$http" == "200" ]]; then
+        IFS="$US" read -r fr frs sr srs < <(printf '%s' "$body" | jq -j --arg sep "$US" '[
+            (.five_hour.utilization // ""),(.five_hour.resets_at // ""),
+            (.seven_day.utilization // ""),(.seven_day.resets_at // "")]
+            | map(tostring) | join($sep)' 2>/dev/null)
+        if [[ -n "$fr" ]]; then
+            printf '%s%s%s%s%s%s%s\n' "$fr" "$US" "$frs" "$US" "$sr" "$US" "$srs" > "$USAGE_CACHE"
+            rm -f "$USAGE_RETRY_FILE"
+        fi
     else
-        printf '%s\n' "$body"
+        # Honor a server Retry-After if present so we stay off the endpoint.
+        retry_after=$(printf '%s' "$resp" | grep -i '^retry-after:' | head -1 | tr -d '\r' | awk '{print $2}')
+        if [[ "$retry_after" =~ ^[0-9]+$ && $retry_after -gt 0 ]]; then
+            [[ $retry_after -gt $USAGE_RETRY_CAP ]] && retry_after=$USAGE_RETRY_CAP
+            echo $(( $(date +%s) + retry_after )) > "$USAGE_RETRY_FILE"
+        fi
     fi
+}
+
+# Spawn a background warm-fetch, rate-limited to WARM_MIN_INTERVAL and gated by
+# any server cooldown. Disowned so it outlives this render's process.
+maybe_warm_usage() {
+    local now; now=$(date +%s)
+    if [[ -f "$USAGE_RETRY_FILE" ]]; then
+        local ru; ru=$(cat "$USAGE_RETRY_FILE" 2>/dev/null)
+        [[ "$ru" =~ ^[0-9]+$ && $now -lt $ru ]] && return
+    fi
+    if [[ -f "$USAGE_ATTEMPT" ]]; then
+        local am; am=$(stat -c %Y "$USAGE_ATTEMPT" 2>/dev/null)
+        [[ -n "$am" && $((now - am)) -lt $WARM_MIN_INTERVAL ]] && return
+    fi
+    : > "$USAGE_ATTEMPT"
+    ( warm_usage_cache & ) 2>/dev/null
 }
 
 CZK_CACHE="$CACHE_DIR/claude-czk-cache.txt"
 CZK_CACHE_TTL=3600  # 1 hour
 
 fetch_usd_czk_rate() {
+    # Network-free in steady state: serve cache immediately, refresh in the
+    # background when stale so the render never blocks on the FX call.
+    local now cache_mtime age
+    now=$(date +%s)
     if [[ -f "$CZK_CACHE" ]]; then
-        local now cache_mtime age
-        now=$(date +%s)
-        cache_mtime=$(stat -c %Y "$CZK_CACHE" 2>/dev/null || stat -f %m "$CZK_CACHE" 2>/dev/null)
-        if [[ -n "$cache_mtime" ]]; then
-            age=$((now - cache_mtime))
-            if [[ $age -lt $CZK_CACHE_TTL ]]; then
-                cat "$CZK_CACHE"
-                return
-            fi
-        fi
-    fi
-
-    local rate
-    rate=$(curl -s --max-time 2 "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CZK" 2>/dev/null | jq -r '.rates.CZK // empty' 2>/dev/null)
-    if [[ -n "$rate" ]]; then
-        echo "$rate" > "$CZK_CACHE"
-    elif [[ -f "$CZK_CACHE" ]]; then
+        cache_mtime=$(stat -c %Y "$CZK_CACHE" 2>/dev/null)
+        age=$((now - ${cache_mtime:-0}))
         cat "$CZK_CACHE"
+        if [[ $age -ge $CZK_CACHE_TTL ]]; then
+            ( curl -s --max-time 3 "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CZK" 2>/dev/null \
+                | jq -r '.rates.CZK // empty' 2>/dev/null | tr -d '\r' > "$CZK_CACHE.tmp" \
+                && mv "$CZK_CACHE.tmp" "$CZK_CACHE" 2>/dev/null ) & disown 2>/dev/null
+        fi
         return
     fi
+    # No cache yet — fetch once synchronously (rare).
+    local rate
+    rate=$(curl -s --max-time 3 "https://api.frankfurter.dev/v1/latest?base=USD&symbols=CZK" 2>/dev/null | jq -r '.rates.CZK // empty' 2>/dev/null | tr -d '\r')
+    [[ -n "$rate" ]] && echo "$rate" > "$CZK_CACHE"
     echo "$rate"
 }
 
-# --- Session token + cost (from statusLine JSON) ---
-session_tokens_in=$(echo "$input" | jq -r '.context_window.total_input_tokens // empty' 2>/dev/null)
-session_tokens_out=$(echo "$input" | jq -r '.context_window.total_output_tokens // empty' 2>/dev/null)
-session_cost_usd_raw=$(echo "$input" | jq -r '.cost.total_cost_usd // empty' 2>/dev/null)
-
-session_tokens_total=""
-if [[ -n "$session_tokens_in" && -n "$session_tokens_out" ]]; then
-    if [[ "$session_tokens_in" =~ ^[0-9]+$ && "$session_tokens_out" =~ ^[0-9]+$ ]]; then
-        session_tokens_total=$((session_tokens_in + session_tokens_out))
-    fi
-fi
-
+# --- Session cost (USD + CZK) ---
 usd_disp=""
 czk_disp=""
 if [[ -n "$session_cost_usd_raw" && "$session_cost_usd_raw" != "null" ]]; then
@@ -353,136 +301,135 @@ if [[ -n "$session_cost_usd_raw" && "$session_cost_usd_raw" != "null" ]]; then
         rate=$(fetch_usd_czk_rate)
         if [[ -n "$rate" && "$rate" != "null" ]]; then
             czk_val=$(LC_ALL=C awk -v u="$usd_disp" -v r="$rate" 'BEGIN{ printf("%.2f", (u+0)*(r+0)) }' 2>/dev/null)
-            if [[ -n "$czk_val" ]]; then
-                czk_disp="${czk_val}Kč"
-            fi
+            [[ -n "$czk_val" ]] && czk_disp="${czk_val}Kč"
         fi
     fi
 fi
 
-# --- Quota utilization (5h + 7d) ---
-quota_line=""
-TOKEN=$(get_oauth_token)
-USAGE_DATA=""
-if [[ -n "$TOKEN" ]]; then
-    USAGE_DATA=$(fetch_usage_json "$TOKEN")
-fi
-
-# Age of the numbers on screen = time since the cache last held a SUCCESSFUL
-# fetch (its mtime). The endpoint rate-limits us (HTTP 429), and on failure we
-# serve the stale cache — so this age is how we know the reading is frozen.
-usage_age=""
-if [[ -f "$USAGE_CACHE" ]]; then
-    _cm=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null || stat -f %m "$USAGE_CACHE" 2>/dev/null)
+# --- Quota utilization (5h + 7d) ---------------------------------------------
+# Source order: (1) stdin rate_limits — live, no network; (2) cached last-known
+# (covers the seconds before a fresh session's first API response). The endpoint
+# is only ever touched by a background warm when we have neither.
+usage_src=""
+usage_age=0
+if [[ -n "$five_raw" ]]; then
+    usage_src="live"
+    printf '%s%s%s%s%s%s%s\n' "$five_raw" "$US" "$five_resets" "$US" "$seven_raw" "$US" "$seven_resets" > "$USAGE_CACHE" 2>/dev/null
+elif [[ -f "$USAGE_CACHE" ]]; then
+    IFS="$US" read -r five_raw five_resets seven_raw seven_resets < "$USAGE_CACHE"
+    usage_src="cache"
+    _cm=$(stat -c %Y "$USAGE_CACHE" 2>/dev/null)
     [[ -n "$_cm" ]] && usage_age=$(( $(date +%s) - _cm ))
 fi
-is_stale=0
-if [[ -n "$usage_age" && "$usage_age" =~ ^[0-9]+$ && $usage_age -gt $USAGE_STALE_SECS ]]; then
-    is_stale=1
-fi
 
-aerr=$(echo "$USAGE_DATA" | jq -r '.error.type // empty' 2>/dev/null)
-if [[ -z "$aerr" ]]; then
-    five_raw=$(echo "$USAGE_DATA" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
-    seven_raw=$(echo "$USAGE_DATA" | jq -r '.seven_day.utilization // empty' 2>/dev/null)
-    five_resets=$(echo "$USAGE_DATA" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
-    seven_resets=$(echo "$USAGE_DATA" | jq -r '.seven_day.resets_at // empty' 2>/dev/null)
-
-    five_pct=$(format_pct "$five_raw")
-    seven_pct=$(format_pct "$seven_raw")
-
-    # Fresh: keep the original look. Stale: paint labels + numbers coral red and
-    # bracket the line with ⚠ + age, so a frozen reading is unmistakable.
-    lbl="$C_GRAY"; txt=""
-    if [[ $is_stale -eq 1 ]]; then lbl="$C_WARN"; txt="$C_WARN"; fi
-
-    if [[ -n "$five_pct" && "$five_pct" =~ ^[0-9]+$ ]]; then
-        [[ $five_pct -gt 100 ]] && five_pct=100
-        five_bar=$(progress_bar "$five_pct" 8)
-        five_countdown=$(time_until "$five_resets")
-        [[ $is_stale -eq 1 ]] && quota_line="${C_WARN}⚠ " || quota_line=""
-        quota_line+="${lbl}5h ${five_bar}${txt} ${five_pct}%"
-        [[ -n "$five_countdown" ]] && quota_line+="${txt} ⏳${five_countdown}"
-
-        if [[ -n "$seven_pct" && "$seven_pct" =~ ^[0-9]+$ ]]; then
-            [[ $seven_pct -gt 100 ]] && seven_pct=100
-            seven_bar=$(progress_bar "$seven_pct" 8)
-            seven_countdown=$(time_until "$seven_resets")
-            quota_line+="${lbl} | 7d ${seven_bar}${txt} ${seven_pct}%"
-            [[ -n "$seven_countdown" ]] && quota_line+="${txt} ⏳${seven_countdown}"
-        else
-            quota_line+="${lbl} | 7d n/a"
-        fi
-
-        if [[ $is_stale -eq 1 ]]; then
-            quota_line+="${C_WARN} · $(human_age "$usage_age") old ⚠${C_RESET}"
-        else
-            quota_line+="${C_RESET}"
-        fi
+# Cold start (no live data and no fresh cache) -> warm the cache in the background.
+if [[ "$usage_src" != "live" ]]; then
+    if [[ -z "$five_raw" || ( "$usage_age" =~ ^[0-9]+$ && $usage_age -gt $USAGE_STALE_SECS ) ]]; then
+        maybe_warm_usage
     fi
-else
-    # Endpoint errored AND no cached numbers to fall back on — say so plainly in
-    # warning color rather than showing a fabricated reading.
-    quota_line="${C_WARN}5h n/a | 7d n/a (usage endpoint unavailable)${C_RESET}"
 fi
 
-# --- Build 4-line status output ---
-line1="${C_ACCENT}${model}${C_RESET}"
-
-line2="${C_GRAY}📁${dir}"
-[[ -n "$branch" ]] && line2+=" | 🔀${branch}"
-line2+="${C_RESET}"
-
-line3="${C_GRAY}🔥 ${ctx_bar} ${pct_prefix}${pct}% of ${max_k}k tokens"
-if [[ -n "$usd_disp" ]]; then
-    line3+=" | \$${usd_disp}"
-    [[ -n "$czk_disp" ]] && line3+=" | ${czk_disp}"
+# Staleness applies only to the cache path; live stdin data is always current.
+is_stale=0   # muted age note
+is_old=0     # coral + ⚠ (genuinely outdated)
+if [[ "$usage_src" == "cache" && "$usage_age" =~ ^[0-9]+$ ]]; then
+    [[ $usage_age -gt $USAGE_STALE_SECS ]] && is_stale=1
+    [[ $usage_age -gt $USAGE_WARN_SECS ]] && is_old=1
 fi
+
+quota_line=""
+five_pct=$(format_pct "$five_raw")
+seven_pct=$(format_pct "$seven_raw")
+
+if [[ -n "$five_pct" && "$five_pct" =~ ^[0-9]+$ ]]; then
+    lbl="$C_GRAY"; txt=""
+    if [[ $is_old -eq 1 ]]; then lbl="$C_WARN"; txt="$C_WARN"; fi
+
+    [[ $five_pct -gt 100 ]] && five_pct=100
+    five_bar=$(progress_bar "$five_pct" 8)
+    five_countdown=$(time_until "$five_resets")
+    [[ $is_old -eq 1 ]] && quota_line="${C_WARN}⚠ " || quota_line=""
+    quota_line+="${lbl}5h ${five_bar}${txt} ${five_pct}%"
+    [[ -n "$five_countdown" ]] && quota_line+="${txt} ⏳${five_countdown}"
+
+    if [[ -n "$seven_pct" && "$seven_pct" =~ ^[0-9]+$ ]]; then
+        [[ $seven_pct -gt 100 ]] && seven_pct=100
+        seven_bar=$(progress_bar "$seven_pct" 8)
+        seven_countdown=$(time_until "$seven_resets")
+        quota_line+="${lbl} | 7d ${seven_bar}${txt} ${seven_pct}%"
+        [[ -n "$seven_countdown" ]] && quota_line+="${txt} ⏳${seven_countdown}"
+    else
+        quota_line+="${lbl} | 7d n/a"
+    fi
+
+    if [[ $is_old -eq 1 ]]; then
+        quota_line+="${C_WARN} · $(human_age "$usage_age") old ⚠${C_RESET}"
+    elif [[ $is_stale -eq 1 ]]; then
+        quota_line+="${C_GRAY} · $(human_age "$usage_age")${C_RESET}"
+    else
+        quota_line+="${C_RESET}"
+    fi
+fi
+
+# --- Context tokens + %: from stdin (no transcript math), fall back to tokens/max ---
+ctx_pct=$(format_pct "$context_used_pct")
+if ! [[ "$ctx_pct" =~ ^[0-9]+$ ]] && [[ "$session_tokens_in" =~ ^[0-9]+$ ]]; then
+    ctx_pct=$(( session_tokens_in * 100 / max_context ))
+fi
+[[ "$ctx_pct" =~ ^[0-9]+$ && $ctx_pct -gt 100 ]] && ctx_pct=100
+tokens_k=""
+[[ "$session_tokens_in" =~ ^[0-9]+$ ]] && tokens_k=$(( (session_tokens_in + 500) / 1000 ))
+
+# --- Build status output -----------------------------------------------------
+# Line 1: session name + short session id
+line1=""
+[[ -n "$session_name" ]] && line1="${C_SESSION}${session_name}${C_RESET}"
+if [[ -n "$short_id" ]]; then
+    [[ -n "$line1" ]] && line1+=" "
+    line1+="${C_GRAY}#${short_id}${C_RESET}"
+fi
+
+# Line 2: model <effort> · account
+line2="${C_ACCENT}${model}${C_RESET}"
+[[ -n "$effort_level" ]] && line2+=" ${C_GRAY}<${effort_level}>${C_RESET}"
+line2+=" ${C_GRAY}·${C_RESET} ${account_color}${account_label}${C_RESET}"
+
+# Line 3: worktree dir + branch
+line3="${C_GRAY}📁${dir}"
+[[ -n "$branch" ]] && line3+=" | 🔀${branch}"
 line3+="${C_RESET}"
 
-line4=""
-if [[ -n "$quota_line" ]]; then
-    line4="$quota_line"
-fi
-
-printf '%b
-' "$line1"
-printf '%b
-' "$line2"
-printf '%b
-' "$line3"
-[[ -n "$line4" ]] && printf '%b
-' "$line4"
-
-# --- Last user message (text only) ---
-if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
-    plain_line2="${dir}"
-    [[ -n "$branch" ]] && plain_line2+=" | ${branch}"
-    max_len=${#plain_line2}
-
-    last_user_msg=$(jq -rs '
-        def is_unhelpful:
-            startswith("[Request interrupted") or
-            startswith("[Request cancelled") or
-            . == "";
-
-        [.[] | select(.type == "user") |
-         select(.message.content | type == "string" or
-                (type == "array" and any(.[]; .type == "text")))] |
-        reverse |
-        map(.message.content |
-            if type == "string" then .
-            else [.[] | select(.type == "text") | .text] | join(" ") end |
-            gsub("\n"; " ") | gsub("  +"; " ")) |
-        map(select(is_unhelpful | not)) |
-        first // ""
-    ' < "$transcript_path" 2>/dev/null)
-
-    if [[ -n "$last_user_msg" ]]; then
-        if [[ ${#last_user_msg} -gt $max_len ]]; then
-            echo "💬 ${last_user_msg:0:$((max_len - 3))}..."
-        else
-            echo "💬 ${last_user_msg}"
-        fi
+# Line 4: context tokens (%), session cost, line edits (green +/red -)
+# Context color escalates by absolute input tokens: >=100k yellow, >=140k
+# orange, >=180k red — else the default gray.
+ctx_color="$C_GRAY"
+if [[ "$session_tokens_in" =~ ^[0-9]+$ ]]; then
+    if   [[ $session_tokens_in -ge 180000 ]]; then ctx_color="$C_CTX_RED"
+    elif [[ $session_tokens_in -ge 140000 ]]; then ctx_color="$C_CTX_ORANGE"
+    elif [[ $session_tokens_in -ge 100000 ]]; then ctx_color="$C_CTX_YELLOW"
     fi
 fi
+line4="${ctx_color}🔥 "
+if [[ -n "$tokens_k" ]]; then
+    line4+="${tokens_k}k"
+    [[ "$ctx_pct" =~ ^[0-9]+$ ]] && line4+=" (${ctx_pct}%)"
+elif [[ "$ctx_pct" =~ ^[0-9]+$ ]]; then
+    line4+="${ctx_pct}%"
+fi
+line4+="${C_RESET}"
+if [[ -n "$usd_disp" ]]; then
+    line4+="${C_GRAY} | \$${usd_disp}"
+    [[ -n "$czk_disp" ]] && line4+=" | ${czk_disp}"
+fi
+if [[ "$lines_added" =~ ^[0-9]+$ || "$lines_removed" =~ ^[0-9]+$ ]]; then
+    line4+="${C_GRAY} |"
+    [[ "$lines_added" =~ ^[0-9]+$ ]] && line4+=" ${C_ADD}+${lines_added}${C_RESET}"
+    [[ "$lines_removed" =~ ^[0-9]+$ ]] && line4+=" ${C_DEL}-${lines_removed}${C_RESET}"
+fi
+line4+="${C_RESET}"
+
+printf '%b\n' "$line1"
+printf '%b\n' "$line2"
+printf '%b\n' "$line3"
+printf '%b\n' "$line4"
+[[ -n "$quota_line" ]] && printf '%b\n' "$quota_line"
