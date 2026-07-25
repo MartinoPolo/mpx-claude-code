@@ -345,6 +345,12 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 | `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
 
+### Vendored Skills
+
+| Skill          | Description                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| `/notebooklm`  | Third-party reference for the full `notebooklm-py` CLI surface, installed by that package and committed here so `/mp-podcast`'s link to it resolves in a fresh clone. Pinned to v0.7.3 — edits belong upstream, not here |
+
 ## Agents
 
 | Agent                       | Model  | Description                                                                 |
