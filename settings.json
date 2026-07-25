@@ -12,7 +12,6 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
   "hooks": {
     "PostToolUse": [
       {
@@ -122,5 +121,6 @@
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": false
+  "agentPushNotifEnabled": false,
+  "model": "claude-opus-5[1m]"
 }
