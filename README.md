@@ -28,6 +28,32 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and working
 
+### Machine Roots (`MPX_*`)
+
+This repo is public, so personal absolute paths live in user-scope environment variables rather
+than in any committed file. The [`machine-paths.js`](hooks/machine-paths.js) SessionStart hook
+reads them and injects whichever are set into every session; unset ones are skipped silently, so
+the setup is optional and portable.
+
+| Variable             | Root                    |
+| -------------------- | ----------------------- |
+| `MPX_PROJECTS`       | Personal projects       |
+| `MPX_WORK`           | Work repositories       |
+| `MPX_CLONED`         | Cloned OSS repositories |
+| `MPX_APPS`           | Local apps              |
+| `MPX_ONEDRIVE`       | OneDrive root           |
+| `MPX_OBSIDIAN_VAULT` | Obsidian vault          |
+
+Set them once (PowerShell, user scope — survives reboots):
+
+```powershell
+[Environment]::SetEnvironmentVariable('MPX_PROJECTS', 'C:\your\projects', 'User')
+```
+
+Skills and agents reference these by name (`$MPX_WORK\...`). Markdown does **not** interpolate
+environment variables, so a sub-agent resolves them at runtime with `env | grep '^MPX_'`. An unset
+variable means "unavailable" — ask, do not guess.
+
 ## Workflow
 
 ```
