@@ -210,7 +210,7 @@ Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into Git
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `/mp-playwright-test` | Reliable raw-Playwright visual verification over a scope (uncommitted / current PR / verbal area) — per-surface PASS/FAIL with measured values + screenshots |
 
-`/mp-playwright-test` and `/mp-batch-execute`'s verify gate both follow `skills/shared/PLAYWRIGHT_TESTING.md` — the raw-Playwright reliability contract (stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-playwright-tester` agent is for exploratory testing only.
+`/mp-playwright-test` and `/mp-batch-execute`'s verify gate both follow `skills/shared/PLAYWRIGHT_TESTING.md` — the raw-Playwright reliability contract (stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing only, and additionally covers performance traces and Lighthouse audits, which raw Playwright cannot do.
 
 ### Code Quality Skills
 
