@@ -284,6 +284,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
 | `/mp-tutorial-create`         | Generate interactive self-contained HTML tutorials (topic or code-showcase) from compact markdown source — quizzes, walkthroughs, theme-aware Mermaid diagrams, and an interactive CSS playground with Froggy-style challenges — compiled to `OneDrive/tutorials/<category>/` with dashboard index |
+| `/mp-podcast`                 | Turn a topic into a two-host educational podcast MP3 in `OneDrive/Podcasts/` — parallel topic research and a personalization sweep over own projects, Obsidian notes and cloned repos (work repos opt-in), a fact-dense brief plus customize prompt, NotebookLM generation with a Gemini multi-speaker TTS fallback, ffmpeg re-encode to 64 kbps mono |
 | `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
