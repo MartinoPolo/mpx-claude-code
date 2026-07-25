@@ -1,12 +1,12 @@
 ---
 name: mp-vocabulary
-description: 'Create or update domain language in CONTEXT.md § Domain Language. Confirms with user before writing. Use when: "update vocabulary", "define terms", "domain language", "vocabulary"'
+description: "Creates or updates the domain language section of CONTEXT.md, confirming terms with the user first."
 argument-hint: "[topic or context to focus term extraction on]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "1.2"
   category: planning
 ---
 

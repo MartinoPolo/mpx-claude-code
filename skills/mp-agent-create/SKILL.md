@@ -1,16 +1,20 @@
 ---
 name: mp-agent-create
-description: 'Create new Claude Code custom agents with structured conventions and review checklist. Use when: "create agent", "new agent", "write an agent", "agent create"'
+description: "Creates a new Claude Code sub-agent following this repo's conventions, with a review checklist."
 argument-hint: "[agent name or description]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.4"
   category: utility
 ---
 
 Create a new Claude Code custom agent following project conventions.
+
+Read [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) and
+[`../shared/AUTHORING.md`](../shared/AUTHORING.md) now — they carry the verified rules
+for model selection, tool grants, and naming that this skill applies.
 
 ## Process
 
@@ -33,7 +37,7 @@ Ask all of the following in a single numbered list (one round-trip):
 
 1. **Purpose**: What task does this agent handle? What problem does it solve?
 2. **Tools needed**: Which tools should it access? (Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, WebFetch, WebSearch, MCP tools)
-3. **Model**: haiku (fast/cheap), sonnet (balanced), opus (complex reasoning), or inherit (parent's model)?
+3. **Model**: haiku (fast mechanical work), sonnet (exploring, reviewing, moderate implementation), or opus (complex reasoning)? Every agent in this repo names one — see Model Selection below for why `inherit` is not offered.
 4. **Read-only or read-write?**: Does it modify files or only analyze?
 5. **Color**: Status line color (red, green, yellow, blue, magenta, cyan, white)
 
@@ -48,7 +52,7 @@ Create `agents/<agent-name>.md` with this structure:
 name: <agent-name>
 description: <one-line what it does and when to use it>
 tools: <comma-separated tool list>
-model: <haiku|sonnet|opus|inherit>
+model: <haiku|sonnet|opus>
 color: <color>
 ---
 
@@ -75,23 +79,15 @@ color: <color>
 
 | Field         | Rules                                                                  |
 | ------------- | ---------------------------------------------------------------------- |
-| `name`        | Lowercase, hyphens only, max 64 chars. Must match filename.            |
+| `name`        | Lowercase, hyphens only, max 64 chars. Must match filename. Overriding a built-in is the one exception — match its capitalisation exactly. |
 | `description` | One line, max 250 chars. Front-load key use cases.                     |
-| `tools`       | Comma-separated allowlist. Only include tools the agent actually uses. |
-| `model`       | Pick based on task complexity. Default `inherit` unless specific need. |
+| `tools`       | Comma-separated allowlist. Only include tools the agent actually uses. Write `Agent`, not the deprecated `Task`. |
+| `model`       | Name one explicitly — see Model Selection below.                       |
 | `color`       | Status line color for visual identification.                           |
 
-**Optional (use only when needed):**
-
-| Field            | Purpose                                                          |
-| ---------------- | ---------------------------------------------------------------- |
-| `maxTurns`       | Cap agentic turns before stopping                                |
-| `skills`         | Skill names to preload into agent context                        |
-| `mcpServers`     | MCP servers scoped to this agent                                 |
-| `memory`         | Persistent memory scope: `user`, `project`, or `local`           |
-| `background`     | `true` to always run as background task                          |
-| `isolation`      | `worktree` to run in isolated git worktree                       |
-| `permissionMode` | `default`, `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan` |
+**Optional:** `disallowedTools`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`,
+`hooks`, `memory`, `background`, `effort`, `isolation`, `initialPrompt`. Semantics in
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 6.
 
 #### Body Conventions
 
@@ -99,7 +95,14 @@ color: <color>
 - `## Workflow` — numbered steps, clear and sequential
 - `## Output` — structured template so parent can parse results
 - Keep body under **100 lines** — agents should be focused
-- Use positive instructions (say what to do, not what to avoid)
+
+Naming, descriptions, positive phrasing, explicit references, paths, and versioning are
+covered once in [`../shared/AUTHORING.md`](../shared/AUTHORING.md). Follow it rather
+than restating it here.
+
+An agent that overrides a built-in keeps its body **deliberately thin** — the override
+replaces the built-in's tuned system prompt, so a verbose body trades cost for worse
+behaviour. See [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 7.
 
 #### Tool Selection Guidelines
 
@@ -111,21 +114,43 @@ color: <color>
 | Orchestrator (spawns sub-agents) | `Read, Grep, Glob, Bash, Agent`                                       |
 | Browser tester                   | `Read, Glob, Grep, Bash, AskUserQuestion` + chrome-devtools MCP tools |
 
-#### Model Selection Guidelines
+`tools` is a strict allowlist: an unlisted tool is absent from the agent's schema
+entirely. `Agent` is **not** granted by default — an agent without it cannot delegate,
+and its parent must spawn on its behalf and pass results back in. Full tool-grant
+semantics, including `disallowedTools`, are in
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 6.
 
-| Model     | Best For                                                    |
-| --------- | ----------------------------------------------------------- |
-| `haiku`   | Fast read-only tasks: checking, exploring, simple analysis  |
-| `sonnet`  | Balanced: reviewing, docs updates, moderate complexity      |
-| `opus`    | Complex reasoning: implementation, architecture, multi-step |
-| `inherit` | When parent should control model choice                     |
+**An agent that needs MCP tools enumerates none of them.** Every name in `tools` is
+reprinted in the agent roster in every session, so a long MCP list is a standing context
+charge that also rots when the server renames a tool. Omit `tools` and subtract instead:
+
+```yaml
+disallowedTools: Write, Edit, NotebookEdit, Agent
+```
+
+`AskUserQuestion` is stripped from every sub-agent whatever the frontmatter says, so
+granting it is always dead.
+
+#### Model Selection
+
+| Model    | Best for                                                             |
+| -------- | -------------------------------------------------------------------- |
+| `haiku`  | Fast mechanical work: running checks, committing, simple lookups     |
+| `sonnet` | Exploring, reviewing, docs, moderate-complexity implementation       |
+| `opus`   | Complex reasoning: architecture, analysis, multi-step implementation |
+
+**Name a model in every agent this repo owns.** `inherit` is valid, and omitting
+`model:` means exactly the same thing — both resolve to the main conversation's model,
+which on this machine is `claude-opus-5[1m]`, the most expensive option. An agent left
+on `inherit` gets silently expensive the moment the session model changes.
 
 #### Explicit Tool References (mandatory)
 
 - GitHub CLI: specify exact `gh` command (e.g., `gh pr list`)
 - Bash commands: name exact command/script
-- Omit `model` in spawning instructions when sub-agent defines its own
-- Use `gh` CLI for all GitHub operations
+- Sub-agent spawns: name the exact agent type, and pass `model` only when that type
+  declares none — [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3
+- Describe a model in prose nowhere: only a real `model` parameter selects one (§ 1)
 
 ### Step 4: Validate Against Guidelines
 
@@ -160,14 +185,23 @@ Ask the user for feedback. Iterate until approved.
 
 Before finalizing, verify:
 
-- [ ] Name is lowercase with hyphens, matches filename
+- [ ] Name is lowercase with hyphens, matches filename (or matches a built-in's capitalisation exactly, if overriding one)
 - [ ] Description front-loads use cases, under 250 chars
-- [ ] Tools list matches what the body actually uses
-- [ ] Model matches task complexity
+- [ ] Tools list matches what the body actually uses, and uses `Agent` rather than the deprecated `Task`
+- [ ] `Agent` is granted if — and only if — the agent spawns sub-agents
+- [ ] `model` names a specific model rather than relying on `inherit`
 - [ ] Color is set
 - [ ] Body is under 100 lines
 - [ ] Workflow is numbered and sequential
 - [ ] Output template is structured and parseable
 - [ ] All tool references are explicit (exact agent names, `gh` commands, script paths)
+- [ ] No model named in prose — only in a real `model` field
 - [ ] Instructions are positive (say what to do, not what to avoid)
 - [ ] Agent is focused on one responsibility (single-purpose)
+
+When overriding a built-in, additionally verify against
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 7:
+
+- [ ] `description` copied verbatim from the built-in (it drives auto-delegation)
+- [ ] `disallowedTools` re-denies every tool the built-in denied
+- [ ] Permissions verified by making the agent **attempt** each call, never by asking it (§ 8)

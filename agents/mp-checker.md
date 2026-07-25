@@ -1,7 +1,7 @@
 ---
 name: mp-checker
 description: Executes provided check commands and reports failures. No fixing.
-tools: Bash, Read, Grep, Glob, AskUserQuestion
+tools: Bash, Read, Grep, Glob
 model: haiku
 color: yellow
 ---

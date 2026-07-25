@@ -1,11 +1,12 @@
 ---
 name: mp-review
-description: 'Review code with configurable scope and autofix. Use when: "review scope branch", "review changes", "review pr #123 autofix"'
+description: "Reviews a branch, working diff, or PR across specialist axes (security, performance, tests, quality) and optionally applies the fixes."
+when_to_use: "User asks to review code, changes, or a pull request."
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.6"
   category: code-review
 ---
 
@@ -116,7 +117,7 @@ Compute total issues from merged findings (`Critical + Important + Minor`).
 
 Run only when autofix ON and at least one finding exists.
 
-**Analyze each finding and determine the concrete fix** — identify exact file paths, lines, and the specific code change needed. Then spawn `mp-executor` sub-agent (sonnet) with pre-analyzed fix instructions:
+**Analyze each finding and determine the concrete fix** — identify exact file paths, lines, and the specific code change needed. Then spawn `mp-executor` sub-agent with pre-analyzed fix instructions:
 
 - concrete fix per finding: file path, current code, and exact change to apply (the executor applies — it does not diagnose)
 - resolved scope summary (branch/changes/pr)

@@ -1,12 +1,12 @@
 ---
 name: mp-gemini-fetch
-description: "Fetch content from sites Claude cannot access (Reddit, etc.) using Gemini CLI as fallback. Use when: fetching Reddit, StackOverflow, or sites Claude cannot access directly."
+description: "Fetches content from sites Claude cannot reach, using the Gemini CLI as a fallback."
 compatibility: Requires Gemini CLI installed and authenticated
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: utility
 ---
 

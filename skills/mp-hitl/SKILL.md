@@ -1,12 +1,12 @@
 ---
 name: mp-hitl
-description: 'Resolve HITL issues into AFK-ready by grilling human decisions. Use when: "resolve HITL", "make issues AFK", "grill HITL issues", "prep for overnight run"'
+description: "Resolves HITL-blocked issues into AFK-ready ones by grilling the human decisions out of them."
 argument-hint: "[PRD issue URL or number] [lowest|most-blocking]"
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: project-management
 ---
 
@@ -94,7 +94,7 @@ For each HITL issue, in priority order:
 
 1. Read the issue body — focus on `## Notes` for the HITL reason, `## Acceptance Criteria` for ambiguity, `## Description` for open questions
 2. Cross-reference against the PRD's `## Implementation Decisions` section — remove anything already decided
-3. Spawn an `Explore` agent (`model: "sonnet"`) to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
+3. Spawn an `Explore` agent to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
 
 #### 5b: Grill Decision Points
 
@@ -102,7 +102,7 @@ Group the issue's decision points into thematic batches. Present each batch as a
 
 Only split into a follow-up round when earlier answers would change later questions.
 
-Follow the `mp-grill` pattern: if a question can be answered by exploring the codebase, spawn an `Explore` agent (`model: "sonnet"`) instead of asking.
+See [EXPLORATION.md](../shared/EXPLORATION.md) — explore instead of asking.
 
 #### 5c: Record Outcome
 

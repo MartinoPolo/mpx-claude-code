@@ -1,11 +1,12 @@
 ---
 name: mp-symlink
-description: 'Create and verify Windows symlinks and directory junctions — the PowerShell New-Item path, not Git Bash ln -s or cmd mklink. Use when: "symlink", "junction", "create a symlink", "verify symlink"'
+description: "Creates and verifies Windows symlinks and directory junctions through PowerShell New-Item."
+when_to_use: "Any symlink or junction work on Windows. Git Bash ln -s and cmd mklink silently create the wrong thing here."
 argument-hint: "[link-path] [target-path]"
 allowed-tools: Bash, PowerShell
 metadata:
   author: MartinoPolo
-  version: "0.1.1"
+  version: "0.1.2"
   category: utility
 ---
 

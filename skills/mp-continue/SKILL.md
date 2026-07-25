@@ -1,11 +1,12 @@
 ---
 name: mp-continue
-description: 'Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then resumes where the session left off. Use when: "continue", "resume after limit"'
+description: "Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then resumes it."
 argument-hint: "[optional focus or task to resume first]"
+disable-model-invocation: true
 allowed-tools: Agent, SendMessage, TaskList, Bash, Read, Grep, Glob
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.3"
   category: utility
 ---
 
@@ -51,7 +52,7 @@ For each interrupted `agentId`, in order:
    - Failure (`"No transcript found for agent ID"`) — the transcript did not survive. Go to the fallback.
 2. Fallback: spawn a fresh `Agent` scoped to **only the remaining work** from Step 2, pointed at the surviving artifacts. Instruct it to inventory what exists first and fill gaps, not restart from zero.
 
-Match the fresh agent's type to the original task (e.g. `mp-executor`, `mp-playwright-tester`). Omit `model` for agents that define their own.
+Match the fresh agent's type to the original task (e.g. `mp-executor`, `mp-chrome-devtools-tester`). Omit `model` for agents that define their own; pass it explicitly when resuming as `general-purpose` or `claude`, which do not.
 
 ### Step 4: Recover orphaned background tasks
 

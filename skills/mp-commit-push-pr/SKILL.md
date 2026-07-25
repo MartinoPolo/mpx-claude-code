@@ -1,10 +1,11 @@
 ---
 name: mp-commit-push-pr
-description: 'Full workflow - commit, push, and create or update PR. Use when: "commit push and PR", "full workflow", "commit push PR"'
+description: "Stages, commits, pushes, then creates or updates the pull request."
+disable-model-invocation: true
 allowed-tools: Agent, Read, Bash(node *), Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *), Bash(gh pr *), Bash(gh issue view *)
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: git-workflow
 ---
 

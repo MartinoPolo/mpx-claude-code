@@ -1,11 +1,12 @@
 ---
 name: mp-board-to-issues
-description: 'Converts Obsidian board notes from the To Process lane into labelled GitHub issues, deduping against existing ones and moving each to Ready to implement. Use when: "board to issues", "convert board"'
+description: "Converts Obsidian board notes from the To Process lane into labelled GitHub issues, deduping against existing ones."
 argument-hint: "[optional guidance]"
+disable-model-invocation: true
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: project-management
 ---
 

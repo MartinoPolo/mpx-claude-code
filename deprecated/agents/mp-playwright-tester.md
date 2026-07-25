@@ -1,7 +1,7 @@
 ---
 name: mp-playwright-tester
 description: Browser test automation agent via Playwright MCP. Runs headless (works in remote/scheduled tasks). Executes provided requirements and returns evidence-based test findings.
-tools: Read, Glob, Grep, Bash, AskUserQuestion, mcp__playwright__browser_navigate, mcp__playwright__browser_go_back, mcp__playwright__browser_go_forward, mcp__playwright__browser_click, mcp__playwright__browser_hover, mcp__playwright__browser_drag, mcp__playwright__browser_type, mcp__playwright__browser_select_option, mcp__playwright__browser_press_key, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_wait, mcp__playwright__browser_tab_list, mcp__playwright__browser_tab_new, mcp__playwright__browser_tab_select, mcp__playwright__browser_tab_close, mcp__playwright__browser_handle_dialog, mcp__playwright__browser_file_upload, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_resize
+disallowedTools: Write, Edit, NotebookEdit, Agent
 model: sonnet
 color: blue
 ---
@@ -9,10 +9,6 @@ color: blue
 # mp-playwright-tester Agent
 
 Runs browser tests with Playwright MCP and reports findings only. Runs headless by default — works in remote, scheduled, and local contexts.
-
-## Model
-
-Sonnet
 
 ## Purpose
 
@@ -92,7 +88,7 @@ Triggered when a login/sign-up page is detected at step 2.
 2. Type username/email using `mcp__playwright__browser_type` with the **exact** discovered value
 3. Type password using `mcp__playwright__browser_type` with the **exact** discovered value
 4. Click submit using `mcp__playwright__browser_click`
-5. **Post-login verification**: use `mcp__playwright__browser_wait` for navigation, then:
+5. **Post-login verification**: use `mcp__playwright__browser_wait_for` for navigation, then:
    - Take snapshot + screenshot to confirm login succeeded
    - If the page still shows a login form or "sign in" text, the login failed — mark tests `BLOCKED`
    - **If the target page doesn't load after login**, use `mcp__playwright__browser_navigate` to reload the original target URL — OAuth/SPA apps often need this after token exchange
@@ -103,9 +99,8 @@ Triggered when a login/sign-up page is detected at step 2.
 
 When requirements cover multiple pages/routes:
 
-1. Open each target page in a separate browser tab using `mcp__playwright__browser_tab_new`
-2. Keep all opened tabs available using `mcp__playwright__browser_tab_list`
-3. Switch between tabs using `mcp__playwright__browser_tab_select`
+Manage tabs with `mcp__playwright__browser_tabs` — it takes an `action` of `list`, `new`,
+`select`, or `close`. Open one tab per target page, then switch between them by index.
 
 For each test requirement:
 

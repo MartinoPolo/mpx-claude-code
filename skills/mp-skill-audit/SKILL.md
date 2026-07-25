@@ -1,17 +1,23 @@
 ---
 name: mp-skill-audit
-description: 'Audit all active skills for consistency, convention drift, and common issues. Auto-fixes where possible, reports remaining issues. Use when: "audit skills", "skill audit", "check skills", "lint skills"'
+description: "Audits all active skills for convention drift and common defects, fixing what it can and reporting the rest."
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.7"
   category: utility
 ---
 
 # Skill Audit
 
 Scan all active skills for consistency and convention drift. Auto-fix mechanical issues, report findings.
+
+The conventions being audited are defined in
+[`../shared/AUTHORING.md`](../shared/AUTHORING.md),
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md), and
+[`../shared/EXPLORATION.md`](../shared/EXPLORATION.md). Read them before auditing —
+each check below points at the rule it enforces.
 
 When invoked from `mp-skill-create`, pass the single skill path as `$ARGUMENTS`.
 
@@ -23,7 +29,9 @@ If `$ARGUMENTS` is a skill name or path, audit only that skill.
 
 ## Step 2: Run Checks (per skill)
 
-Spawn parallel Sonnet sub-agents, each auditing 3-5 skills. Each agent runs all 12 checks against each skill and returns findings. Check 12 runs once repo-wide, in the main session.
+Spawn parallel `general-purpose` sub-agents with `model: "sonnet"`, each auditing 3-5 skills. `general-purpose` declares no model of its own, so the parameter is load-bearing here — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 3.
+
+Each agent runs all 15 checks against each skill and returns findings. Checks 12 and 14 run once repo-wide, in the main session.
 
 ### Check 1: Positive Instructions
 
@@ -43,11 +51,21 @@ Valid categories: `planning`, `execution`, `project-management`, `issue-manageme
 
 Flag missing or invalid fields. Auto-fix category casing.
 
-### Check 4: Trigger Phrases
+### Check 4: Description Budget and Discoverability
 
-Description must contain `Use when:` followed by quoted trigger phrases.
+`description` and `when_to_use` are the only parts of a skill that sit in every
+session's context. Flag each of:
 
-Flag if missing. Suggest triggers based on the skill name and content.
+- **4a** — `description` longer than two sentences, or carrying an inline
+  `Use when: "..."` trigger list. Triggers move to `when_to_use`.
+- **4b** — `when_to_use` longer than three short sentences.
+- **4c** — combined `description` + `when_to_use` over 1,536 chars, the point at which
+  the listing truncates.
+- **4d** — a model-invocable skill (no `disable-model-invocation: true`) that reads as
+  explicit-invocation-only. Ask whether Claude ever needs to reach for it unprompted; if
+  not, setting the flag drops its context cost to zero.
+- **4e** — `when_to_use` present on a skill that has `disable-model-invocation: true`.
+  Nothing reads it there; remove it.
 
 ### Check 5: Legacy Documentation References
 
@@ -75,7 +93,9 @@ Compare the `description` field to the skill body. Flag if the description claim
 
 ### Check 9: Spawned Agent Types Exist
 
-For skills with `Agent` in `allowed-tools`: grep the body for spawned agent type names (`grep -oE 'mp-[a-z0-9-]+' SKILL.md` plus explicitly named types like `general-purpose`). Each spawned type must match a file `agents/<type>.md` or a built-in: `general-purpose`, `Explore`, `Plan`. Flag unknown types.
+For skills with `Agent` in `allowed-tools`: grep the body for spawned agent type names (`grep -oE 'mp-[a-z0-9-]+' SKILL.md` plus explicitly named types like `general-purpose`). Each spawned type must match a file `agents/<type>.md` or a built-in: `general-purpose`, `Explore`, `Plan`, `claude`, `claude-code-guide`, `statusline-setup`. Flag unknown types.
+
+Also flag every spawn instruction that names no agent type at all ("spawn a sub-agent to…") — the type is what determines tools and model, so leaving it implicit is a defect.
 
 ### Check 10: allowed-tools Paths Exist
 
@@ -88,6 +108,38 @@ For each `allowed-tools` entry, grep the skill body for its usage token: plain t
 ### Check 12: README Table Sync
 
 Runs once for the repo. Glob `skills/*/SKILL.md`, `agents/*.md`, `hooks/*` and diff each file list against the corresponding README.md table rows. Flag rows whose file is gone, files on disk with no row, and renamed entries (row and file differ by name only). Report only — README edits stay manual.
+
+### Check 13: Model Specification
+
+Rules and evidence: [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) §§ 1-3. Only a real `model` parameter selects a model; prose is measured at 0% obeyed. Three distinct defects:
+
+**13a — Prose model mention (no-op).** Grep the body case-insensitively for `sonnet`, `haiku`, `opus`, `fable`. Flag every occurrence that sits in an English sentence rather than in a `model:` field — `Spawn a Sonnet sub-agent`, `(Haiku)`, `10 Sonnet Sub-Agents`, `the Opus orchestrator`. Each one reads as an instruction and does nothing.
+
+Fix by deciding which the author meant:
+- the named agent already declares that model → delete the prose annotation
+- the agent type declares no model → replace the prose with a real `model: "<value>"` parameter
+
+Prose that describes the *main thread* rather than a spawn ("handle this at the main-agent level") is not a defect.
+
+**13b — Redundant `model` parameter.** Flag a `model` parameter passed to an agent type whose `agents/<type>.md` declares its own `model` — the call site duplicates the declaration and drifts when the agent changes.
+
+**13c — Missing `model` parameter.** Flag a spawn of `general-purpose`, `claude`, `Plan`, or `fork` with no `model` parameter. These declare no model, so they inherit the main conversation's model — the most expensive option. State the intended model explicitly.
+
+### Check 14: Shared Reference Integrity
+
+Runs once for the repo. For every markdown link to `../shared/<FILE>.md` in any `skills/*/SKILL.md` or supporting file, resolve the path and confirm the target exists. Flag broken links.
+
+Also flag content duplicated from `skills/shared/` — a skill restating rules from `SUBAGENT_PROTOCOL.md`, `EXPLORATION.md`, or `AUTHORING.md` instead of linking to them. Shared rules drift the moment they are copied.
+
+### Check 15: Exploration Delegation
+
+Rule: [../shared/EXPLORATION.md](../shared/EXPLORATION.md) § Delegate.
+
+Flag main-thread instructions that sweep the codebase — `Grep`, `Glob`, `rg`, `find`, "search the codebase", "locate", "scan the repo" — where the search is broad enough to belong in an `Explore` sub-agent. Reading two or three already-known files is not exploration; a repo-wide content search is.
+
+Two exemptions, both narrow: a deterministic inventory of a fixed, known path pattern (`Glob skills/*/SKILL.md`), and a search instruction that already sits **inside** a sub-agent prompt.
+
+Also flag delegated searches that state no breadth — `Explore` calibrates effort from the request, so `quick` / `medium` / `very thorough` belongs in every spawn.
 
 ## Step 3: Auto-Fix
 

@@ -1,11 +1,12 @@
 ---
 name: mp-tutorial-create
-description: 'Generates interactive, self-contained HTML tutorial pages from a topic or code-showcase prompt, compiled from compact markdown source into the OneDrive tutorials folder. Use when: "create tutorial", "make a tutorial"'
+description: "Compiles an interactive, self-contained HTML tutorial from a topic or code showcase into the OneDrive tutorials folder."
+when_to_use: "User asks to create or make a tutorial."
 argument-hint: "<topic or code-showcase description> [--type topic|code-showcase] [--category <name>]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Agent, WebSearch, WebFetch
 metadata:
   author: MartinoPolo
-  version: "1.2.0"
+  version: "1.3.1"
   category: utility
 ---
 
@@ -25,7 +26,7 @@ From `$ARGUMENTS` infer:
 
 ### Step 2: Find Videos
 
-Spawn a `general-purpose` sub-agent to find 1-2 intro YouTube videos following `${CLAUDE_SKILL_DIR}/reference/CHANNELS.md` (channel profiles, WebSearch `site:youtube.com` technique, duration filter, oEmbed verification). Pass it the topic; require back: title, channel, duration, verified URL per video.
+Spawn a `general-purpose` sub-agent with `model: "sonnet"` to find 1-2 intro YouTube videos following `${CLAUDE_SKILL_DIR}/reference/CHANNELS.md` (channel profiles, WebSearch `site:youtube.com` technique, duration filter, oEmbed verification). Pass it the topic; require back: title, channel, duration, verified URL per video.
 
 ### Step 3: Author Source
 

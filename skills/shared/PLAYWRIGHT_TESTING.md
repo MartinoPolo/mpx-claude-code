@@ -6,7 +6,7 @@ Single source of truth for **reliable** browser verification of UI changes. Refe
 
 Drive the browser with **raw Playwright** — the project's own installed `playwright` dependency, run as a short Node script (e.g. `node scripts/shot.mjs`). A raw script is deterministic, reproducible, assertable, and works in headless / scheduled / remote runs where a browser MCP is unreliable or absent.
 
-**Boundary vs the MCP agent.** The `mp-playwright-tester` agent (Playwright MCP, spawned by `mp-execute` step 6c) is for **interactive exploratory** testing only — a human-style click-through when e2e specs don't cover an interaction. It is *not* the reliability path. Any check that must be trustworthy, repeatable, or run unattended uses raw Playwright per this file.
+**Boundary vs the MCP agent.** The `mp-chrome-devtools-tester` agent (chrome-devtools MCP, spawned by `mp-execute` step 6c) is for **interactive exploratory** testing only — a human-style click-through when e2e specs don't cover an interaction, plus performance traces and Lighthouse audits, which raw Playwright has no equivalent for. It is *not* the reliability path. Any check that must be trustworthy, repeatable, or run unattended uses raw Playwright per this file.
 
 ## Discover project specifics first
 

@@ -1,12 +1,12 @@
 ---
 name: mp-setup-react-native
-description: 'Create a React + React Native monorepo from template with GitHub repo, branch protection, and CI. Use when: "setup React Native project", "new mobile project", "create React Native monorepo"'
+description: "Creates a React and React Native monorepo from template, with GitHub repo, branch protection, and CI."
 argument-hint: <project-name>
 disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: setup
 ---
 

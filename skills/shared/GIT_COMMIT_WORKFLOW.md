@@ -19,7 +19,7 @@ Parse the agent's JSON output:
 
 ### Escalation (on FAIL only)
 
-**Handle at main-agent level (Sonnet/Opus) — do not delegate the fix to a sub-agent.** Read the error from the committer's output. Diagnose and fix the issue (e.g., pre-commit hook failure, staging error, push rejection). Once fixed, re-spawn `mp-git-committer` with the same parameters.
+**Handle at main-agent level — do not delegate the fix to a sub-agent.** Read the error from the committer's output. Diagnose and fix the issue (e.g., pre-commit hook failure, staging error, push rejection). Once fixed, re-spawn `mp-git-committer` with the same parameters.
 
 Up to 2 retry attempts. If still failing → report error to user and stop.
 

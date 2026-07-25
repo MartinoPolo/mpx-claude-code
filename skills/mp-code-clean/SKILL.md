@@ -1,11 +1,11 @@
 ---
 name: mp-code-clean
-description: 'Review and fix code quality issues immediately: deduplicate, remove repetition, remove dead code. Use when: "clean code", "deduplicate this module", "remove dead code"'
+description: "Deduplicates code, removes repetition, and deletes dead code in a given scope."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: code-review
 ---
 
@@ -38,7 +38,7 @@ Rules:
 
 ### Step 2: Spawn Review Subagents per Group
 
-For each file group, spawn a `general-purpose` review sub-agent (finding duplication and judging risk needs judgment).
+For each file group, spawn a `general-purpose` review sub-agent with `model: "sonnet"` (finding duplication and judging risk needs judgment).
 
 Use this exact review prompt shape:
 
@@ -68,7 +68,7 @@ Required output:
 
 ### Step 3: Spawn Fix Subagents per Group
 
-For each reviewed group, spawn an `mp-executor` sub-agent with approved findings. `mp-executor` runs Sonnet — the prompt must carry the full pre-analyzed plan with exact files and concrete changes, leaving only mechanical application. If a finding still needs judgment (unclear plan, cross-module tradeoffs), use a `general-purpose` sub-agent for that group instead.
+For each reviewed group, spawn an `mp-executor` sub-agent with approved findings. The prompt must carry the full pre-analyzed plan with exact files and concrete changes, leaving only mechanical application — `mp-executor` applies, it does not decide. If a finding still needs judgment (unclear plan, cross-module tradeoffs), use a `general-purpose` sub-agent with `model: "opus"` for that group instead.
 
 Use this exact fix prompt shape:
 

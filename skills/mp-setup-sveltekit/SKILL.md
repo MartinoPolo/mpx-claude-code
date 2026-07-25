@@ -1,12 +1,12 @@
 ---
 name: mp-setup-sveltekit
-description: 'Create a new SvelteKit project from template with GitHub repo, branch protection, and CI. Use when: "setup Svelte project", "new Svelte project", "create SvelteKit app"'
+description: "Creates a SvelteKit project from template, with GitHub repo, branch protection, and CI."
 argument-hint: "<project-name>"
 disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: setup
 ---
 

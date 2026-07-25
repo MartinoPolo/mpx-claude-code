@@ -1,11 +1,12 @@
 ---
 name: mp-to-prd
-description: 'Create a PRD as a GitHub issue from passed requirements. Use when: "create PRD", "write PRD", "requirements to PRD", "to PRD"'
+description: "Creates a PRD as a GitHub issue from the requirements passed in."
 argument-hint: "[milestone name]"
+disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.7"
   category: project-management
 ---
 
@@ -21,12 +22,12 @@ Read `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (if it exists). If CONTEXT.md is 
 
 ### Step 2: Explore Codebase
 
-Understand current project state:
+Spawn `Explore` (medium breadth, see [EXPLORATION.md](../shared/EXPLORATION.md)) to understand current project state:
 
-- Read `package.json` for project name, dependencies, scripts
-- Glob for key structural files (src/, lib/, etc.)
-- Read existing README or docs for context
-- Note existing patterns, frameworks, conventions
+- Project name, dependencies, scripts (package.json)
+- Key structural files (src/, lib/, etc.)
+- Existing README/docs context
+- Existing patterns, frameworks, conventions
 
 ### Step 3: Design Modules
 

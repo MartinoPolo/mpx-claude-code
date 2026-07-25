@@ -1,17 +1,18 @@
 ---
 name: mp-batch-execute
-description: 'Autonomously implements a batch of small AFK issues end to end in sequential sub-agents on one shared branch, then opens a single PR. Use when: "batch execute", "execute issues"'
+description: "Implements a batch of small AFK issues in sequential sub-agents on one shared branch, then opens a single PR."
 argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-review | --no-review]'
+disable-model-invocation: true
 allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.9"
   category: project-management
 ---
 
 # mp-batch-execute
 
-Orchestrate a batch of small fixes: this session is the Opus orchestrator; each fix runs in a Sonnet sub-agent. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board write-back format and lane layout. See `${CLAUDE_SKILL_DIR}/REFERENCE.md` for the experimental `--parallel` worktree mode. $ARGUMENTS
+Orchestrate a batch of small fixes: this session orchestrates; each fix runs in its own sub-agent. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board write-back format and lane layout. See `${CLAUDE_SKILL_DIR}/REFERENCE.md` for the experimental `--parallel` worktree mode. $ARGUMENTS
 
 ## Rules
 
@@ -56,7 +57,7 @@ git checkout -b batch/<slug>
 For each work item, in order:
 
 1. Set its Task `in_progress`.
-2. Spawn a `claude` sub-agent (sonnet) with a prescriptive prompt: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only — do not push or open a PR.**
+2. Spawn a `claude` sub-agent with `model: "sonnet"` and a prescriptive prompt: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only — do not push or open a PR.**
 3. On the completion notification, confirm the commit landed. If the sub-agent died mid-run (e.g. `API Error: Overloaded`) leaving a partial edit, diagnose and finish/commit it yourself, or re-spawn — never leave a half-applied fix.
 4. Mark the Task `completed`.
 
@@ -77,17 +78,17 @@ bash $HOME/.claude/scripts/detect-check-scripts.sh
 - **Static checks** (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`) — always.
 - **Unit tests** (`TEST`/`TEST_UNIT`) — always; **e2e** (`TEST_E2E`) when source, route, component, spec, config, or dependency files changed.
 
-Fix failures via a Sonnet fix sub-agent, up to 3 iterations. Still failing → **hard blocker**: stop, report, do not open the PR.
+Fix failures via an `mp-executor` sub-agent, up to 3 iterations. Still failing → **hard blocker**: stop, report, do not open the PR.
 
 ### 5b. Code review (batch diff)
 
-Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent to run `/mp-review scope=branch autofix=true` against the batch-branch diff (default → `partial` 4-reviewer set; `--full-review` → `full` 7-reviewer set). It engages the `mp-reviewer-*` agents and applies confidence-gated fixes via `mp-executor` (up to 3 iterations), writing `REVIEW.md`.
+Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent with `model: "sonnet"` to run `/mp-review scope=branch autofix=true` against the batch-branch diff (default → `partial` 4-reviewer set; `--full-review` → `full` 7-reviewer set). It engages the `mp-reviewer-*` agents and applies confidence-gated fixes via `mp-executor` (up to 3 iterations), writing `REVIEW.md`.
 
 `mp-review` does not commit — so **commit its fixes** as one `fix(review): apply batch review fixes` commit on the batch branch, then re-run **5a** to confirm still green. Review findings that persist after autofix are **non-blocking**: carry them into the PR body (Step 7), optionally routing them to the sibling issues with `mp-unresolved-issue-tracker`.
 
 ### 5c. Visual verification
 
-For UI-changed surfaces: Read `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` now, then run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST**, in fix-list order. Fix failures via a Sonnet fix sub-agent, up to 3 iterations; still failing → **hard blocker**.
+For UI-changed surfaces: Read `${CLAUDE_SKILL_DIR}/../shared/PLAYWRIGHT_TESTING.md` now, then run **raw-Playwright** visual verification with the **stale-worktree sanity-gate FIRST**, in fix-list order. Fix failures via an `mp-executor` sub-agent, up to 3 iterations; still failing → **hard blocker**.
 
 ## Step 6: Write back to the board
 

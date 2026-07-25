@@ -1,11 +1,11 @@
 ---
 name: mp-architecture-review
-description: 'Review codebase architecture and create refactor issue. Use when: "review architecture", "find refactoring opportunities", "improve architecture"'
+description: "Reviews codebase architecture and opens a refactor issue with the findings."
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(git *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.6"
   category: planning
 ---
 
@@ -25,7 +25,7 @@ Before starting:
 
 ### 1. Explore the codebase
 
-Spawn `Explore` sub-agent (`model: "sonnet"`) to navigate the codebase naturally. Do NOT follow rigid heuristics — explore organically and note where you experience friction:
+Spawn `Explore` sub-agent (breadth: very thorough) to navigate the codebase naturally. Do NOT follow rigid heuristics — explore organically and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small files?
 - Where are modules so shallow that the interface is nearly as complex as the implementation?
@@ -60,7 +60,7 @@ Show this to the user, then immediately proceed to Step 5. The user reads and th
 
 ### 5. Design multiple interfaces
 
-Spawn 3+ sub-agents in parallel. Each must produce a **radically different** interface for the deepened module.
+Spawn 3+ `general-purpose` sub-agents in parallel with `model: "opus"`. Each must produce a **radically different** interface for the deepened module.
 
 Prompt each sub-agent with a separate technical brief (file paths, coupling details, dependency category, what's being hidden). This brief is independent of the user-facing explanation in Step 4. Give each agent a different design constraint:
 

@@ -28,6 +28,32 @@ A collection of skills, agents, hooks, scripts, and instructions that extend [Cl
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and working
 
+### Machine Roots (`MPX_*`)
+
+This repo is public, so personal absolute paths live in user-scope environment variables rather
+than in any committed file. The [`machine-paths.js`](hooks/machine-paths.js) SessionStart hook
+reads them and injects whichever are set into every session; unset ones are skipped silently, so
+the setup is optional and portable.
+
+| Variable             | Root                    |
+| -------------------- | ----------------------- |
+| `MPX_PROJECTS`       | Personal projects       |
+| `MPX_WORK`           | Work repositories       |
+| `MPX_CLONED`         | Cloned OSS repositories |
+| `MPX_APPS`           | Local apps              |
+| `MPX_ONEDRIVE`       | OneDrive root           |
+| `MPX_OBSIDIAN_VAULT` | Obsidian vault          |
+
+Set them once (PowerShell, user scope — survives reboots):
+
+```powershell
+[Environment]::SetEnvironmentVariable('MPX_PROJECTS', 'C:\your\projects', 'User')
+```
+
+Skills and agents reference these by name (`$MPX_WORK\...`). Markdown does **not** interpolate
+environment variables, so a sub-agent resolves them at runtime with `env | grep '^MPX_'`. An unset
+variable means "unavailable" — ask, do not guess.
+
 ## Workflow
 
 ```
@@ -158,21 +184,45 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details and skill respo
 
 ## Skills Reference
 
+### Discoverability policy
+
+A skill's `description` and `when_to_use` are the only parts of it that sit in **every**
+session's context, in every repo. `disable-model-invocation: true` removes them entirely
+while the skill stays invocable as `/name` — the documented behaviour is "description not
+in context, full skill loads when you invoke".
+
+Only these 12 skills stay model-invocable, because Claude benefits from reaching for them
+unprompted:
+
+`/mp-execute` · `/mp-review` · `/mp-check-fix` · `/mp-handoff` · `/mp-symlink` ·
+`/mp-ship` · `/mp-skill-create` · `/mp-grill` · `/mp-issue-create` ·
+`/mp-playwright-test` · `/mp-tutorial-create` · `/mp-podcast`
+
+The other 36 are `/`-only and cost nothing. `/mp-ship` carries the trigger phrasing for
+the whole git family, so `/mp-commit`, `/mp-commit-push`, `/mp-commit-push-pr`, `/mp-pr`
+and `/mp-sync-base` stay available by name without each paying for a description.
+
+Conventions for writing the two fields are in `skills/shared/AUTHORING.md`.
+
 ### Shared References (`skills/shared/`)
 
 Cross-skill reference library — plain reference files, no SKILL.md, not runnable. Skills load them at run time via `${CLAUDE_SKILL_DIR}/../shared/<FILE>.md`:
 
 | File                       | Purpose                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ |
+| `AUTHORING.md`             | Conventions shared by all skills and agents: naming, descriptions, size, versioning |
 | `BOARD_CONVENTION.md`      | Obsidian board format, content→type map, four-lane pipeline                    |
 | `CI_FIX_AGENT.md`          | CI-fix sub-agent contract with bounded JSON return (mp-execute, mp-ship)       |
 | `deep-modules.md`          | Deep vs shallow module design (Ousterhout)                                     |
 | `DOCUMENTATION_STRATEGY.md`| `.mpx/` CONTEXT.md + DECISIONS.md formats and skill responsibilities           |
+| `EXECUTOR_CONTRACT.md`     | Shared contract for `mp-executor` + `mp-tdd-executor`: role boundary, parent inputs, output |
+| `EXPLORATION.md`           | Canonical exploration policy: delegate to `Explore`, state breadth, `MPX_*` roots |
 | `GIT_COMMIT_WORKFLOW.md`   | Phased commit/push/PR delegation shared by the git skills                      |
 | `GITHUB_ISSUE_TEMPLATE.md` | Canonical issue body format, labels, HITL/AFK classification                   |
 | `interface-design.md`      | Interface design rules for testability                                         |
 | `PLAYWRIGHT_TESTING.md`    | Raw-Playwright reliability contract (sanity-gate, assert-don't-eyeball, auth)  |
 | `REVIEWER_PROTOCOL.md`     | Verification discipline + report format for the 7 `mp-reviewer-*` agents       |
+| `SUBAGENT_PROTOCOL.md`     | Verified rules for spawning sub-agents: model selection, tool grants, overrides |
 | `VERIFY_FIX_ORCHESTRATOR.md`| Nested verify-fix orchestrator contract (checks/reviewers/tests, bounded JSON)|
 
 ### Planning Skills
@@ -210,7 +260,7 @@ Turn an Obsidian board (bug/task/feature notes with pasted screenshots) into Git
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `/mp-playwright-test` | Reliable raw-Playwright visual verification over a scope (uncommitted / current PR / verbal area) — per-surface PASS/FAIL with measured values + screenshots |
 
-`/mp-playwright-test` and `/mp-batch-execute`'s verify gate both follow `skills/shared/PLAYWRIGHT_TESTING.md` — the raw-Playwright reliability contract (stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-playwright-tester` agent is for exploratory testing only.
+`/mp-playwright-test` and `/mp-batch-execute`'s verify gate both follow `skills/shared/PLAYWRIGHT_TESTING.md` — the raw-Playwright reliability contract (stale-worktree sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing only, and additionally covers performance traces and Lighthouse audits, which raw Playwright cannot do.
 
 ### Code Quality Skills
 
@@ -228,7 +278,7 @@ Run after larger chunks of work (milestone end, PRD completion, or on a regular 
 | `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code. Creates PR with findings.                        |
 | `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc. Auto-fixes + creates PR.       |
 | `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Removes duplicates, tightens language. Fully automatic.                |
-| `/mp-skill-audit`         | All skills        | Low       | Checks 12 consistency rules, auto-fixes drift. Creates report.         |
+| `/mp-skill-audit`         | All skills        | Low       | Checks 15 consistency rules, auto-fixes drift. Creates report.         |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
 | `/mp-components-audit`    | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
 | `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |
@@ -295,16 +345,23 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 | `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
 
+### Vendored Skills
+
+| Skill          | Description                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| `/notebooklm`  | Third-party reference for the full `notebooklm-py` CLI surface, installed by that package and committed here so `/mp-podcast`'s link to it resolves in a fresh clone. Pinned to v0.7.3 — edits belong upstream, not here |
+
 ## Agents
 
 | Agent                       | Model  | Description                                                                 |
 | --------------------------- | ------ | --------------------------------------------------------------------------- |
-| mp-executor                 | Sonnet | Executes grouped task chunks                                                |
+| Explore                     | Sonnet | **Overrides the built-in `Explore`** — read-only codebase search            |
+| mp-executor                 | Sonnet | Applies pre-analyzed edits to a scoped task chunk                           |
 | mp-issue-analyzer           | Opus   | Analyzes issues and codebase, creates execution plans                       |
 | mp-issue-finder             | Haiku  | Finds issue matching a PR branch                                            |
 | mp-tdd-executor             | Opus   | Executes strict TDD red-green-refactor loops for behaviors                  |
 | mp-ui-variant-generator     | Opus   | Generates a single UI variant in a specific design style                    |
-| mp-playwright-tester        | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)       |
+| mp-chrome-devtools-tester   | Sonnet | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
 | mp-checker                  | Haiku  | Runs check commands and reports failures                                    |
 | mp-context7-docs-fetcher    | Haiku  | Fetches library docs via Context7 MCP                                       |
 | mp-git-committer            | Haiku  | Stages, commits, and optionally pushes with conventional commit format      |
@@ -320,6 +377,44 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | mp-scanner-architecture     | Sonnet | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
+
+Each agent's `description` **and its `tools` list** are printed into the agent roster in
+every session, so an enumerated MCP tool list is a standing context charge. Agents needing
+MCP tools omit `tools` and use `disallowedTools` instead — see `skills/shared/AUTHORING.md`
+§ Tool grants.
+
+### Why `Explore` is overridden
+
+Claude Code delegates to a built-in `Explore` agent on its own, without being asked, whenever a
+question needs a broad codebase sweep. Since Claude Code v2.1.198 that built-in **inherits the
+session model** (capped at Opus), so with `"model": "claude-opus-5[1m]"` in `settings.json` every
+automatic exploration was running on Opus.
+
+A user-level agent named `Explore` overrides the built-in and keeps its own `model`, so
+[`agents/Explore.md`](agents/Explore.md) pins it to Sonnet. This is preferred over the
+`CLAUDE_CODE_SUBAGENT_MODEL` env var, which is higher-priority but blunt — it would also force
+`mp-issue-analyzer`, `mp-tdd-executor`, and `mp-ui-variant-generator` off Opus.
+
+Call sites therefore **never pass `model` when spawning `Explore`** — see
+[`skills/shared/EXPLORATION.md`](skills/shared/EXPLORATION.md).
+
+Two gotchas, both verified against session transcripts:
+
+- **`name` must be capitalised `Explore`.** A lowercase `explore` agent does not override the built-in.
+- **`disallowedTools` subtracts from the full tool set**, not from the built-in's curated set — so an
+  override must re-deny everything the built-in denied (`Agent`, `Artifact`, `ExitPlanMode`, `Edit`,
+  `Write`, `NotebookEdit`) or it silently gains permissions the built-in withheld.
+
+The override is confirmed working: bare `Explore` spawns resolve to `claude-sonnet-5` while the main
+thread runs `claude-opus-5[1m]`, and every denied tool rejects on attempt with
+`exists but is not enabled in this context`.
+
+`scripts/analyze-subagent-models.py` parses `~/.claude/projects/**/*.jsonl` and reports which model
+every spawned sub-agent actually ran on — the way to verify any of the above rather than assume it.
+The measured rule: an explicit `model` parameter is obeyed 100% of the time, prose asking for a model
+is obeyed 0% of the time. The full rule set lives in
+[`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md), with every rule tagged
+`TESTED`, `DOC`, or `UNVERIFIED`.
 
 All 7 `mp-reviewer-*` agents read the shared `skills/shared/REVIEWER_PROTOCOL.md` (verification discipline + report format); role-specific judgment criteria stay in each agent file.
 
@@ -368,20 +463,23 @@ Both include: Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules,
 
 ![Status Line](assets/status-line.png)
 
-4-line status bar showing:
+Status bar showing:
 
-- **Line 1**: Model name (colored)
-- **Line 2**: Folder + git branch
-- **Line 3**: Context usage bar, % tokens, session cost (USD/CZK)
-- **Line 4**: 5-hour & 7-day quota utilization with reset countdowns
+- **Line 1**: Session name + short session id
+- **Line 2**: Model + reasoning effort `<level>` + account (Personal/Work)
+- **Line 3**: Folder + git branch
+- **Line 4**: Context tokens `58k (6%)` — escalating color as context fills (yellow ≥100k, orange ≥140k, red ≥180k) — session cost (USD/CZK), lines edited (green `+` / red `-`)
+- **Line 5**: 5-hour & 7-day quota utilization with reset countdowns
 
-Configured via `scripts/context-bar.sh`.
+All values come straight from Claude Code's stdin JSON in a single `jq` pass — model, session name/id, effort, context (`context_window.used_percentage` + `total_input_tokens`), cost, line edits (`cost.total_lines_*`), and quota (`rate_limits`). Fields are packed with the ASCII Unit Separator (`0x1F`) rather than a tab so empty fields never collapse under `read`.
+
+Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/context-bar.sh`.
 
 ## Settings
 
 `settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
 
-**MCP plugins:** Context7 (library docs), TypeScript LSP. **MCP servers:** Playwright (browser testing, headless).
+**MCP plugins:** Context7 (library docs), TypeScript LSP. **Browser MCP:** chrome-devtools, registered at user scope (`claude mcp add`) and therefore loaded in every session; `mp-chrome-devtools-tester` uses that shared server. Scoping it to just that agent via inline `mcpServers:` frontmatter was measured to be inert on Claude Code 2.1.212 despite being documented — see `skills/shared/AUTHORING.md` § Tool grants. `ENABLE_TOOL_SEARCH: "auto:1"` keeps the cost to tool names only (~260 tokens), not full schemas. Reliable UI verification uses raw Playwright, not a browser MCP.
 
 ## Review System
 

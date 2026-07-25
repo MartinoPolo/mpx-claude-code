@@ -1,11 +1,12 @@
 ---
 name: mp-ship
-description: 'Ship finished work: sync base, commit, push, PR, wait for CI green, merge. Use when: "ship it", "ship and merge", "ship this"'
+description: "Ships finished work end to end: syncs the base branch, commits, pushes, opens a PR, waits for CI, then merges. Individual steps exist as /mp-commit, /mp-commit-push, /mp-commit-push-pr, /mp-pr and /mp-sync-base."
+when_to_use: "User asks to ship or merge work, or to commit, push, or open a PR."
 argument-hint: "[base-branch]"
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: git-workflow
 ---
 
@@ -19,8 +20,8 @@ Full workflow from finished execution to merged PR. $ARGUMENTS
 
 1. **State detection** — skip completed steps
 2. **Sync base** — invoke `mp-sync-base` skill
-3. **Commit + push** — stage, commit, push (Haiku agent)
-4. **Create/update PR** — find issue, create PR (Haiku agent)
+3. **Commit + push** — stage, commit, push
+4. **Create/update PR** — find issue, create PR
 5. **Watch CI** — `gh pr checks --watch` (do NOT merge yet)
 6. **CI fix loop** — delegated CI-fix sub-agent (max 3 attempts inside it)
 7. **Merge on green** — `gh pr merge --squash` only after CI is fully green
@@ -59,7 +60,7 @@ If it reports "already up-to-date" → continue to Step 3.
 
 ## Step 3: Commit and Push
 
-Spawn `mp-git-committer` sub-agent (Haiku):
+Spawn `mp-git-committer` sub-agent:
 
 > push: true
 > commit_hint: $ARGUMENTS or summary of changes from git diff --stat
@@ -75,11 +76,11 @@ Spawn `mp-git-committer` sub-agent (Haiku):
 
 Fast-path: `node $HOME/.claude/scripts/extract-branch-issue.js`
 
-If no number extracted, spawn `mp-issue-finder` sub-agent (Haiku) with repo, branch, commits, diff summary.
+If no number extracted, spawn `mp-issue-finder` sub-agent with repo, branch, commits, diff summary.
 
 **4b. Create PR:**
 
-Spawn `mp-pr-manager` sub-agent (Haiku):
+Spawn `mp-pr-manager` sub-agent:
 
 > issue_number: (from 4a, if found)
 > description_hint: summary of changes
@@ -105,7 +106,7 @@ If the PR has **no checks at all** (`gh pr checks` exits non-zero with "no check
 
 ## Step 6: CI Fix Loop (delegated — main never reads CI logs)
 
-On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent:
+On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 
 > First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
 > Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.

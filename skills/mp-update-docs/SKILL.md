@@ -1,11 +1,11 @@
 ---
 name: mp-update-docs
-description: 'Documentation updater for README and instruction docs. Use when: "update docs", "refresh README", "update instructions", "sync docs"'
+description: "Updates README and instruction docs to match current functionality."
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.4"
   category: utility
 ---
 

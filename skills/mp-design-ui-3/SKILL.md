@@ -1,12 +1,12 @@
 ---
 name: mp-design-ui-3
-description: 'Generate multiple UI variants in different design styles for comparison. Use when: "design ui", "ui variants", "design exploration", "explore designs", "3 styles", "5 styles"'
+description: "Generates several UI variants in different design styles for side-by-side comparison."
 argument-hint: "<ComponentOrPageName> [--count 5] [--styles brutalism,cafe,luxury] [--target src/components/MyComponent.svelte]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(cat *), Bash(mkdir *), Bash(rm -rf */.design-variants*), Bash(mv *), Bash(cp *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "1.1"
+  version: "1.2"
   category: design
 ---
 

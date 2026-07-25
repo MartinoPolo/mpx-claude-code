@@ -1,12 +1,12 @@
 ---
 name: mp-prd-review
-description: 'Comprehensive PRD-end review: code quality, architecture, cleanup, documentation, unresolved items. Use when: "review PRD", "phase end", "PRD review", "wrap up PRD"'
+description: "End-of-PRD review covering code quality, architecture, cleanup, documentation, and unresolved items."
 argument-hint: "<PRD-number-or-URL>"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.3"
+  version: "1.6"
   category: project-management
 ---
 
@@ -73,7 +73,7 @@ If the diff exceeds context limits, fall back to `--stat` only and let agents re
 
 ### 1d. Build Context Slices
 
-The orchestrator (Opus) builds tailored context for each agent:
+The orchestrator builds tailored context for each agent:
 
 | Agent                 | Diff | Changed Files | PR/Issue Comments                   |
 | --------------------- | ---- | ------------- | ----------------------------------- |
@@ -90,13 +90,13 @@ The orchestrator (Opus) builds tailored context for each agent:
 
 Build a brief digest of PR/issue comments for agents that receive it: summarize key decisions, concerns raised, and deferred items in ~500 words.
 
-## Step 2: Parallel Analysis (10 Sonnet Sub-Agents)
+## Step 2: Parallel Analysis (10 Sub-Agents)
 
 Spawn all 10 agents in parallel. Each agent receives its tailored context slice from Step 1d.
 
 ### Agents 1-6: Existing Reviewer Agents
 
-Spawn each as a sub-agent with `model: "sonnet"`:
+Spawn each as a sub-agent:
 
 1. `mp-reviewer-code-quality` — DRY, dead code, SoC, naming, complexity
 2. `mp-reviewer-best-practices` — language/framework conventions, type design
@@ -114,7 +114,7 @@ Prompt each with:
 
 ### Agent 7: Architecture Scanner (Standalone Agent)
 
-Spawn `mp-scanner-architecture` sub-agent with `model: "sonnet"`:
+Spawn `mp-scanner-architecture` sub-agent:
 
 > Scan these files changed during PRD #N: "[title]".
 > Focus on structural concerns introduced or worsened across the full PRD scope.
@@ -126,7 +126,7 @@ The agent reads its own reference files (`deep-modules.md`, `interface-design.md
 
 ### Agent 8: Dead Code / Cleanup Scanner (Inline)
 
-Spawn `Explore` sub-agent with `model: "sonnet"`:
+Spawn `Explore` sub-agent (breadth: medium):
 
 > Scan files changed during PRD #N for cleanup opportunities introduced across multiple PRs:
 >
@@ -147,7 +147,7 @@ Spawn `Explore` sub-agent with `model: "sonnet"`:
 
 ### Agent 9: Documentation Scanner (Inline)
 
-Spawn `Explore` sub-agent with `model: "sonnet"`:
+Spawn `Explore` sub-agent (breadth: medium):
 
 > Check if project documentation is stale relative to changes made in PRD #N: "[title]".
 >
@@ -166,7 +166,7 @@ Spawn `Explore` sub-agent with `model: "sonnet"`:
 
 ### Agent 10: Unresolved Items Scanner (Inline)
 
-Spawn a sub-agent with `model: "sonnet"`:
+Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 
 > Scan all PR bodies and comments + issue bodies and comments from PRD #N for deferred, unfinished, or incomplete work.
 >
@@ -195,7 +195,7 @@ Spawn a sub-agent with `model: "sonnet"`:
 > `Status: Complete|Tracked (#N)|Needs AFK issue|Needs HITL issue`
 > `Details` + [for HITL: `Open questions`]
 
-## Step 3: Opus Synthesis
+## Step 3: Synthesis
 
 Collect all 10 agents' findings. Merge into a unified action list:
 
@@ -305,13 +305,13 @@ Count actionable items (excluding "Already Tracked" and dropped items).
 
 ### If ≤ 20 items and user confirms execution:
 
-Execute using Sonnet sub-agents. The Opus orchestrator:
+Execute using `mp-executor` sub-agents. The orchestrator:
 
 1. Analyzes each item and determines the concrete fix (exact file, line, change)
 2. Groups items by parallelizability:
    - **Parallel group**: items touching different files or independent code paths
    - **Sequential group**: items where one fix affects another (e.g., extracting a shared utility before deduplicating callers)
-3. Spawns `mp-executor` sub-agents (Sonnet) with pre-analyzed fix instructions for each parallel group
+3. Spawns `mp-executor` sub-agents with pre-analyzed fix instructions for each parallel group
 4. After each group completes, update PHASE_END.md checkboxes (`- [x]`)
 5. For unresolved items needing issues:
 

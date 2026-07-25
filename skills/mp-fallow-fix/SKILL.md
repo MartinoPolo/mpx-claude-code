@@ -1,11 +1,11 @@
 ---
 name: mp-fallow-fix
-description: 'Diagnoses and fixes fallow dead-code or audit failures, suppressing or baselining findings when justified. Use when: "fallow check fails", "dead-code regression detected"'
+description: "Diagnoses and fixes fallow dead-code audit failures, suppressing or baselining findings when justified."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Bash(*fallow*), Bash(pnpm *fallow*), Bash(git diff*), Bash(git log*)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: code-quality
 ---
 

@@ -1,11 +1,12 @@
 ---
 name: mp-execute
-description: 'Execute tasks with TDD from GitHub issues, milestones, or inline descriptions. Use when: "execute issue", "implement issue", "work on issue", "execute tasks", "run TDD"'
+description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, then opens a PR."
+when_to_use: "User asks to execute, implement, or work on an issue, milestone, or task list."
 argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or checklist">'
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "2.0"
+  version: "2.4"
   category: project-management
 ---
 
@@ -97,13 +98,13 @@ Spawn `mp-tdd-executor` sub-agent with:
 - Project context (test framework, file structure, relevant source files)
 - Acceptance criteria from the issue/task
 - Design Mapping constraints from Step 2 when the issue references mockups
-- Module design reference paths: `${CLAUDE_SKILL_DIR}/../shared/deep-modules.md`, `${CLAUDE_SKILL_DIR}/../shared/interface-design.md`
+- The test/check commands from Step 3, verbatim
 
 The executor handles the full red-green-refactor cycle for each behavior.
 
 ## Step 5: Verify-Fix Loop (delegated)
 
-All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn a `general-purpose` sub-agent:
+All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn a `general-purpose` sub-agent with `model: "opus"`:
 
 > First Read `${CLAUDE_SKILL_DIR}/../shared/VERIFY_FIX_ORCHESTRATOR.md` and follow it exactly.
 >
@@ -158,7 +159,7 @@ Spawn `mp-git-committer` sub-agent to stage, commit, and push:
 
 - **OK** → continue to Step 8 (GitHub issues) or Step 10 (inline tasks)
 - **SKIP** → report "Nothing to commit" — check if push needed
-- **FAIL** → diagnose error from agent output. If pre-commit hook failed, spawn `mp-executor` (sonnet) with the concrete fix and re-spawn committer. Up to 2 retries before escalating to user.
+- **FAIL** → diagnose error from agent output. If pre-commit hook failed, spawn `mp-executor` with the concrete fix and re-spawn committer. Up to 2 retries before escalating to user.
 
 ## Step 8: Create PR (GitHub issues only)
 
@@ -178,7 +179,7 @@ Spawn `mp-pr-manager` sub-agent to create or update the PR:
 
 Check: `gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'`
 
-If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent:
+If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 
 > Merge origin/<base> into <branch> and resolve all conflicts.
 >
@@ -200,7 +201,7 @@ After push (and after confirming PR is mergeable per Step 8d): `gh pr checks <pr
 
 ### 9b. Fix Loop (delegated — main never reads CI logs)
 
-If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent:
+If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 
 > First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
 > Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.
