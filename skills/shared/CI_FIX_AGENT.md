@@ -25,7 +25,7 @@ Extract file:line, error message, failing test/job name. Classify:
 ### 3. Apply fix
 
 - Small, clearly-scoped fix → apply directly with Edit.
-- Larger or multi-file fix → spawn `mp-executor` (sonnet) with pre-analyzed instructions: per failure, file path, root cause, exact change to apply. Never vague "fix the CI".
+- Larger or multi-file fix → spawn `mp-executor` with pre-analyzed instructions: per failure, file path, root cause, exact change to apply. Never vague "fix the CI".
 
 ### 4. Verify locally
 

@@ -299,12 +299,13 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 
 | Agent                       | Model  | Description                                                                 |
 | --------------------------- | ------ | --------------------------------------------------------------------------- |
-| mp-executor                 | Sonnet | Executes grouped task chunks                                                |
+| Explore                     | Sonnet | **Overrides the built-in `Explore`** — read-only codebase search            |
+| mp-executor                 | Sonnet | Applies pre-analyzed edits to a scoped task chunk                           |
 | mp-issue-analyzer           | Opus   | Analyzes issues and codebase, creates execution plans                       |
 | mp-issue-finder             | Haiku  | Finds issue matching a PR branch                                            |
 | mp-tdd-executor             | Opus   | Executes strict TDD red-green-refactor loops for behaviors                  |
 | mp-ui-variant-generator     | Opus   | Generates a single UI variant in a specific design style                    |
-| mp-playwright-tester        | Sonnet | Browser test automation via Playwright MCP (headless, works remotely)       |
+| mp-chrome-devtools-tester   | Sonnet | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
 | mp-checker                  | Haiku  | Runs check commands and reports failures                                    |
 | mp-context7-docs-fetcher    | Haiku  | Fetches library docs via Context7 MCP                                       |
 | mp-git-committer            | Haiku  | Stages, commits, and optionally pushes with conventional commit format      |
@@ -320,6 +321,44 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | mp-scanner-architecture     | Sonnet | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
+
+Each agent's `description` **and its `tools` list** are printed into the agent roster in
+every session, so an enumerated MCP tool list is a standing context charge. Agents needing
+MCP tools omit `tools` and use `disallowedTools` instead — see `skills/shared/AUTHORING.md`
+§ Tool grants.
+
+### Why `Explore` is overridden
+
+Claude Code delegates to a built-in `Explore` agent on its own, without being asked, whenever a
+question needs a broad codebase sweep. Since Claude Code v2.1.198 that built-in **inherits the
+session model** (capped at Opus), so with `"model": "claude-opus-5[1m]"` in `settings.json` every
+automatic exploration was running on Opus.
+
+A user-level agent named `Explore` overrides the built-in and keeps its own `model`, so
+[`agents/Explore.md`](agents/Explore.md) pins it to Sonnet. This is preferred over the
+`CLAUDE_CODE_SUBAGENT_MODEL` env var, which is higher-priority but blunt — it would also force
+`mp-issue-analyzer`, `mp-tdd-executor`, and `mp-ui-variant-generator` off Opus.
+
+Call sites therefore **never pass `model` when spawning `Explore`** — see
+[`skills/shared/EXPLORATION.md`](skills/shared/EXPLORATION.md).
+
+Two gotchas, both verified against session transcripts:
+
+- **`name` must be capitalised `Explore`.** A lowercase `explore` agent does not override the built-in.
+- **`disallowedTools` subtracts from the full tool set**, not from the built-in's curated set — so an
+  override must re-deny everything the built-in denied (`Agent`, `Artifact`, `ExitPlanMode`, `Edit`,
+  `Write`, `NotebookEdit`) or it silently gains permissions the built-in withheld.
+
+The override is confirmed working: bare `Explore` spawns resolve to `claude-sonnet-5` while the main
+thread runs `claude-opus-5[1m]`, and every denied tool rejects on attempt with
+`exists but is not enabled in this context`.
+
+`scripts/analyze-subagent-models.py` parses `~/.claude/projects/**/*.jsonl` and reports which model
+every spawned sub-agent actually ran on — the way to verify any of the above rather than assume it.
+The measured rule: an explicit `model` parameter is obeyed 100% of the time, prose asking for a model
+is obeyed 0% of the time. The full rule set lives in
+[`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md), with every rule tagged
+`TESTED`, `DOC`, or `UNVERIFIED`.
 
 All 7 `mp-reviewer-*` agents read the shared `skills/shared/REVIEWER_PROTOCOL.md` (verification discipline + report format); role-specific judgment criteria stay in each agent file.
 
