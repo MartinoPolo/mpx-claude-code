@@ -289,6 +289,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers (wraps `scripts/detect-project-scripts.sh`, single-sourced there) |
 | `/mp-symlink`                 | Create & verify Windows symlinks/junctions the way that works in Claude Code (PowerShell `New-Item`, not `ln -s`/`mklink`) |
+| `/mp-clean-pc`                | Full-disk cleanup sweep across 8 domains (caches, Docker/WSL, build output, apps, screenshots, duplicates, installers, system reclaim) — parallel scan sub-agents, ranked dashboard, per-group approval, Explorer thumbnail review for visual groups, quarantine instead of delete |
 | `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
 | `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 | `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
