@@ -457,20 +457,23 @@ Both include: Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules,
 
 ![Status Line](assets/status-line.png)
 
-4-line status bar showing:
+Status bar showing:
 
-- **Line 1**: Model name (colored)
-- **Line 2**: Folder + git branch
-- **Line 3**: Context usage bar, % tokens, session cost (USD/CZK)
-- **Line 4**: 5-hour & 7-day quota utilization with reset countdowns
+- **Line 1**: Session name + short session id
+- **Line 2**: Model + reasoning effort `<level>` + account (Personal/Work)
+- **Line 3**: Folder + git branch
+- **Line 4**: Context tokens `58k (6%)` — escalating color as context fills (yellow ≥100k, orange ≥140k, red ≥180k) — session cost (USD/CZK), lines edited (green `+` / red `-`)
+- **Line 5**: 5-hour & 7-day quota utilization with reset countdowns
 
-Configured via `scripts/context-bar.sh`.
+All values come straight from Claude Code's stdin JSON in a single `jq` pass — model, session name/id, effort, context (`context_window.used_percentage` + `total_input_tokens`), cost, line edits (`cost.total_lines_*`), and quota (`rate_limits`). Fields are packed with the ASCII Unit Separator (`0x1F`) rather than a tab so empty fields never collapse under `read`.
+
+Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/context-bar.sh`.
 
 ## Settings
 
 `settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
 
-**MCP plugins:** Context7 (library docs), TypeScript LSP. **MCP servers:** Playwright (browser testing, headless).
+**MCP plugins:** Context7 (library docs), TypeScript LSP. **Browser MCP:** chrome-devtools, registered at user scope (`claude mcp add`) and therefore loaded in every session; `mp-chrome-devtools-tester` uses that shared server. Scoping it to just that agent via inline `mcpServers:` frontmatter was measured to be inert on Claude Code 2.1.212 despite being documented — see `skills/shared/AUTHORING.md` § Tool grants. `ENABLE_TOOL_SEARCH: "auto:1"` keeps the cost to tool names only (~260 tokens), not full schemas. Reliable UI verification uses raw Playwright, not a browser MCP.
 
 ## Review System
 
