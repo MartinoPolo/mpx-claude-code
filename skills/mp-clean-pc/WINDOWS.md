@@ -14,12 +14,18 @@ The verified platform path. Domain rules live in [DOMAINS.md](DOMAINS.md).
 | --- | --- |
 | Bare `C:` resolves to the process working directory on that drive | `Get-NormalizedRoot` restores the trailing backslash |
 | `.Attributes` on a child dir throws on locked junctions (`C:\Documents and Settings`) and aborts the whole sibling loop, silently truncating the scan | `Get-ChildDirectoryPath` returns plain strings; `Test-ReparsePoint` checks per item |
-| Junctions get followed and double-counted | Every walker skips reparse points |
-| `Remove-Item -Recurse` on a junction can delete the target's contents in PowerShell 5.1 | `Invoke-Removal.ps1` calls `.Delete()` to unlink instead |
+| Junctions get followed and double-counted | Every walker skips reparse points **tagged as name surrogates** |
+| Skipping every reparse point drops the whole OneDrive tree: Files-On-Demand tags each folder, so scanners report zero findings there with no error | `Get-ReparsePointKind` reads the reparse **tag** via `FindFirstFileW` and skips only the name-surrogate bit `0x20000000`; cloud/dedup/WIM placeholders get walked |
+| The cloud attribute flags (`RECALL_ON_OPEN`, `PINNED`) do **not** identify a OneDrive folder — most carry `ReparsePoint` with none of them set | Classify by tag, never by attributes |
+| A fully dehydrated placeholder enumerates as **empty** with no error, indistinguishable from a genuinely empty folder | Collected into `-UnscannedPlaceholderPath`; every scanner prints `Write-UnscannedPlaceholderWarning` so an under-scan is never read as a clean result |
+| `Remove-Item -Recurse` on a junction can delete the target's contents in PowerShell 5.1 | `Invoke-Removal.ps1` calls `.Delete()` to unlink instead, and only for `Link` — placeholders take the normal path |
 | pnpm-hardlinked `node_modules` free far less than logical size | Report the `Get-FreeSpaceSnapshot` delta, never the sum of sizes |
 | Cache deletion returns exit code 5 and reclaims nothing while a browser is open | Failures are logged per item and surfaced, not swallowed |
 | `wsl --manage --set-sparse` is refused as potentially corrupting | Never pass `--allow-unsafe` on a disk holding live data |
 | Registry UserAssist launch history is too sparse to judge usage | `Get-InstalledApps.ps1` uses data-folder `LastWriteTime` |
+| Matching an app to its data folder on the first word filed **Auto Dark Mode → Autodesk**, **Fast Node Manager → FastStone**, **VLC → JellyfinMediaPlayer**, making ten active apps look idle | Token containment both ways, one name wholly inside the other, ignoring generic vendor words; the `MatchedOn` column shows what the verdict rests on |
+| `Import-Csv` in 5.1 ignores the UTF-8 BOM `Export-Csv` writes, so non-ASCII paths come back mangled and every row logs as `Missing` — a silent no-op that reads like success | `Read-ScanCsv` in `_Common.ps1`; never call `Import-Csv` directly |
+| `Measure-Object -Sum` over an empty set has no `Sum` property, which throws under `Set-StrictMode` instead of returning zero | Read it through `Get-PropertyValue ... 'Sum' 0` |
 | `@($list)` on a `List[object]` throws `ArgumentException` and yields an **empty** array in PowerShell 5.1 | Use `.ToArray()`; `Write-ScanCsv` takes an untyped `$Row` and normalises internally |
 | A single-element array unrolls to a bare string on return or assignment, so `.Count` throws | Wrap call sites and whole `if` expressions in `@()` |
 | Missing registry properties (`Publisher`, `DisplayVersion`) throw under `Set-StrictMode` | Read them via `Get-PropertyValue` |

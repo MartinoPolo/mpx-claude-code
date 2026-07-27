@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Find build output directories under project roots and classify each project as active or inactive by git history.
 
@@ -52,6 +52,7 @@ function Get-RepoRoot {
 $repoLastCommitCache = @{}
 $repoRootCache = @{}
 $found = New-Object System.Collections.Generic.List[object]
+$unscannedPlaceholder = New-Object System.Collections.Generic.List[string]
 
 foreach ($rootPath in $Root) {
     if (-not $rootPath -or -not (Test-Path $rootPath)) {
@@ -102,14 +103,15 @@ foreach ($rootPath in $Root) {
             continue
         }
 
-        foreach ($childPath in Get-ChildDirectoryPath $current) {
-            if (-not (Test-ReparsePoint $childPath)) { $pending.Push($childPath) }
+        foreach ($childPath in Get-TraversableChildDirectory -Path $current -UnscannedPlaceholderPath ([ref]$unscannedPlaceholder)) {
+            $pending.Push($childPath)
         }
     }
 }
 
 $rows = @($found | Sort-Object GB -Descending)
 Write-Host "Found $($rows.Count) artifact dirs; $(@($rows | Where-Object Status -eq 'Candidate').Count) in idle projects"
+Write-UnscannedPlaceholderWarning $unscannedPlaceholder
 Write-Host "Logical size overstates the real gain when pnpm hardlinks are involved - confirm via free-space delta."
 
 if ($OutCsv) { Write-ScanCsv -Row $rows -Path $OutCsv } else { $rows }

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Depth-limited folder size map for one or more roots. Fallback when WizTree/TreeSize/du are absent.
 
@@ -32,6 +32,7 @@ function Get-FolderMap {
     $bytesByPath = @{}
     $lastWriteByPath = @{}
     $deniedCount = 0
+    $unscannedPlaceholder = New-Object System.Collections.Generic.List[string]
 
     $pending = [System.Collections.Generic.Stack[object]]::new()
     $pending.Push([pscustomobject]@{ Path = $normalizedRoot; Ancestors = @($normalizedRoot); Level = 0 })
@@ -64,8 +65,7 @@ function Get-FolderMap {
             } catch { }
         }
 
-        foreach ($childPath in Get-ChildDirectoryPath $node.Path) {
-            if (Test-ReparsePoint $childPath) { continue }
+        foreach ($childPath in Get-TraversableChildDirectory -Path $node.Path -UnscannedPlaceholderPath ([ref]$unscannedPlaceholder)) {
             $childLevel = $node.Level + 1
             $childAncestors = if ($childLevel -le $MaxDepth) { @($node.Ancestors) + $childPath } else { $node.Ancestors }
             $pending.Push([pscustomobject]@{ Path = $childPath; Ancestors = $childAncestors; Level = $childLevel })
@@ -73,6 +73,7 @@ function Get-FolderMap {
     }
 
     Write-Host "$normalizedRoot : $($bytesByPath.Count) folders mapped, $deniedCount unreadable"
+    Write-UnscannedPlaceholderWarning $unscannedPlaceholder
 
     foreach ($path in $bytesByPath.Keys) {
         [pscustomobject]@{

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Find empty directories and zero-byte files under the given roots.
 
@@ -64,8 +64,14 @@ function Measure-Tree {
         } catch { $hasContent = $true }
     }
 
+    # A link or an unscannable cloud placeholder counts as content: neither can be proved
+    # empty from here, and the domain rule is to keep when unsure.
     foreach ($childPath in Get-ChildDirectoryPath $Path) {
-        if (Test-ReparsePoint $childPath) { $hasContent = $true; continue }
+        $kind = Get-ReparsePointKind $childPath
+        if ($kind -eq 'Link' -or ($kind -eq 'Placeholder' -and -not (Test-DirectoryHasEntry $childPath))) {
+            $hasContent = $true
+            continue
+        }
         $childIsEmpty = Measure-Tree -Path $childPath
         if (-not $childIsEmpty) { $hasContent = $true }
     }

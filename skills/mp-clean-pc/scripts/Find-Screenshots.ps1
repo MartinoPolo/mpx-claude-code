@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Find screenshots by filename pattern and location, aged past a cutoff, honouring curated-folder protection.
 
@@ -63,6 +63,7 @@ function Test-AnyPattern {
 }
 
 $rows = New-Object System.Collections.Generic.List[object]
+$unscannedPlaceholder = New-Object System.Collections.Generic.List[string]
 
 foreach ($rootPath in $Root) {
     if (-not $rootPath -or -not (Test-Path $rootPath)) {
@@ -111,14 +112,18 @@ foreach ($rootPath in $Root) {
             } catch { }
         }
 
-        foreach ($childPath in Get-ChildDirectoryPath $current) {
-            if (-not (Test-ReparsePoint $childPath)) { $pending.Push($childPath) }
+        foreach ($childPath in Get-TraversableChildDirectory -Path $current -UnscannedPlaceholderPath ([ref]$unscannedPlaceholder)) {
+            $pending.Push($childPath)
         }
     }
 }
 
 $result = @($rows | Sort-Object Folder, LastWrite)
 $candidates = @($result | Where-Object Status -eq 'Candidate')
-Write-Host "Found $($candidates.Count) screenshot candidates ($([math]::Round((($candidates | Measure-Object MB -Sum).Sum) / 1024, 2)) GB), $(@($result | Where-Object Status -eq 'Protected').Count) protected"
+# Measure-Object over an empty set returns no Sum property at all, which is a throw under
+# Set-StrictMode rather than a zero.
+$candidateGB = [math]::Round((Get-PropertyValue ($candidates | Measure-Object MB -Sum) 'Sum' 0) / 1024, 2)
+Write-Host "Found $($candidates.Count) screenshot candidates ($candidateGB GB), $(@($result | Where-Object Status -eq 'Protected').Count) protected"
+Write-UnscannedPlaceholderWarning $unscannedPlaceholder
 
 if ($OutCsv) { Write-ScanCsv -Row $result -Path $OutCsv } else { $result }

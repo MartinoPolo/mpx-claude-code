@@ -19,12 +19,13 @@ param(
     [switch]$Open
 )
 
+. "$PSScriptRoot\_Common.ps1"
 Set-StrictMode -Version Latest
 
 # The outer @() matters: an if-expression unrolls a single-element array on assignment,
 # leaving a bare string that has no .Count.
 $candidatePath = @(if ($PSCmdlet.ParameterSetName -eq 'Csv') {
-    Import-Csv -Path $InputCsv |
+    Read-ScanCsv -Path $InputCsv |
         Where-Object { $_.Status -eq 'Candidate' } |
         ForEach-Object { $_.Path }
 } else {

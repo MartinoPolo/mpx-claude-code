@@ -39,7 +39,7 @@ Add-Type -AssemblyName Microsoft.VisualBasic
 # The outer @() matters: an if-expression unrolls a single-element array on assignment,
 # leaving a bare string that has no .Count.
 $targetPath = @(if ($PSCmdlet.ParameterSetName -eq 'Csv') {
-    Import-Csv -Path $InputCsv | Where-Object { $_.Status -eq 'Candidate' } | ForEach-Object { $_.Path }
+    Read-ScanCsv -Path $InputCsv | Where-Object { $_.Status -eq 'Candidate' } | ForEach-Object { $_.Path }
 } else {
     $Path
 })
@@ -72,8 +72,9 @@ foreach ($item in $targetPath) {
     $isDirectory = Test-Path -LiteralPath $item -PathType Container
 
     # A junction looks like a directory; deleting one recursively can take the target's
-    # contents with it under PowerShell 5.1. Unlink it instead.
-    if ($isDirectory -and (Test-ReparsePoint $item)) {
+    # contents with it under PowerShell 5.1. Unlink it instead. Cloud placeholders are
+    # also reparse points but hold real content, so they take the normal path below.
+    if ($isDirectory -and (Get-ReparsePointKind $item) -eq 'Link') {
         if ($DryRun) {
             $log.Add([pscustomobject]@{ Path = $item; Result = 'WouldUnlink'; Detail = 'reparse point, target would be untouched' })
         } else {

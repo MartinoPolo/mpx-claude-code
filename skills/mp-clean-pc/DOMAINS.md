@@ -30,6 +30,7 @@ Apply before anything reaches an approval question.
 - **Quarantine roots are excluded from every scan** so pending items never resurface as fresh candidates.
 - **Local fixed disks only.** Network shares, mapped drives and removable media are skipped.
 - **Cloud-synced paths carry a propagation warning** on every group: a delete there reaches every synced device and the cloud copy.
+- **A cloud tree that scans clean has not necessarily been scanned.** Files-On-Demand placeholders enumerate as empty without error. Every scanner reports what it could not open; carry that count into the dashboard rather than presenting the domain as complete.
 - **Hashing is local.** Only path, size, date and digest leave the machine; file contents are never read into context.
 
 ## 1. Regenerable dev caches
@@ -75,6 +76,11 @@ Order: build cache → dangling images → cherry-picked unreferenced images →
 
 - Inventory from the system's package/uninstall registry, all hives and architectures.
 - **Judge usage by the app's data-folder write time.** Registry launch-history is too sparse to trust; it has reported obviously-active apps as never launched.
+- **Check what the folder match rests on before trusting an idle verdict.** A wrong data-folder match is what makes an active app look idle; the scanner exposes the matched tokens for exactly this.
+- **Re-verify every uninstall at execution time — new evidence overrides an earlier approval.** One sweep reached execution with approval to remove two python.org MSI installs, a Windows SDK and the live WSL package. The PEP 514 registry (`HKCU:\SOFTWARE\Python\PythonCore\<ver>\InstallPath`) showed the MSIs owned the interpreters on `PATH`; `Windows Kits\10\Include` showed the "old" SDK was the newest one present and the only one the MSVC toolchain could link against; the WSL package was backing live distros. All three were revoked at the last moment.
+- **When a removal is justified by "a newer version stays", prove the newer version exists — by file count, not by folder presence.** A sweep removed Visual Studio 2017 on the stated grounds that VS2022 would take over. The `2022` directory existed and held zero files; the machine was left with no C/C++ compiler and a Rust toolchain that could no longer link. An empty vendor shell is the normal residue of an uninstall, so its presence is evidence of the opposite.
+- Uninstalling the last of a kind is a different decision from uninstalling one of several. Compilers, SDKs, language runtimes and hypervisors need the "what else provides this?" check before the group is ever proposed.
+- A registry `EstimatedSize` is an estimate. Never report it as reclaimable space.
 - Idle threshold: 6 months without data-folder activity.
 - Prefer each app's silent-uninstall string; verify removal afterwards, since some uninstallers deregister but leave their folder.
 - Orphaned app data qualifies only when **both** hold: the folder matches no installed app, **and** it is older than 6 months. Vendor and framework folders are skipped unless clearly belonging to something uninstalled.

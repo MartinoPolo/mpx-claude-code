@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Find duplicate files and cloud-sync conflict copies. Hashing happens locally; only digests leave the machine.
 
@@ -42,6 +42,7 @@ function Test-ConflictName {
 }
 
 $allFiles = New-Object System.Collections.Generic.List[object]
+$unscannedPlaceholder = New-Object System.Collections.Generic.List[string]
 
 foreach ($rootPath in $Root) {
     if (-not $rootPath -or -not (Test-Path $rootPath)) {
@@ -71,13 +72,14 @@ foreach ($rootPath in $Root) {
             } catch { }
         }
 
-        foreach ($childPath in Get-ChildDirectoryPath $current) {
-            if (-not (Test-ReparsePoint $childPath)) { $pending.Push($childPath) }
+        foreach ($childPath in Get-TraversableChildDirectory -Path $current -UnscannedPlaceholderPath ([ref]$unscannedPlaceholder)) {
+            $pending.Push($childPath)
         }
     }
 }
 
 Write-Host "Stage 1: $($allFiles.Count) files at or above $MinMB MB"
+Write-UnscannedPlaceholderWarning $unscannedPlaceholder
 
 # Stage 2: hash only within same-length groups.
 $sizeGroups = @($allFiles | Group-Object Bytes | Where-Object Count -gt 1)

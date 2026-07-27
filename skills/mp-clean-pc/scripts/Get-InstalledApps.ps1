@@ -34,48 +34,122 @@ $apps = foreach ($keyPath in $uninstallKey) {
     }
 }
 
-# Newest write time anywhere one level under an app data folder, used as the usage proxy.
-function Get-DataFolderActivity {
-    param([Parameter(Mandatory)][string]$DisplayName)
+# Vendor and filesystem words that identify nothing on their own. A match resting only on
+# one of these is not evidence: %LOCALAPPDATA%\Microsoft is written to constantly and would
+# otherwise mark every Microsoft-published app as active.
+$genericToken = @(
+    'microsoft', 'google', 'apple', 'adobe', 'oracle', 'intel', 'nvidia', 'jetbrains',
+    'corp', 'inc', 'ltd', 'llc', 'gmbh', 'software', 'systems', 'technologies',
+    'app', 'apps', 'data', 'local', 'locallow', 'roaming', 'programs', 'packages',
+    'temp', 'cache', 'common', 'files', 'windows', 'edition', 'version', 'update',
+    'installer', 'setup', 'x64', 'x86', 'bit'
+)
 
-    $searchRoot = @(
-        (Join-Path $env:APPDATA ''),
-        (Join-Path $env:LOCALAPPDATA '')
-    )
-    # Match on the first significant word so "Visual Studio Code" finds "Code".
-    $token = ($DisplayName -split '[\s\-_]' | Where-Object { $_.Length -ge 4 } | Select-Object -First 1)
-    if (-not $token) { return $null }
+# Lowercase alphanumeric tokens, split on separators, camelCase boundaries and
+# letter-to-digit boundaries, so "JellyfinMediaPlayer", "Jellyfin Media Player" and
+# "jellyfin-media-player" all tokenise identically.
+function Get-NameToken {
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$Name)
+    $spaced = [regex]::Replace($Name, '(?<=[a-z0-9])(?=[A-Z])', ' ')
+    $spaced = [regex]::Replace($spaced, '(?<=[A-Za-z])(?=[0-9])', ' ')
+    return @($spaced -split '[^A-Za-z0-9]+' | Where-Object { $_ } | ForEach-Object { $_.ToLowerInvariant() })
+}
 
-    $newest = $null
-    $matchedFolder = $null
-    foreach ($root in $searchRoot) {
-        if (-not (Test-Path $root)) { continue }
-        foreach ($folderPath in Get-ChildDirectoryPath $root) {
-            $folderName = Split-Path $folderPath -Leaf
-            if ($folderName -notlike "*$token*") { continue }
-            try {
-                $info = New-Object System.IO.DirectoryInfo $folderPath
-                $folderNewest = $info.LastWriteTime
-                foreach ($childPath in Get-ChildDirectoryPath $folderPath) {
-                    try {
-                        $childInfo = New-Object System.IO.DirectoryInfo $childPath
-                        if ($childInfo.LastWriteTime -gt $folderNewest) { $folderNewest = $childInfo.LastWriteTime }
-                    } catch { }
-                }
-                if ($null -eq $newest -or $folderNewest -gt $newest) {
-                    $newest = $folderNewest
-                    $matchedFolder = $folderPath
-                }
-            } catch { }
+# Newest write time of a folder or any of its immediate children.
+function Get-FolderActivityTime {
+    param([Parameter(Mandatory)][string]$Path)
+    try {
+        $newest = (New-Object System.IO.DirectoryInfo $Path).LastWriteTime
+    } catch {
+        return $null
+    }
+    foreach ($childPath in Get-ChildDirectoryPath $Path) {
+        try {
+            $childTime = (New-Object System.IO.DirectoryInfo $childPath).LastWriteTime
+            if ($childTime -gt $newest) { $newest = $childTime }
+        } catch { }
+    }
+    return $newest
+}
+
+# Every plausible data folder, indexed once with its tokens and activity time. Built ahead
+# of the app loop because rebuilding it per app makes the scan quadratic. Two levels deep
+# because vendors nest their products: %LOCALAPPDATA%\Google\Chrome.
+function Get-DataFolderIndex {
+    $index = New-Object System.Collections.Generic.List[object]
+    foreach ($root in @($env:APPDATA, $env:LOCALAPPDATA)) {
+        if (-not $root -or -not (Test-Path $root)) { continue }
+        foreach ($vendorPath in Get-ChildDirectoryPath $root) {
+            $vendorToken = @(Get-NameToken (Split-Path $vendorPath -Leaf))
+            $vendorActivity = Get-FolderActivityTime $vendorPath
+            if ($null -ne $vendorActivity) {
+                $index.Add([pscustomobject]@{ Path = $vendorPath; Token = $vendorToken; LastActivity = $vendorActivity })
+            }
+            foreach ($productPath in Get-ChildDirectoryPath $vendorPath) {
+                $productActivity = Get-FolderActivityTime $productPath
+                if ($null -eq $productActivity) { continue }
+                $index.Add([pscustomobject]@{
+                    Path         = $productPath
+                    Token        = @($vendorToken + @(Get-NameToken (Split-Path $productPath -Leaf)) | Select-Object -Unique)
+                    LastActivity = $productActivity
+                })
+            }
         }
     }
-    if ($null -eq $newest) { return $null }
-    [pscustomobject]@{ LastActivity = $newest; DataFolder = $matchedFolder }
+    return $index
 }
+
+# Match by token containment, not by a single leading word. First-word substring matching
+# filed "Auto Dark Mode" under Autodesk, "Fast Node Manager" under FastStone and "VLC media
+# player" under JellyfinMediaPlayer, reporting ten actively-used apps as idle. One folder
+# can plausibly match several apps; the most specific match wins, newest activity breaks ties.
+function Get-DataFolderActivity {
+    param(
+        [Parameter(Mandatory)][AllowEmptyString()][string]$DisplayName,
+        [AllowEmptyString()][string]$InstallLocation,
+        [Parameter(Mandatory)][AllowNull()]$FolderIndex
+    )
+    $appToken = @(Get-NameToken $DisplayName)
+    if ($InstallLocation) {
+        $installLeaf = Split-Path $InstallLocation.TrimEnd('\') -Leaf
+        $appToken = @($appToken + @(Get-NameToken $installLeaf) | Select-Object -Unique)
+    }
+    if ($appToken.Count -eq 0) { return $null }
+
+    $best = $null
+    foreach ($folder in $FolderIndex) {
+        $shared = @($folder.Token | Where-Object { $appToken -contains $_ })
+        if ($shared.Count -eq 0) { continue }
+
+        # One name must be wholly inside the other. Partial overlap is what produced the
+        # Autodesk and FastStone misfiles.
+        if ($shared.Count -ne $folder.Token.Count -and $shared.Count -ne $appToken.Count) { continue }
+
+        $identifying = @($shared | Where-Object { $_.Length -ge 3 -and $genericToken -notcontains $_ })
+        if ($identifying.Count -eq 0) { continue }
+
+        $isBetter = ($null -eq $best) -or
+                    ($identifying.Count -gt $best.Specificity) -or
+                    ($identifying.Count -eq $best.Specificity -and $folder.LastActivity -gt $best.LastActivity)
+        if ($isBetter) {
+            $best = [pscustomobject]@{
+                LastActivity = $folder.LastActivity
+                DataFolder   = $folder.Path
+                MatchedOn    = ($identifying -join '+')
+                Specificity  = $identifying.Count
+            }
+        }
+    }
+    return $best
+}
+
+$folderIndex = Get-DataFolderIndex
+Write-Host "Indexed $($folderIndex.Count) app data folders"
 
 $rows = foreach ($app in $apps) {
     $displayName = Get-PropertyValue $app 'DisplayName' ''
-    $activity = Get-DataFolderActivity -DisplayName $displayName
+    $installLocation = Get-PropertyValue $app 'InstallLocation' ''
+    $activity = Get-DataFolderActivity -DisplayName $displayName -InstallLocation $installLocation -FolderIndex $folderIndex
     $lastActivity = if ($activity) { $activity.LastActivity } else { $null }
     $isIdle = ($null -ne $lastActivity -and $lastActivity -lt $idleCutoff)
 
@@ -86,9 +160,10 @@ $rows = foreach ($app in $apps) {
         DisplayName      = $displayName
         Publisher        = Get-PropertyValue $app 'Publisher' ''
         Version          = Get-PropertyValue $app 'DisplayVersion' ''
-        InstallLocation  = Get-PropertyValue $app 'InstallLocation' ''
+        InstallLocation  = $installLocation
         EstimatedMB      = $sizeMB
         DataFolder       = if ($activity) { $activity.DataFolder } else { '' }
+        MatchedOn        = if ($activity) { $activity.MatchedOn } else { '' }
         LastActivity     = $lastActivity
         UninstallString  = Get-PropertyValue $app 'UninstallString' ''
         QuietUninstall   = Get-PropertyValue $app 'QuietUninstallString' ''
@@ -101,5 +176,6 @@ $rows = foreach ($app in $apps) {
 
 $result = @($rows | Sort-Object Status, LastActivity)
 Write-Host "Inventoried $($result.Count) apps; $(@($result | Where-Object Status -eq 'Idle').Count) idle past $IdleMonths months"
+Write-Host "Check MatchedOn before trusting any Idle verdict - a wrong data-folder match is what makes an active app look idle."
 
 if ($OutCsv) { Write-ScanCsv -Row $result -Path $OutCsv } else { $result }
