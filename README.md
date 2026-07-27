@@ -281,7 +281,6 @@ Run after larger chunks of work (milestone end, PRD completion, or on a regular 
 | `/mp-skill-audit`         | All skills        | Low       | Checks 15 consistency rules, auto-fixes drift. Creates report.         |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Scans transcripts for decisions → CONTEXT.md + DECISIONS.md.           |
 | `/mp-components-audit`    | Whole repo (UI)   | Medium    | Finds native elements / detached styles that should use design-system components, wrong variants, color-token bypass. Reports by default; `autofix` applies mechanical fixes. |
-| `/mp-update-docs`         | Whole repo        | Medium    | Reviews README, CLAUDE.md, AGENTS.md for staleness. Confirms updates.  |
 | `/mp-code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication. Pass folder for focused scope.       |
 | `/mp-decompose`           | Whole repo        | Medium    | Splits oversized files into modules. Pass file for focused scope.      |
 | `/mp-architecture-review` | Whole repo        | High      | Interactive — grills about pain points, proposes deepening candidates. |
@@ -290,9 +289,14 @@ All maintenance skills (except architecture-review and components-audit) auto-fi
 
 ### Design Skills
 
-| Skill             | Description                                                                        |
-| ----------------- | ---------------------------------------------------------------------------------- |
-| `/mp-design-ui-3` | Generate multiple UI variants in different visual styles using parallel sub-agents |
+| Skill                | Description                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `/mp-design-init`    | One-time per project — derives palette, font pairing, density, and motion from the app's domain into `designs/tokens.css` + `designs/DESIGN_SYSTEM.md` |
+| `/mp-design-brief`   | Writes a component design brief (surrounding context, exhaustive states, component reuse map) and gates dependent issues with `Design needed` |
+| `/mp-mockup`         | Generates N self-contained HTML variants from a brief — parallel `mp-ui-variant-generator` sub-agents when N > 1 |
+| `/mp-design-refine`  | Applies refinements to a chosen variant → `refined.html` + `SUMMARY.md`, updates the brief, removes the design gate. `all` for batch mode |
+
+Run in order: `init` (once) → `brief` → `mockup` → `refine`. Conventions shared by all four — the `designs/<component-name>/` layout, `DECISION.md`, project discovery, mockup HTML rules — live in `skills/shared/DESIGN_PIPELINE.md`.
 
 ### Git Skills
 
@@ -317,6 +321,10 @@ Retired skills and agents are archived (not deleted) under [`deprecated/`](depre
 | `/mp-grill-me`                 | Superseded by `/mp-grill`               |
 | `/mp-grill-requirements`       | Superseded by `/mp-grill`               |
 | `/mp-consolidate-requirements` | Superseded by `/mp-consolidate-context` |
+| `/mp-design-ui-3`              | Superseded by the `/mp-design-brief` → `/mp-mockup` → `/mp-design-refine` pipeline |
+| `/mp-gemini-fetch`             | Unused — fetched blocked sites via Gemini CLI |
+| `/mp-publish-obsidian-plugin`  | Unused — published an Obsidian plugin to the community directory |
+| `/mp-update-docs`              | Unused — doc-staleness review, now done inline per the same-change README rule |
 
 See `deprecated/skills/` for the full list of retired skills and `deprecated/agents/` for retired agents.
 
@@ -342,8 +350,6 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-script-discovery`        | Discover runnable scripts and dev servers (wraps `scripts/detect-project-scripts.sh`, single-sourced there) |
 | `/mp-symlink`                 | Create & verify Windows symlinks/junctions the way that works in Claude Code (PowerShell `New-Item`, not `ln -s`/`mklink`) |
 | `/mp-clean-pc`                | Full-disk cleanup sweep across 8 domains (caches, Docker/WSL, build output, apps, screenshots, duplicates, installers, system reclaim) — parallel scan sub-agents, ranked dashboard, per-group approval, Explorer thumbnail review for visual groups, quarantine instead of delete |
-| `/mp-gemini-fetch`            | Fetch blocked sites via Gemini CLI                                                          |
-| `/mp-publish-obsidian-plugin` | Publish Obsidian plugin to community directory                                              |
 | `/mp-yoursafe-overview`       | (Personal) Regenerate the Yoursafe/Verotel onboarding HTML reference from live sources      |
 
 ### Vendored Skills
@@ -357,29 +363,61 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | Agent                       | Model  | Effort | Description                                                                 |
 | --------------------------- | ------ | ------ | --------------------------------------------------------------------------- |
 | Explore                     | Sonnet | Low    | **Overrides the built-in `Explore`** — read-only codebase search            |
-| mp-executor                 | Sonnet | —      | Applies pre-analyzed edits to a scoped task chunk                           |
-| mp-issue-analyzer           | Opus   | —      | Analyzes issues and codebase, creates execution plans                       |
-| mp-issue-finder             | Haiku  | —      | Finds issue matching a PR branch                                            |
-| mp-tdd-executor             | Opus   | —      | Executes strict TDD red-green-refactor loops for behaviors                  |
-| mp-ui-variant-generator     | Opus   | —      | Generates a single UI variant in a specific design style                    |
-| mp-chrome-devtools-tester   | Sonnet | High   | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
+| mp-executor                 | Opus   | Low    | Applies pre-analyzed edits to a scoped task chunk                           |
+| mp-issue-analyzer           | Opus   | High   | Analyzes issues and codebase, creates execution plans                       |
+| mp-issue-finder             | Sonnet | Low    | Finds issue matching a PR branch                                            |
+| mp-tdd-executor             | Opus   | Medium | Executes strict TDD red-green-refactor loops for behaviors                  |
+| mp-ui-variant-generator     | Opus   | Medium | Generates a single UI variant for one layout angle. Spawned in parallel by `/mp-mockup` |
+| mp-chrome-devtools-tester   | Opus   | High   | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
 | mp-checker                  | Haiku  | —      | Runs check commands and reports failures                                    |
 | mp-context7-docs-fetcher    | Haiku  | —      | Fetches library docs via Context7 MCP                                       |
 | mp-git-committer            | Haiku  | —      | Stages, commits, and optionally pushes with conventional commit format      |
-| mp-pr-manager               | Haiku  | —      | Creates or updates GitHub PRs with conventional title/body format           |
-| mp-unresolved-issue-tracker | Sonnet | —      | Routes unresolved implementation items to sibling issues or tracking issue  |
-| mp-reviewer-best-practices  | Sonnet | —      | Best practices and conventions reviewer (with language-specific references) |
-| mp-reviewer-code-quality    | Sonnet | —      | DRY, naming, maintainability reviewer                                       |
-| mp-reviewer-error-handling  | Sonnet | —      | Error handling and resilience reviewer                                      |
-| mp-reviewer-performance     | Sonnet | —      | Performance reviewer                                                        |
-| mp-reviewer-security        | Sonnet | —      | Security reviewer (OWASP-focused)                                          |
-| mp-reviewer-spec-alignment  | Sonnet | —      | Spec compliance and scope reviewer                                          |
-| mp-reviewer-test-quality    | Sonnet | —      | Test correctness, anti-patterns, redundancy, and mocking discipline reviewer|
-| mp-scanner-architecture     | Sonnet | —      | Lightweight architecture scanner for PRD-end review                         |
+| mp-pr-manager               | Sonnet | Low    | Creates or updates GitHub PRs with conventional title/body format           |
+| mp-unresolved-issue-tracker | Sonnet | Low    | Routes unresolved implementation items to sibling issues or tracking issue  |
+| mp-reviewer-best-practices  | Sonnet | Medium | Best practices and conventions reviewer (with language-specific references) |
+| mp-reviewer-code-quality    | Sonnet | Medium | DRY, naming, maintainability reviewer                                       |
+| mp-reviewer-error-handling  | Sonnet | Medium | Error handling and resilience reviewer                                      |
+| mp-reviewer-performance     | Sonnet | Medium | Performance reviewer                                                        |
+| mp-reviewer-security        | Sonnet | Medium | Security reviewer (OWASP-focused)                                          |
+| mp-reviewer-spec-alignment  | Sonnet | Medium | Spec compliance and scope reviewer                                          |
+| mp-reviewer-test-quality    | Sonnet | Medium | Test correctness, anti-patterns, redundancy, and mocking discipline reviewer|
+| mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
 
 `effort:` is a frontmatter-only reasoning knob, independent of `Explore`'s breadth wording (`quick`/`medium`/`very thorough`) — see [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md) § 10.
+
+The table reflects a July 2026 benchmark (80 sub-agents) that settled three open questions in § 10.
+The seven `mp-reviewer-*` agents are pinned to `effort: medium`: against a diff with ten seeded
+defects, `medium` caught 10/10 where `low` caught 8/10, at the same cost as `high`, with zero false
+positives at every level. `Explore`'s `effort: low` pin was confirmed on the real agent (it matches
+`medium` for 27% less). Haiku stays on `mp-checker` and `mp-git-committer` — correct and cheaper —
+but was 2.4× *more* expensive than sonnet on `mp-pr-manager`, which now runs sonnet.
+
+Model choice by task category is § 11, cross-checked against
+[DeepSWE v1.1](https://deepswe.datacurve.ai/) for implementation and
+[Design Arena](https://www.designarena.ai/leaderboard) for design. Only `opus`, `sonnet`, `haiku`
+are permitted — no `fable` — `high` is the effort ceiling, and `sonnet` never pairs with `high`.
+
+Three findings drive the table. **Pick on horizon, not difficulty**: on bounded tasks cost scales
+with tokens so the cheap model wins, but on long-horizon autonomous work it scales with wrong
+turns, where Sonnet 5 runs $26.40/task against Opus 4.8's $13.22 while scoring *lower* (54% vs
+59%) and Haiku scores ~0%. **Effort buys function, not looks**: a full low→medium→high sweep moves
+aesthetic Elo by +15 and agentic Elo by +52, so design sits at `medium` — high enough to preserve
+output detail, since effort throttles all output tokens and not just thinking. **The model gap
+dwarfs the effort gap for design**: Opus 5 leads Sonnet 5 by ~130 Elo, roughly ten times what any
+effort setting is worth.
+
+One mechanic to keep in mind when authoring: **the `Agent` tool has no `effort` parameter.** Effort
+is frontmatter-only, so `general-purpose`/`claude` spawns inherit the caller's effort and cannot
+override it — writing `effort:` into a spawn instruction is a defect, not configuration.
+
+[`scripts/usage-audit.mjs`](scripts/usage-audit.mjs) counts real skill and agent invocations across
+the local session store, to tell live workflows from dead ones.
+
+`mp-context7-docs-fetcher` is unbenchmarked: the context7 plugin had been installed against an
+unrelated project path, so it registered no server in this repo despite being enabled. It is now
+installed at user scope and connected, pending confirmation in a fresh session.
 
 Each agent's `description` **and its `tools` list** are printed into the agent roster in
 every session, so an enumerated MCP tool list is a standing context charge. Agents needing
@@ -478,9 +516,53 @@ All values come straight from Claude Code's stdin JSON in a single `jq` pass —
 
 Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/context-bar.sh`.
 
+## Sub-Agent Status Line
+
+`scripts/subagent-bar.sh` (settings key `subagentStatusLine`) renders one row per **live** sub-agent
+in the tasks panel — toggled with **Ctrl+T**. It answers "who is running right now, on what model, at
+what effort", which the main status line cannot show.
+
+```
+mp-reviewer-security   sonnet  medium   12.4k (6%)    Review auth changes
+Explore                sonnet  low       3.2k (1%)    Find rate-limit code
+mp-executor            sonnet  low       7.2k (3%)  ! Apply doc fixes
+    ^ mp-executor declares opus
+general-purpose        fable   ~high   150.0k (75%) ! Research OTEL attrs
+    ^ fable is never allowed
+```
+
+Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
+medium yellow, high orange, xhigh red, max purple. **Context** — escalates yellow ≥50%, orange ≥70%,
+red ≥90%, using each row's own `contextWindowSize` (the main bar's absolute token cut-offs would mean
+different things on rows with different windows).
+
+Rows that violate a rule in `instructions/AGENTS.md` get a red `!` and a reason line beneath: a
+`fable` spawn, a model that contradicts the agent's own frontmatter, effort above the `high` ceiling,
+or `sonnet` paired with `high`.
+
+**Effort is derived, not reported.** The stdin row carries `id, name, type, status, description,
+label, startTime, model, contextWindowSize, tokenCount, tokenSamples, cwd` — no effort, because the
+`Agent` tool has no `effort` parameter to record. It is resolved from the agent definition's
+frontmatter, falling back to the session `effortLevel`, which is genuinely what agents without a
+declared effort inherit. A `~` prefix marks that inherited case, so a derived value is never mistaken
+for a declared one. Plugin agents with no local definition always show `~`.
+
+Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; ids left unemitted keep
+the built-in `name · description · tokens` row. Only live rows appear — completed agents linger
+briefly, then drop. For history that survives the panel, use
+`scripts/analyze-subagent-models.py`, which reads the same data from
+`~/.claude/projects/**/*.jsonl` after the fact.
+
 ## Settings
 
 `settings.json` is the central configuration file. Contains environment variables, MCP plugins, hook definitions, and status line config. Installed to `~/.claude/settings.json`.
+
+**Context budget:** `autoCompactWindow: 213000` caps the auto-compact window well below the 1M the model (`claude-opus-5[1m]`) actually carries. Auto-compaction fires at `window − 20,000 (output reserve) − 13,000 (fixed margin)` = **180,000 tokens used**; the hard block sits at `window − 3,000`.
+
+Two constraints make 213000 the number rather than something smaller:
+
+- An **explicitly configured** window below 200,000 makes Claude Code skip auto-compaction entirely (`if (window < 200000) return false` in the should-compact check) while still passing the settings schema's `min(1e5)` validation — a silent failure. 200,000 is a hard floor.
+- Because of the fixed 33,000 of deductions, the lowest trigger reachable via the window alone is 167,000. Anything lower needs `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`, which multiplies against the window (on a 1M model `"50"` means 500k, not 50k) — deliberately unset here.
 
 **MCP plugins:** Context7 (library docs), TypeScript LSP. **Browser MCP:** chrome-devtools, registered at user scope (`claude mcp add`) and therefore loaded in every session; `mp-chrome-devtools-tester` uses that shared server. Scoping it to just that agent via inline `mcpServers:` frontmatter was measured to be inert on Claude Code 2.1.212 despite being documented — see `skills/shared/AUTHORING.md` § Tool grants. `ENABLE_TOOL_SEARCH: "auto:1"` keeps the cost to tool names only (~260 tokens), not full schemas. Reliable UI verification uses raw Playwright, not a browser MCP.
 
@@ -507,11 +589,11 @@ npm run test:watch    # Watch mode
 
 ## Design System
 
-`/mp-design-ui-3` generates multiple UI variants in radically different visual styles using parallel sub-agents. Each variant is a fully functional component with fonts, colors, responsive layout, and all interactive states.
+A four-stage pipeline, adapted from the Grovekeeper/prejemesi project-local skills and generalized: `/mp-design-init` → `/mp-design-brief` → `/mp-mockup` → `/mp-design-refine`. Contract in `skills/shared/DESIGN_PIPELINE.md`.
 
-**18 built-in styles:** brutalism, cafe, cosmic, dashboard, doodle, editorial, energetic, glassmorphism, luxury, minimal, mono, neobrutalism, pacman, paper, contemporary, lingo, vintage, enterprise.
+The premise differs from the retired `/mp-design-ui-3`: the design system is fixed first by `init`, so variants explore **layout, density, hierarchy, and disclosure** within it rather than swapping whole aesthetics. That is why the old 18-style catalog was not carried over — it still sits in `deprecated/skills/mp-design-ui-3/style-catalog.md` for greenfield work.
 
-Auto-selection maximizes distance across 4 axes: theme polarity, typography family, density, and mood. Style catalog in `skills/mp-design-ui-3/style-catalog.md`.
+Everything lands under `designs/<component-name>/` — the brief, `variants/variant-{a,b,c}.html`, `DECISION.md`, `refined.html`, `SUMMARY.md`. Briefs apply a `Design needed` label to dependent GitHub issues; `refine` removes it, unblocking implementation.
 
 ## Worktree Scripts
 

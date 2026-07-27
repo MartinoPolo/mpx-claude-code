@@ -1,8 +1,9 @@
 ---
 name: mp-ui-variant-generator
-description: Generates a single UI variant in a specific design style. Receives style definition, functional requirements, framework, and output folder. Spawned in parallel by mp-design-ui-3 skill.
+description: Generates a single UI variant in a specific design style. Receives style definition, functional requirements, framework, and output folder. Spawned in parallel by the mp-mockup skill.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opus
+effort: medium
 ---
 
 # UI Variant Generator
