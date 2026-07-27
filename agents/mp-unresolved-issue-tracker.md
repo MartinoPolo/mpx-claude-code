@@ -3,6 +3,7 @@ name: mp-unresolved-issue-tracker
 description: Routes unresolved items from execution to sibling GitHub issues or a PRD-level tracking issue. Spawned by skills that discover non-blocking issues during implementation.
 tools: Bash, Read, Grep, Glob
 model: sonnet
+effort: low
 color: yellow
 ---
 

@@ -2,7 +2,8 @@
 name: mp-pr-manager
 description: Creates or updates GitHub PRs with conventional title/body format. Detects base branch, composes structured PR description.
 tools: Bash
-model: haiku
+model: sonnet
+effort: low
 color: cyan
 ---
 
@@ -103,6 +104,9 @@ Add `--draft` flag if `draft` is true.
 
 ## Constraints
 
+- When `issue_number` is provided the title MUST start with `#N `, before the conventional-commit
+  type: `#2 feat(skills): add video-to-image skill`. Benchmarked arms dropped this prefix 1 run in 3
+  when it was stated only in Step 4.
 - Never use destructive git commands
 - If `gh pr create` or `gh pr edit` fails, report error — do NOT retry
 - PR title under 72 characters

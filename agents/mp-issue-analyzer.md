@@ -3,6 +3,7 @@ name: mp-issue-analyzer
 description: Analyzes issues and codebase exploration results to create fix plans. Use after gathering issue data and codebase context.
 tools: Bash, Read, Grep, Glob, WebFetch
 model: opus
+effort: high
 color: cyan
 ---
 

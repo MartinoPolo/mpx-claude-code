@@ -2,7 +2,8 @@
 name: mp-issue-finder
 description: Finds the issue that a PR branch closes. Given branch diff/commits, searches repo issues and returns the best match.
 tools: Bash, Read, Grep, Glob
-model: haiku
+model: sonnet
+effort: low
 color: cyan
 ---
 

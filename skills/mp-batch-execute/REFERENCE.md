@@ -10,7 +10,7 @@ The verify gate runs raw-Playwright visual verification in a read-only `claude` 
 
 Default execution is **sequential on one shared branch** because all sub-agents share one working tree and parallel commits race the git index. `--parallel` trades that for speed by giving each fix sub-agent its own git worktree.
 
-**Mechanism.** Spawn each fix sub-agent as a `claude` sub-agent via the Agent tool with `isolation: "worktree"` and `model: "sonnet"` — the harness creates a temporary worktree per agent (auto-removed if unchanged), so agents edit and commit isolated copies concurrently. Because worktrees share the same `.git` object store, their commits are all visible from the main checkout.
+**Mechanism.** Spawn each fix sub-agent as a `claude` sub-agent via the Agent tool with `isolation: "worktree"` and `model: "opus"` — the harness creates a temporary worktree per agent (auto-removed if unchanged), so agents edit and commit isolated copies concurrently. Because worktrees share the same `.git` object store, their commits are all visible from the main checkout.
 
 **Integration.** After the parallel agents finish, integrate each item's commit onto the batch branch from the main checkout (`git merge --no-ff` or `git cherry-pick`). Small issues touch disjoint files, so conflicts are rare; resolve any that occur before the verify gate. The verify gate (Step 5) then runs **once** on the integrated branch — not per worktree.
 

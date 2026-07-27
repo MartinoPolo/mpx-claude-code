@@ -13,9 +13,13 @@ docs when behaviour changes.
 Name the agent type at every spawn. Only a real `model` parameter selects a model — naming one
 in prose does nothing.
 
-`Explore` and every `mp-*` agent declare their own model: omit `model`. `general-purpose`,
-`claude`, `Plan`, `fork` declare none: pass one, or the spawn inherits the session model, the
-most expensive option.
+`Explore` and every `mp-*` agent declare their own model and effort: omit both. `general-purpose`,
+`claude`, `Plan`, `fork` declare neither: pass both, or the spawn inherits the session's, the most
+expensive option.
+
+Only `opus`, `sonnet`, `haiku` — never `fable`. `high` is the effort ceiling, and `sonnet` never
+pairs with `high`. Opus for orchestration, analysis, design, and implementation; sonnet `medium`
+for review, `low` for exploration; haiku only for bounded work needing no judgment.
 
 Delegate codebase searches to `Explore`; state breadth `quick`, `medium`, or `very thorough`.
 It skips CLAUDE.md, so restate what the search depends on inside the prompt.
@@ -33,3 +37,17 @@ Conventional commits.
 
 On errors or workflow friction: fix the immediate issue, then propose a rule for this file or
 memory — describe the friction and the proposed rule, and ask before writing it.
+
+## Compact instructions
+
+Applies to auto-compact, not just `/compact`. Keep the standard sections, and add:
+
+- **Key Decisions** — what was decided, which alternatives were rejected, and why.
+- **Dead Ends** — approaches abandoned and the symptom that killed them. The standard
+  "Errors and fixes" section only captures errors that got fixed; a path abandoned as
+  wrong leaves no trace otherwise, so it gets retried after compaction.
+- **Working Memory** — implicit constraints carried in my head: "X depends on Y",
+  "don't change Z because…", environment quirks, version-specific behaviour.
+
+Preserve file paths with line numbers, and error text verbatim. Never generalise an
+identifier to "the variable" or "the file" — the specific name is the load-bearing part.

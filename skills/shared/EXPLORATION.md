@@ -39,13 +39,17 @@ against repo conventions.
 
 ## State the breadth
 
-`Explore` calibrates its effort from the request, so say which you want:
+`Explore`'s body maps these words to concrete stopping criteria, so say which you want:
 
 | Breadth         | Use for                                                        |
 | --------------- | -------------------------------------------------------------- |
 | `quick`         | One known concept, obvious location                            |
 | `medium`        | Obvious locations plus one alternative naming convention       |
 | `very thorough` | Exhaust conventions, sibling dirs, config, tests               |
+
+Breadth is a search-scope instruction, not a reasoning-effort setting. It reaches the
+agent as prompt text and the agent body acts on it. The `effort:` reasoning knob is
+frontmatter only — see [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 10.
 
 ## Explore instead of asking
 

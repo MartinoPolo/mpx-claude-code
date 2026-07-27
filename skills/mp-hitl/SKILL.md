@@ -94,7 +94,7 @@ For each HITL issue, in priority order:
 
 1. Read the issue body — focus on `## Notes` for the HITL reason, `## Acceptance Criteria` for ambiguity, `## Description` for open questions
 2. Cross-reference against the PRD's `## Implementation Decisions` section — remove anything already decided
-3. Spawn an `Explore` agent to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
+3. Spawn an `Explore` agent (breadth: medium) to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
 
 #### 5b: Grill Decision Points
 

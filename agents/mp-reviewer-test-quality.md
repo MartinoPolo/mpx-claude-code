@@ -3,6 +3,7 @@ name: mp-reviewer-test-quality
 description: Read-only reviewer for test correctness, anti-patterns, redundancy, and mocking discipline.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: medium
 color: magenta
 ---
 

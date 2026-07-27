@@ -68,7 +68,7 @@ Required output:
 
 ### Step 3: Spawn Fix Subagents per Group
 
-For each reviewed group, spawn an `mp-executor` sub-agent with approved findings. The prompt must carry the full pre-analyzed plan with exact files and concrete changes, leaving only mechanical application — `mp-executor` applies, it does not decide. If a finding still needs judgment (unclear plan, cross-module tradeoffs), use a `general-purpose` sub-agent with `model: "opus"` for that group instead.
+For each reviewed group, spawn an `mp-executor` sub-agent with approved findings. The prompt must carry the full pre-analyzed plan with exact files and concrete changes, leaving only mechanical application — `mp-executor` applies, it does not decide. If a finding still needs judgment (unclear plan, cross-module tradeoffs), use a `general-purpose` sub-agent with `model: "opus"` for that group instead, telling it to reason through the tradeoff before editing.
 
 Use this exact fix prompt shape:
 

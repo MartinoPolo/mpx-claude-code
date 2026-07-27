@@ -371,7 +371,7 @@ When user wants full automation (generate and download when ready):
      prompt="Wait for artifact {task_id} in notebook {notebook_id} to complete, then download.
              Use: notebooklm artifact wait {task_id} -n {notebook_id} --timeout 1200
              Then: notebooklm download audio ./podcast.mp3 -a {task_id} -n {notebook_id}",
-     subagent_type="general-purpose", model="sonnet"
+     subagent_type="general-purpose", model="haiku"
    )
    ```
 5. Main conversation continues while agent waits
@@ -422,7 +422,7 @@ When adding multiple sources and needing to wait for processing before chat/gene
      prompt="Wait for sources {source_ids} in notebook {notebook_id} to be ready.
              For each: notebooklm source wait {id} -n {notebook_id} --timeout 600
              Report when all ready or if any fail.",
-     subagent_type="general-purpose", model="sonnet"
+     subagent_type="general-purpose", model="haiku"
    )
    ```
 3. Main conversation continues while agent waits
@@ -446,7 +446,7 @@ Deep research finds and analyzes web sources on a topic:
      prompt="Wait for research in notebook {notebook_id} to complete and import sources.
              Use: notebooklm research wait -n {notebook_id} --import-all --timeout 1800
              Report how many sources were imported.",
-     subagent_type="general-purpose", model="sonnet"
+     subagent_type="general-purpose", model="haiku"
    )
    ```
 4. Main conversation continues while agent waits

@@ -60,7 +60,7 @@ Show this to the user, then immediately proceed to Step 5. The user reads and th
 
 ### 5. Design multiple interfaces
 
-Spawn 3+ `general-purpose` sub-agents in parallel with `model: "opus"`. Each must produce a **radically different** interface for the deepened module.
+Spawn 3+ `general-purpose` sub-agents in parallel with `model: "opus"`. Each must produce a **radically different** interface for the deepened module. Tell each to reason through the trade-offs before committing to a shape.
 
 Prompt each sub-agent with a separate technical brief (file paths, coupling details, dependency category, what's being hidden). This brief is independent of the user-facing explanation in Step 4. Give each agent a different design constraint:
 

@@ -56,7 +56,7 @@ Spawn `mp-issue-analyzer` sub-agent to explore + analyze + plan:
 > Issue: [title, body, acceptance criteria]
 > Codebase: [project root]
 >
-> 1. Explore the codebase to understand relevant areas
+> 1. Explore the codebase to understand relevant areas (breadth: medium)
 > 2. Classify issue type (bug/task/feature) with rationale
 > 3. Create execution plan: files to modify/create, behaviors to test (TDD), acceptance criteria mapped to test cases, risk areas and open questions
 > 4. If external library behavior is uncertain, note it for Context7 lookup
@@ -179,7 +179,7 @@ Spawn `mp-pr-manager` sub-agent to create or update the PR:
 
 Check: `gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'`
 
-If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
+If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent with `model: "opus"`:
 
 > Merge origin/<base> into <branch> and resolve all conflicts.
 >
@@ -201,7 +201,7 @@ After push (and after confirming PR is mergeable per Step 8d): `gh pr checks <pr
 
 ### 9b. Fix Loop (delegated — main never reads CI logs)
 
-If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "sonnet"`:
+If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "opus"`:
 
 > First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
 > Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.

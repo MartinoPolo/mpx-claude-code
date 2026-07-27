@@ -57,7 +57,7 @@ git checkout -b batch/<slug>
 For each work item, in order:
 
 1. Set its Task `in_progress`.
-2. Spawn a `claude` sub-agent with `model: "sonnet"` and a prescriptive prompt: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only — do not push or open a PR.**
+2. Spawn a `claude` sub-agent with `model: "opus"` and a prescriptive prompt — the plan is already made, so it applies rather than re-decides: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only — do not push or open a PR.**
 3. On the completion notification, confirm the commit landed. If the sub-agent died mid-run (e.g. `API Error: Overloaded`) leaving a partial edit, diagnose and finish/commit it yourself, or re-spawn — never leave a half-applied fix.
 4. Mark the Task `completed`.
 
@@ -82,7 +82,7 @@ Fix failures via an `mp-executor` sub-agent, up to 3 iterations. Still failing �
 
 ### 5b. Code review (batch diff)
 
-Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent with `model: "sonnet"` to run `/mp-review scope=branch autofix=true` against the batch-branch diff (default → `partial` 4-reviewer set; `--full-review` → `full` 7-reviewer set). It engages the `mp-reviewer-*` agents and applies confidence-gated fixes via `mp-executor` (up to 3 iterations), writing `REVIEW.md`.
+Unless `--no-review` is set, review the whole batch: spawn a `claude` sub-agent with `model: "opus"` to run `/mp-review scope=branch autofix=true` against the batch-branch diff (default → `partial` 4-reviewer set; `--full-review` → `full` 7-reviewer set). It engages the `mp-reviewer-*` agents and applies confidence-gated fixes via `mp-executor` (up to 3 iterations), writing `REVIEW.md`.
 
 `mp-review` does not commit — so **commit its fixes** as one `fix(review): apply batch review fixes` commit on the batch branch, then re-run **5a** to confirm still green. Review findings that persist after autofix are **non-blocking**: carry them into the PR body (Step 7), optionally routing them to the sibling issues with `mp-unresolved-issue-tracker`.
 
