@@ -167,6 +167,49 @@ run: 27 sidechains logged assistant turns from more than one model under a singl
 | `sonnet` | Exploring, reviewing, docs, moderate-complexity implementation |
 | `opus` | Complex reasoning: architecture, analysis, multi-step implementation |
 
+## 10. Effort is frontmatter — prose never sets it
+
+`DOC` — agent frontmatter accepts `effort:` with values `low`, `medium`, `high`, `xhigh`,
+`max` (see the field list in §6). Resolution mirrors §2: environment variable, then
+frontmatter `effort:`, then the session effort. **Omitting `effort:` inherits the session
+effort** — silence is not a cheap default, exactly as with `model:`.
+
+The `Agent` tool has no `effort` parameter. Frontmatter is the only per-agent lever;
+`Workflow`'s `agent(prompt, {effort})` is the only per-call one.
+
+`TESTED` — writing "very thorough" in a delegation prompt does not raise reasoning effort.
+Breadth is search scope; the two are independent knobs.
+
+`TESTED` — 66 sub-agents, hard multi-hop tracing across a real SvelteKit repo (3 tasks,
+scored against verified ground truth):
+
+| Arm | Score | Tool calls | $/task |
+| ----------------- | --------- | ---------- | ------ |
+| sonnet-5 `low` | 30/30 | 9 | $0.158 |
+| sonnet-5 `medium` | 30/30 | 10 | $0.207 |
+| sonnet-5 `high` | invalid | 13 | $0.276 |
+| opus-5 `low` | 30/30 | 11 | $0.502 |
+| opus-5 `medium` | 30/30 | 24 | $0.776 |
+| opus-5 `high` | 29.5/30 | 23 | $0.893 |
+
+Opus-5 at `low` costs 3.2x sonnet-5 at `low` for an identical score. Effort scales cost
+steeply within a model (sonnet 1.7x from `low` to `high`) and bought no accuracy on
+search-shaped work. Opus-5 at `high` was the only arm to hallucinate a detail.
+
+`TESTED` — effort does change quality on browser work: on one chrome-devtools task,
+sonnet scored 3/10 at `low` against 9/10 at `high`. `mp-chrome-devtools-tester` is
+pinned to `effort: high` for that reason.
+
+`TESTED` — haiku 4.5 logs `effort={}` on every request; the field is inert there. Leave
+`effort:` unset on haiku agents.
+
+`UNVERIFIED` — the right effort for reviewing and analysis. Review is not search; do not
+extrapolate the table above to `mp-reviewer-*`, `mp-scanner-architecture`, or
+`mp-issue-analyzer`. Those agents deliberately leave `effort:` unset pending a benchmark.
+
+`UNVERIFIED` — the benchmark spawned default workflow sub-agents, not `agents/Explore.md`
+itself, so the `effort: low` pin on `Explore` is an extrapolation.
+
 ## How to verify any of this
 
 Models are observable from two independent channels:

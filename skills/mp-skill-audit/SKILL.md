@@ -139,7 +139,7 @@ Flag main-thread instructions that sweep the codebase — `Grep`, `Glob`, `rg`, 
 
 Two exemptions, both narrow: a deterministic inventory of a fixed, known path pattern (`Glob skills/*/SKILL.md`), and a search instruction that already sits **inside** a sub-agent prompt.
 
-Also flag delegated searches that state no breadth — `Explore` calibrates effort from the request, so `quick` / `medium` / `very thorough` belongs in every spawn.
+Also flag delegated searches that state no breadth — `Explore` maps `quick` / `medium` / `very thorough` to concrete stopping criteria in its body, so one of them belongs in every spawn. Breadth is search scope, not the `effort:` reasoning knob.
 
 ## Step 3: Auto-Fix
 

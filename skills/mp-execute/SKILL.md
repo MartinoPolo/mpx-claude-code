@@ -56,7 +56,7 @@ Spawn `mp-issue-analyzer` sub-agent to explore + analyze + plan:
 > Issue: [title, body, acceptance criteria]
 > Codebase: [project root]
 >
-> 1. Explore the codebase to understand relevant areas
+> 1. Explore the codebase to understand relevant areas (breadth: medium)
 > 2. Classify issue type (bug/task/feature) with rationale
 > 3. Create execution plan: files to modify/create, behaviors to test (TDD), acceptance criteria mapped to test cases, risk areas and open questions
 > 4. If external library behavior is uncertain, note it for Context7 lookup

@@ -3,6 +3,7 @@ name: mp-chrome-devtools-tester
 description: Exploratory browser click-through, console/network inspection, and performance audits via chrome-devtools MCP. Returns evidence-based findings.
 disallowedTools: Write, Edit, NotebookEdit, Agent
 model: sonnet
+effort: high
 color: blue
 ---
 

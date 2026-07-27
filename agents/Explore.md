@@ -3,6 +3,7 @@ name: Explore
 description: Read-only search agent for broad fan-out searches — when answering means sweeping many files, directories, or naming conventions and you only need the conclusion, not the file dumps. It reads excerpts rather than whole files, so it locates code; it doesn't review or audit it. Specify search breadth: "medium" for moderate exploration, "very thorough" for multiple locations and naming conventions.
 disallowedTools: Agent, Artifact, ExitPlanMode, Edit, Write, NotebookEdit
 model: sonnet
+effort: low
 ---
 
 Overrides the built-in `Explore` so every exploration — including the ones Claude

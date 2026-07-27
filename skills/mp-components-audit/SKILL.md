@@ -39,7 +39,7 @@ The inventory string seeds every sub-agent prompt — agents must audit against 
 
 ### Step 2: Fan-out audit (parallel sub-agents)
 
-See `../shared/EXPLORATION.md` for delegation policy. Spawn `Explore` sub-agents in parallel, **roughly one per base component or component group** (per user preference), each given: the inventory, the exclusion set, and one axis checklist from [CHECKLISTS.md](CHECKLISTS.md). For large component sets, run the agents `run_in_background: true` and process findings as each returns.
+See `../shared/EXPLORATION.md` for delegation policy. Spawn `Explore` sub-agents in parallel (breadth: medium), **roughly one per base component or component group** (per user preference), each given: the inventory, the exclusion set, and one axis checklist from [CHECKLISTS.md](CHECKLISTS.md). For large component sets, run the agents `run_in_background: true` and process findings as each returns.
 
 Audit axes (see [CHECKLISTS.md](CHECKLISTS.md) for the concrete patterns per axis):
 

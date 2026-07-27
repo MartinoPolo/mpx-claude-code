@@ -353,30 +353,32 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 
 ## Agents
 
-| Agent                       | Model  | Description                                                                 |
-| --------------------------- | ------ | --------------------------------------------------------------------------- |
-| Explore                     | Sonnet | **Overrides the built-in `Explore`** — read-only codebase search            |
-| mp-executor                 | Sonnet | Applies pre-analyzed edits to a scoped task chunk                           |
-| mp-issue-analyzer           | Opus   | Analyzes issues and codebase, creates execution plans                       |
-| mp-issue-finder             | Haiku  | Finds issue matching a PR branch                                            |
-| mp-tdd-executor             | Opus   | Executes strict TDD red-green-refactor loops for behaviors                  |
-| mp-ui-variant-generator     | Opus   | Generates a single UI variant in a specific design style                    |
-| mp-chrome-devtools-tester   | Sonnet | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
-| mp-checker                  | Haiku  | Runs check commands and reports failures                                    |
-| mp-context7-docs-fetcher    | Haiku  | Fetches library docs via Context7 MCP                                       |
-| mp-git-committer            | Haiku  | Stages, commits, and optionally pushes with conventional commit format      |
-| mp-pr-manager               | Haiku  | Creates or updates GitHub PRs with conventional title/body format           |
-| mp-unresolved-issue-tracker | Sonnet | Routes unresolved implementation items to sibling issues or tracking issue  |
-| mp-reviewer-best-practices  | Sonnet | Best practices and conventions reviewer (with language-specific references) |
-| mp-reviewer-code-quality    | Sonnet | DRY, naming, maintainability reviewer                                       |
-| mp-reviewer-error-handling  | Sonnet | Error handling and resilience reviewer                                      |
-| mp-reviewer-performance     | Sonnet | Performance reviewer                                                        |
-| mp-reviewer-security        | Sonnet | Security reviewer (OWASP-focused)                                          |
-| mp-reviewer-spec-alignment  | Sonnet | Spec compliance and scope reviewer                                          |
-| mp-reviewer-test-quality    | Sonnet | Test correctness, anti-patterns, redundancy, and mocking discipline reviewer|
-| mp-scanner-architecture     | Sonnet | Lightweight architecture scanner for PRD-end review                         |
+| Agent                       | Model  | Effort | Description                                                                 |
+| --------------------------- | ------ | ------ | --------------------------------------------------------------------------- |
+| Explore                     | Sonnet | Low    | **Overrides the built-in `Explore`** — read-only codebase search            |
+| mp-executor                 | Sonnet | —      | Applies pre-analyzed edits to a scoped task chunk                           |
+| mp-issue-analyzer           | Opus   | —      | Analyzes issues and codebase, creates execution plans                       |
+| mp-issue-finder             | Haiku  | —      | Finds issue matching a PR branch                                            |
+| mp-tdd-executor             | Opus   | —      | Executes strict TDD red-green-refactor loops for behaviors                  |
+| mp-ui-variant-generator     | Opus   | —      | Generates a single UI variant in a specific design style                    |
+| mp-chrome-devtools-tester   | Sonnet | High   | Exploratory browser testing, perf traces and Lighthouse via chrome-devtools MCP |
+| mp-checker                  | Haiku  | —      | Runs check commands and reports failures                                    |
+| mp-context7-docs-fetcher    | Haiku  | —      | Fetches library docs via Context7 MCP                                       |
+| mp-git-committer            | Haiku  | —      | Stages, commits, and optionally pushes with conventional commit format      |
+| mp-pr-manager               | Haiku  | —      | Creates or updates GitHub PRs with conventional title/body format           |
+| mp-unresolved-issue-tracker | Sonnet | —      | Routes unresolved implementation items to sibling issues or tracking issue  |
+| mp-reviewer-best-practices  | Sonnet | —      | Best practices and conventions reviewer (with language-specific references) |
+| mp-reviewer-code-quality    | Sonnet | —      | DRY, naming, maintainability reviewer                                       |
+| mp-reviewer-error-handling  | Sonnet | —      | Error handling and resilience reviewer                                      |
+| mp-reviewer-performance     | Sonnet | —      | Performance reviewer                                                        |
+| mp-reviewer-security        | Sonnet | —      | Security reviewer (OWASP-focused)                                          |
+| mp-reviewer-spec-alignment  | Sonnet | —      | Spec compliance and scope reviewer                                          |
+| mp-reviewer-test-quality    | Sonnet | —      | Test correctness, anti-patterns, redundancy, and mocking discipline reviewer|
+| mp-scanner-architecture     | Sonnet | —      | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
+
+`effort:` is a frontmatter-only reasoning knob, independent of `Explore`'s breadth wording (`quick`/`medium`/`very thorough`) — see [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md) § 10.
 
 Each agent's `description` **and its `tools` list** are printed into the agent roster in
 every session, so an enumerated MCP tool list is a standing context charge. Agents needing
