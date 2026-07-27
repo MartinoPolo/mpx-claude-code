@@ -5,6 +5,7 @@ export default defineConfig({
     include: [
       "hooks/__tests__/**/*.test.{ts,js}",
       "scripts/__tests__/**/*.test.{ts,js}",
+      "skills/**/__tests__/**/*.test.{ts,js}",
     ],
   },
 });

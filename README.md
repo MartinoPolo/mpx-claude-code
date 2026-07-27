@@ -191,12 +191,12 @@ session's context, in every repo. `disable-model-invocation: true` removes them 
 while the skill stays invocable as `/name` — the documented behaviour is "description not
 in context, full skill loads when you invoke".
 
-Only these 12 skills stay model-invocable, because Claude benefits from reaching for them
+Only these 13 skills stay model-invocable, because Claude benefits from reaching for them
 unprompted:
 
 `/mp-execute` · `/mp-review` · `/mp-check-fix` · `/mp-handoff` · `/mp-symlink` ·
 `/mp-ship` · `/mp-skill-create` · `/mp-grill` · `/mp-issue-create` ·
-`/mp-playwright-test` · `/mp-tutorial-create` · `/mp-podcast`
+`/mp-playwright-test` · `/mp-tutorial-create` · `/mp-podcast` · `/mp-video-to-image`
 
 The other 36 are `/`-only and cost nothing. `/mp-ship` carries the trigger phrasing for
 the whole git family, so `/mp-commit`, `/mp-commit-push`, `/mp-commit-push-pr`, `/mp-pr`
@@ -335,6 +335,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
 | `/mp-tutorial-create`         | Generate interactive self-contained HTML tutorials (topic or code-showcase) from compact markdown source — quizzes, walkthroughs, theme-aware Mermaid diagrams, and an interactive CSS playground with Froggy-style challenges — compiled to `OneDrive/tutorials/<category>/` with dashboard index |
 | `/mp-podcast`                 | Turn a topic into a two-host educational podcast MP3 in `OneDrive/Podcasts/` — parallel topic research and a personalization sweep over own projects, Obsidian notes and cloned repos (work repos opt-in), a fact-dense brief plus customize prompt, NotebookLM generation with a Gemini multi-speaker TTS fallback, ffmpeg re-encode to 64 kbps mono |
+| `/mp-video-to-image`          | Turn a YouTube exercise video into a printable cheat-sheet image — Gemini reads the video straight from its URL into a single `OneDrive/AI GENERATED/workout sheets/<slug>.md` holding the exercise table and the image prompt, copies that prompt to the clipboard and opens ChatGPT for a zero-cost manual generation; yt-dlp subtitle + ffmpeg keyframe fallback when Gemini cannot see the video |
 | `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
