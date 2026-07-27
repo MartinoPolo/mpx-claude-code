@@ -12,6 +12,7 @@
   "permissions": {
     "defaultMode": "auto"
   },
+  "model": "claude-opus-5[1m]",
   "hooks": {
     "PostToolUse": [
       {
@@ -116,7 +117,7 @@
     "github@claude-plugins-official": false,
     "typescript-lsp@claude-plugins-official": true
   },
-  "effortLevel": "high",
+  "effortLevel": "medium",
   "autoUpdatesChannel": "stable",
   "minimumVersion": "2.1.169",
   "voice": {
@@ -131,6 +132,5 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": false,
-  "voiceEnabled": true,
-  "model": "claude-opus-5[1m]"
+  "voiceEnabled": true
 }
