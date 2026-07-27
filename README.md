@@ -523,11 +523,9 @@ in the tasks panel — toggled with **Ctrl+T**. It answers "who is running right
 what effort", which the main status line cannot show.
 
 ```
-mp-reviewer-security   sonnet  medium   12.4k (6%)    Review auth changes
-Explore                sonnet  low       3.2k (1%)    Find rate-limit code
-mp-executor            sonnet  low       7.2k (3%)  ! Apply doc fixes
-    ^ mp-executor declares opus
-general-purpose        fable   ~high   150.0k (75%) ! Research OTEL attrs
+sonnet  ~low     12.4k (6%)    Review auth changes
+sonnet  ~low      3.2k (1%)    Find rate-limit code
+fable   ~high   150.0k (75%) ! Research OTEL attrs
     ^ fable is never allowed
 ```
 
@@ -537,15 +535,19 @@ red ≥90%, using each row's own `contextWindowSize` (the main bar's absolute to
 different things on rows with different windows).
 
 Rows that violate a rule in `instructions/AGENTS.md` get a red `!` and a reason line beneath: a
-`fable` spawn, a model that contradicts the agent's own frontmatter, effort above the `high` ceiling,
-or `sonnet` paired with `high`.
+`fable` spawn, effort above the `high` ceiling, or `sonnet` paired with `high`.
 
-**Effort is derived, not reported.** The stdin row carries `id, name, type, status, description,
-label, startTime, model, contextWindowSize, tokenCount, tokenSamples, cwd` — no effort, because the
-`Agent` tool has no `effort` parameter to record. It is resolved from the agent definition's
-frontmatter, falling back to the session `effortLevel`, which is genuinely what agents without a
-declared effort inherit. A `~` prefix marks that inherited case, so a derived value is never mistaken
-for a declared one. Plugin agents with no local definition always show `~`.
+**No per-agent identity, no declared effort — this is a hard limit of the data, not a bug.** The
+stdin row's `.type` field is always the literal string `"local_agent"`, for every task, regardless of
+which custom `mp-*` subagent was actually spawned — verified by capturing raw stdin payloads. Nothing
+else on the row carries the real subagent_type either, and OTEL doesn't fill the gap: its
+`gen_ai.turn.subagent_type` attribute is defined but never populated
+([anthropics/claude-code#14784](https://github.com/anthropics/claude-code/issues/14784)), and OTEL is
+push-based batch export to an external collector regardless, unusable inside a synchronous 5s tick.
+So every row can only ever show the inherited session `effortLevel` (`~`-prefixed) — a per-agent
+declared effort/model, and the drift check comparing it to frontmatter, cannot be resolved from any
+data source Claude Code currently exposes. If `anthropics/claude-code#14784` is ever fixed, that
+lookup becomes possible again.
 
 Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; ids left unemitted keep
 the built-in `name · description · tokens` row. Only live rows appear — completed agents linger
