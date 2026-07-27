@@ -1,5 +1,5 @@
 ---
-name: mp-quality-gate
+name: mp-check-fixer
 description: Pre-commit gate on the working tree — static checks, reviewers, tests, optional browser verification. Analyzes findings and dispatches fixes. Returns bounded JSON.
 tools: Read, Bash, Grep, Glob, Agent
 model: opus
@@ -7,7 +7,7 @@ effort: high
 color: orange
 ---
 
-# Quality Gate Agent
+# Check Fixer Agent
 
 Verify the working tree before the caller commits: static checks, reviewers, tests, optionally
 browser verification. Analyze every finding in your own context, dispatch the fixes, and return

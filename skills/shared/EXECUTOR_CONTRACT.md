@@ -88,4 +88,4 @@ Needs From Parent:
 ## Related
 
 - [`SUBAGENT_PROTOCOL.md`](SUBAGENT_PROTOCOL.md) — model selection, tool grants
-- `mp-quality-gate` (`agents/mp-quality-gate.md`) — the verify→analyze→fix loop that drives `mp-executor`
+- `mp-check-fixer` (`agents/mp-check-fixer.md`) — the verify→analyze→fix loop that drives `mp-executor`

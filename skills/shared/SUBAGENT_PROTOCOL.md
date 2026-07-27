@@ -82,7 +82,7 @@ through v2.1.216 sub-agents could nest by default, up to five layers. Outside th
 range, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` defaults to **0** — the `Agent` tool is
 withheld from every sub-agent regardless of its `tools:` grant.
 
-Exactly two agents grant `Agent`: `mp-quality-gate` and `mp-ci-fixer`. Both are
+Exactly two agents grant `Agent`: `mp-check-fixer` and `mp-ci-fixer`. Both are
 orchestrators whose whole purpose is to keep checks, reviewer findings, and CI logs out
 of the caller's context, which is impossible without spawning. **They are the repo's
 only upgrade exposure — re-verify both after any version change.** Every other agent

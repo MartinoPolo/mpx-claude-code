@@ -112,7 +112,7 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                                       │
          ┌─────────────────────────▼──────────────────────────────────────┐
          │ 5) Verify-Fix Loop (one nested orchestrator sub-agent)         │
-         │   mp-quality-gate: static checks + tests + 4 reviewers         │
+         │   mp-check-fixer: static checks + tests + 4 reviewers          │
          │   (--full-review: 7) + optional browser verify;                │
          │   fixes dispatched inside; returns bounded JSON only           │
          └─────────────────────────┬──────────────────────────────────────┘
@@ -149,7 +149,7 @@ Pipeline summary:
 2. Analyze issue context via `mp-issue-analyzer` (issues only)
 3. Detect checks via `detect-check-scripts.sh` (supports `CHECK_ALL` fallback logic)
 4. Execute TDD via `mp-tdd-executor` (unless `--no-tdd`)
-5. Verify-fix loop in one nested orchestrator sub-agent (`mp-quality-gate`): static checks, tests, reviewers, optional browser verify — fixes applied inside
+5. Verify-fix loop in one nested orchestrator sub-agent (`mp-check-fixer`): static checks, tests, reviewers, optional browser verify — fixes applied inside
 6. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
 7. Commit and push via `mp-git-committer`
 8. Create/update PR via `mp-pr-manager`, then ensure mergeable (conflict resolution delegated)
@@ -362,7 +362,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | --------------------------- | ------ | ------ | --------------------------------------------------------------------------- |
 | Explore                     | Sonnet | Low    | **Overrides the built-in `Explore`** — read-only codebase search            |
 | mp-executor                 | Opus   | Low    | Applies pre-analyzed edits to a scoped task chunk                           |
-| mp-quality-gate             | Opus   | High   | Pre-commit gate: checks, reviewers, tests, optional browser verify; dispatches fixes |
+| mp-check-fixer              | Opus   | High   | Pre-commit gate: checks, reviewers, tests, optional browser verify; dispatches fixes |
 | mp-ci-fixer                 | Opus   | High   | Fixes a failing CI run on a PR branch, pushes, re-watches                   |
 | mp-issue-analyzer           | Opus   | High   | Analyzes issues and codebase, creates execution plans                       |
 | mp-issue-finder             | Sonnet | Low    | Finds issue matching a PR branch                                            |
@@ -385,7 +385,7 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 
 Agents are spawned automatically by Claude Code when task context matches their description.
 
-`mp-quality-gate` and `mp-ci-fixer` are the only agents granted the `Agent` tool — both exist to keep
+`mp-check-fixer` and `mp-ci-fixer` are the only agents granted the `Agent` tool — both exist to keep
 findings, test output and CI logs out of the caller's context, which requires spawning. That makes
 them the repo's only exposure to the sub-agent nesting depth ceiling; re-verify both after a Claude
 Code upgrade. See [`SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md) § 5.

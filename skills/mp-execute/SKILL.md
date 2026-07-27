@@ -104,7 +104,7 @@ The executor handles the full red-green-refactor cycle for each behavior.
 
 ## Step 5: Verify-Fix Loop (delegated)
 
-All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn an `mp-quality-gate` sub-agent (omit `model`; it declares its own):
+All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn an `mp-check-fixer` sub-agent (omit `model`; it declares its own):
 
 > Inputs:
 >
