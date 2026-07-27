@@ -6,7 +6,7 @@ argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or check
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "2.4"
+  version: "2.5"
   category: project-management
 ---
 
@@ -104,10 +104,8 @@ The executor handles the full red-green-refactor cycle for each behavior.
 
 ## Step 5: Verify-Fix Loop (delegated)
 
-All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn a `general-purpose` sub-agent with `model: "opus"`:
+All checking, reviewing, finding analysis, and fixing happens inside ONE nested orchestrator. Spawn an `mp-quality-gate` sub-agent (omit `model`; it declares its own):
 
-> First Read `${CLAUDE_SKILL_DIR}/../shared/VERIFY_FIX_ORCHESTRATOR.md` and follow it exactly.
->
 > Inputs:
 >
 > - check_commands: [static check commands from Step 3]
@@ -117,7 +115,7 @@ All checking, reviewing, finding analysis, and fixing happens inside ONE nested 
 > - changed_scope: [branch + files changed in Step 4]
 > - browser_verification: [true only for UI-heavy changes where e2e doesn't cover the interaction]
 >
-> Return ONLY the JSON contract defined in that file.
+> Return ONLY your JSON contract.
 
 Reviewer list by flags:
 
@@ -201,12 +199,11 @@ After push (and after confirming PR is mergeable per Step 8d): `gh pr checks <pr
 
 ### 9b. Fix Loop (delegated — main never reads CI logs)
 
-If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "opus"`:
+If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn an `mp-ci-fixer` sub-agent (omit `model`; it declares its own):
 
-> First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
-> Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.
+> Fix failing run <run_id> on branch <branch> for PR #<pr_number>.
 > Local verify commands: [static + test commands from Step 3].
-> Return ONLY the JSON contract defined in that file.
+> Return ONLY your JSON contract.
 
 The agent fetches logs, diagnoses, fixes, commits+pushes, and re-watches CI — up to 3 attempts internally.
 

@@ -88,4 +88,4 @@ Needs From Parent:
 ## Related
 
 - [`SUBAGENT_PROTOCOL.md`](SUBAGENT_PROTOCOL.md) — model selection, tool grants
-- [`VERIFY_FIX_ORCHESTRATOR.md`](VERIFY_FIX_ORCHESTRATOR.md) — the verify→analyze→fix loop that drives `mp-executor`
+- `mp-quality-gate` (`agents/mp-quality-gate.md`) — the verify→analyze→fix loop that drives `mp-executor`

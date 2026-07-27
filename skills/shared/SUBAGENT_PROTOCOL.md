@@ -82,12 +82,17 @@ through v2.1.216 sub-agents could nest by default, up to five layers. Outside th
 range, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` defaults to **0** — the `Agent` tool is
 withheld from every sub-agent regardless of its `tools:` grant.
 
-No agent in this repo grants `Agent`, so nothing here breaks on an upgrade past
-2.1.216. Keep it that way: an agent that needs work done by another agent reports that
-need to its parent and lets the parent spawn. Nesting only appears where a skill spawns
-a `general-purpose` orchestrator that then spawns others
-([`VERIFY_FIX_ORCHESTRATOR.md`](VERIFY_FIX_ORCHESTRATOR.md),
-[`CI_FIX_AGENT.md`](CI_FIX_AGENT.md)) — re-verify those after any upgrade.
+Exactly two agents grant `Agent`: `mp-quality-gate` and `mp-ci-fixer`. Both are
+orchestrators whose whole purpose is to keep checks, reviewer findings, and CI logs out
+of the caller's context, which is impossible without spawning. **They are the repo's
+only upgrade exposure — re-verify both after any version change.** Every other agent
+stays nesting-free: one that needs work done by another agent reports that need to its
+parent and lets the parent spawn.
+
+Granting `Agent` in frontmatter neither creates nor worsens the exposure. A
+`general-purpose` orchestrator holds `*` and so inherits `Agent` implicitly; both forms
+lose it identically when the depth ceiling is 0. Declaring it makes the dependency
+greppable instead of invisible.
 
 Other documented ceilings: 200 sub-agents per session
 (`CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION`) and 20 concurrent

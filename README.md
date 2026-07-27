@@ -112,8 +112,8 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                                       │
          ┌─────────────────────────▼──────────────────────────────────────┐
          │ 5) Verify-Fix Loop (one nested orchestrator sub-agent)         │
-         │   shared/VERIFY_FIX_ORCHESTRATOR.md: static checks + tests +   │
-         │   4 reviewers (--full-review: 7) + optional browser verify;    │
+         │   mp-quality-gate: static checks + tests + 4 reviewers         │
+         │   (--full-review: 7) + optional browser verify;                │
          │   fixes dispatched inside; returns bounded JSON only           │
          └─────────────────────────┬──────────────────────────────────────┘
                                       │
@@ -133,8 +133,8 @@ Between sessions, use `/mp-handoff` to save context to `HANDOFF.md` for continui
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
-                        │ 9) CI Green Gate        │  fix loop delegated per
-                        │                         │  shared/CI_FIX_AGENT.md
+                        │ 9) CI Green Gate        │  fix loop delegated to
+                        │                         │  mp-ci-fixer
                         └────────────┬────────────┘
                                       │
                         ┌────────────▼────────────┐
@@ -149,11 +149,11 @@ Pipeline summary:
 2. Analyze issue context via `mp-issue-analyzer` (issues only)
 3. Detect checks via `detect-check-scripts.sh` (supports `CHECK_ALL` fallback logic)
 4. Execute TDD via `mp-tdd-executor` (unless `--no-tdd`)
-5. Verify-fix loop in one nested orchestrator sub-agent (`skills/shared/VERIFY_FIX_ORCHESTRATOR.md`): static checks, tests, reviewers, optional browser verify — fixes applied inside
+5. Verify-fix loop in one nested orchestrator sub-agent (`mp-quality-gate`): static checks, tests, reviewers, optional browser verify — fixes applied inside
 6. Triage unresolved items with `mp-unresolved-issue-tracker` (issues only)
 7. Commit and push via `mp-git-committer`
 8. Create/update PR via `mp-pr-manager`, then ensure mergeable (conflict resolution delegated)
-9. CI green gate — failures fixed by a sub-agent per `skills/shared/CI_FIX_AGENT.md`
+9. CI green gate — failures fixed by the `mp-ci-fixer` sub-agent
 10. Finalize: post the report as a PR comment, then auto-merge (default)
 
 Since 2.0, the main agent is a pure orchestrator: the review-fix, test-fix, and CI-fix loops run inside nested sub-agents that return bounded JSON — main never reads raw findings, test failures, or CI logs.
@@ -212,7 +212,6 @@ Cross-skill reference library — plain reference files, no SKILL.md, not runnab
 | -------------------------- | ------------------------------------------------------------------------------ |
 | `AUTHORING.md`             | Conventions shared by all skills and agents: naming, descriptions, size, versioning |
 | `BOARD_CONVENTION.md`      | Obsidian board format, content→type map, four-lane pipeline                    |
-| `CI_FIX_AGENT.md`          | CI-fix sub-agent contract with bounded JSON return (mp-execute, mp-ship)       |
 | `deep-modules.md`          | Deep vs shallow module design (Ousterhout)                                     |
 | `DOCUMENTATION_STRATEGY.md`| `.mpx/` CONTEXT.md + DECISIONS.md formats and skill responsibilities           |
 | `EXECUTOR_CONTRACT.md`     | Shared contract for `mp-executor` + `mp-tdd-executor`: role boundary, parent inputs, output |
@@ -223,7 +222,6 @@ Cross-skill reference library — plain reference files, no SKILL.md, not runnab
 | `PLAYWRIGHT_TESTING.md`    | Raw-Playwright reliability contract (sanity-gate, assert-don't-eyeball, auth)  |
 | `REVIEWER_PROTOCOL.md`     | Verification discipline + report format for the 7 `mp-reviewer-*` agents       |
 | `SUBAGENT_PROTOCOL.md`     | Verified rules for spawning sub-agents: model selection, tool grants, overrides |
-| `VERIFY_FIX_ORCHESTRATOR.md`| Nested verify-fix orchestrator contract (checks/reviewers/tests, bounded JSON)|
 
 ### Planning Skills
 
@@ -309,7 +307,7 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Conventions s
 | `/mp-sync-base`      | Merge target branch into current branch                               |
 | `/mp-ship`           | Ship finished work: sync base, commit, push, PR, wait for CI green, merge |
 
-`/mp-ship` delegates base sync to the `/mp-sync-base` skill and runs its CI-fix loop in a delegated sub-agent per `skills/shared/CI_FIX_AGENT.md` — it watches CI green explicitly before merging (never `gh pr merge --auto` as the gate).
+`/mp-ship` delegates base sync to the `/mp-sync-base` skill and runs its CI-fix loop in a delegated `mp-ci-fixer` sub-agent — it watches CI green explicitly before merging (never `gh pr merge --auto` as the gate).
 
 ### Deprecated Skills
 
@@ -364,6 +362,8 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | --------------------------- | ------ | ------ | --------------------------------------------------------------------------- |
 | Explore                     | Sonnet | Low    | **Overrides the built-in `Explore`** — read-only codebase search            |
 | mp-executor                 | Opus   | Low    | Applies pre-analyzed edits to a scoped task chunk                           |
+| mp-quality-gate             | Opus   | High   | Pre-commit gate: checks, reviewers, tests, optional browser verify; dispatches fixes |
+| mp-ci-fixer                 | Opus   | High   | Fixes a failing CI run on a PR branch, pushes, re-watches                   |
 | mp-issue-analyzer           | Opus   | High   | Analyzes issues and codebase, creates execution plans                       |
 | mp-issue-finder             | Sonnet | Low    | Finds issue matching a PR branch                                            |
 | mp-tdd-executor             | Opus   | Medium | Executes strict TDD red-green-refactor loops for behaviors                  |
@@ -384,6 +384,11 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for PRD-end review                         |
 
 Agents are spawned automatically by Claude Code when task context matches their description.
+
+`mp-quality-gate` and `mp-ci-fixer` are the only agents granted the `Agent` tool — both exist to keep
+findings, test output and CI logs out of the caller's context, which requires spawning. That makes
+them the repo's only exposure to the sub-agent nesting depth ceiling; re-verify both after a Claude
+Code upgrade. See [`SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md) § 5.
 
 `effort:` is a frontmatter-only reasoning knob, independent of `Explore`'s breadth wording (`quick`/`medium`/`very thorough`) — see [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md) § 10.
 

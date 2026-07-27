@@ -6,7 +6,7 @@ argument-hint: "[base-branch]"
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: git-workflow
 ---
 
@@ -106,11 +106,10 @@ If the PR has **no checks at all** (`gh pr checks` exits non-zero with "no check
 
 ## Step 6: CI Fix Loop (delegated — main never reads CI logs)
 
-On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "opus"`:
+On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn an `mp-ci-fixer` sub-agent (omit `model`; it declares its own):
 
-> First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
-> Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.
-> Return ONLY the JSON contract defined in that file.
+> Fix failing run <run_id> on branch <branch> for PR #<pr_number>.
+> Return ONLY your JSON contract.
 
 The agent fetches failed logs, diagnoses (lint/type → fix; test failure → impl vs test, harden flaky tests; infra flake → `gh run rerun --failed`), applies fixes directly or via `mp-executor`, commits+pushes via `mp-git-committer`, and re-watches CI — up to 3 attempts internally.
 

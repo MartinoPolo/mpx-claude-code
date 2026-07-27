@@ -13,9 +13,11 @@ docs when behaviour changes.
 Name the agent type at every spawn. Only a real `model` parameter selects a model — naming one
 in prose does nothing.
 
-`Explore` and every `mp-*` agent declare their own model and effort: omit both. `general-purpose`,
-`claude`, `Plan`, `fork` declare neither: pass both, or the spawn inherits the session's, the most
-expensive option.
+`Explore` and every `mp-*` agent declare their own model and effort: omit `model`. `general-purpose`,
+`claude`, `Plan`, `fork` declare neither: pass `model`, or the spawn inherits the session's, the most
+expensive option. Effort is not settable at a spawn — the `Agent` tool has no `effort` parameter, so
+those four always inherit the session's. Work that must not run at low effort belongs in an `mp-*`
+agent that declares it.
 
 Only `opus`, `sonnet`, `haiku` — never `fable`. `high` is the effort ceiling, and `sonnet` never
 pairs with `high`. Opus for orchestration, analysis, design, and implementation; sonnet `medium`
