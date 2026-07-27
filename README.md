@@ -489,10 +489,11 @@ Hook scripts in `hooks/` run automatically during Claude Code lifecycle events. 
 | `format-lint-file.js`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files (Vite Plus/Biome/Prettier/ESLint/Ruff) |
 | `post-bash-context.js`       | PostToolUse (Bash)       | Enriches context after bash commands                                       |
 | `notify-flash-beep.ps1`      | Stop                     | Flashes taskbar + plays notification sound (Windows)                       |
-| `compact-context.js`         | SessionStart (compact)   | Re-injects project context after context compaction                        |
 | `herdr-agent-state.ps1`      | SessionStart (*)         | Reports session state to the herdr integration (no-op unless `HERDR_ENV=1`) |
 
 Hooks auto-detect the project toolchain (`vite-plus` | `biome` | `classic`) via `shared.js` and branch behavior accordingly. 4 of the 9 hook scripts have test suites in `hooks/__tests__/` (`dangerous-command-guard`, `enforce-pkg-mgr`, `post-bash-context`, `pre-commit-gate`); the rest do not.
+
+`compact-context.js` was archived to `deprecated/hooks/` — it re-injected toolchain and convention reminders on `SessionStart (compact)`, but every line was already covered: the package-manager and `Grep`/`Read`/`Glob` reminders are enforced at point of use by `enforce-pkg-mgr.js`, the pre-commit check reminder by `pre-commit-gate.js`, and the git/PR conventions are re-read from `instructions/AGENTS.md` after compaction anyway. Steering what compaction *keeps* is now handled by the `## Compact instructions` block in `instructions/AGENTS.md`.
 
 **Custom notification sound:** place a `.wav` file at `~/.claude/sounds/notify.wav` — falls back to a two-note console beep if missing.
 
@@ -519,44 +520,76 @@ Status bar showing:
 
 All values come straight from Claude Code's stdin JSON in a single `jq` pass — model, session name/id, effort, context (`context_window.used_percentage` + `total_input_tokens`), cost, line edits (`cost.total_lines_*`), and quota (`rate_limits`). Fields are packed with the ASCII Unit Separator (`0x1F`) rather than a tab so empty fields never collapse under `read`.
 
-Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/context-bar.sh`.
+Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/status-line.sh`.
 
 ## Sub-Agent Status Line
 
-`scripts/subagent-bar.sh` (settings key `subagentStatusLine`) renders one row per **live** sub-agent
-in the tasks panel — toggled with **Ctrl+T**. It answers "who is running right now, on what model, at
-what effort", which the main status line cannot show.
+`scripts/subagent-status-line.sh` (settings key `subagentStatusLine`) renders one row per sub-agent in
+the tasks panel — toggled with **Ctrl+T** — plus a session-wide tally. It answers "who is running
+right now, on what model, at what effort, for how long", which the main status line cannot show.
 
 ```
-sonnet  ~low     12.4k (6%)    Review auth changes
-sonnet  ~low      3.2k (1%)    Find rate-limit code
-fable   ~high   150.0k (75%) ! Research OTEL attrs
-    ^ fable is never allowed
+● sonnet  low        1m37s  12.4k (6%)      Review auth changes
+✓ haiku   ~medium      14s   3.2k (1%)      Find rate-limit code
+✗ opus    xhigh        47s  600.0k (60%)  ! Research OTEL attrs
+    ^ effort above the high ceiling
+  Σ 5 agents this session · opus 2 sonnet 1 haiku 1 · low 2 medium 2 xhigh 1 · 941.3k tokens · 1 running
 ```
+
+Columns: **status** (`●` running cyan, `✓` completed green, `✗` failed/killed red) — **model** —
+**effort** — **elapsed** — **context** — drift marker — label.
 
 Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
-medium yellow, high orange, xhigh red, max purple. **Context** — escalates yellow ≥50%, orange ≥70%,
-red ≥90%, using each row's own `contextWindowSize` (the main bar's absolute token cut-offs would mean
-different things on rows with different windows).
+medium yellow, high orange, xhigh red, max purple, and cyan for a numeric token budget. **Context** —
+escalates yellow ≥50%, orange ≥70%, red ≥90%, using each row's own `contextWindowSize` (the main
+bar's absolute token cut-offs would mean different things on rows with different windows).
+
+**Effort is the agent's own** — read from its frontmatter or the per-invocation override, via the
+per-task `effort` field added in Claude Code **2.1.214**. A `~` prefix marks the one case where the
+value is not the agent's own: the field is absent when the agent inherits the session `effortLevel`,
+so `~medium` reads as "inherited". A numeric budget renders as `32.0k`.
+
+The **label** is the agent's live progress summary when it has one, falling back to `description` —
+so the column tracks what the agent is doing now, not the static task title it was spawned with.
+
+`tokenSamples` (a rolling history of `tokenCount`, one entry per refresh tick, capped at 16) is
+**deliberately not rendered.** A sparkline of it has to be normalized against the row's own min/max,
+because against a 1M context window every real sub-agent flatlines at the bottom — and that
+normalization destroys scale, so `+200` tokens and `+200k` draw identically. Its real information
+content is close to binary (moving vs. flat), which is not worth ten columns that the label uses
+better.
 
 Rows that violate a rule in `instructions/AGENTS.md` get a red `!` and a reason line beneath: a
-`fable` spawn, effort above the `high` ceiling, or `sonnet` paired with `high`.
+`fable` spawn, effort above the `high` ceiling, or `sonnet` paired with `high`. A numeric budget is
+exempt from the ceiling rules — it maps to no named level.
 
-**No per-agent identity, no declared effort — this is a hard limit of the data, not a bug.** The
-stdin row's `.type` field is always the literal string `"local_agent"`, for every task, regardless of
-which custom `mp-*` subagent was actually spawned — verified by capturing raw stdin payloads. Nothing
-else on the row carries the real subagent_type either, and OTEL doesn't fill the gap: its
-`gen_ai.turn.subagent_type` attribute is defined but never populated
-([anthropics/claude-code#14784](https://github.com/anthropics/claude-code/issues/14784)), and OTEL is
-push-based batch export to an external collector regardless, unusable inside a synchronous 5s tick.
-So every row can only ever show the inherited session `effortLevel` (`~`-prefixed) — a per-agent
-declared effort/model, and the drift check comparing it to frontmatter, cannot be resolved from any
-data source Claude Code currently exposes. If `anthropics/claude-code#14784` is ever fixed, that
-lookup becomes possible again.
+**Finished agents.** Terminal rows stay in the payload for 30s (the bundle's eviction delay) and then
+vanish. To outlive that, every task seen is accumulated into
+`~/.claude/subagent-statusline-state/<session_id>.tsv`, and the `Σ` line reports the whole session:
+agent count, breakdown by model tier and effort level, total tokens, and how many are still running.
+A task's tokens and elapsed time freeze the first tick it is seen terminal, so a finished agent stops
+accruing time. State files are pruned after 7 days, on the first tick of a new session. Because the
+panel only renders rows for ids present in the current payload, the `Σ` line has nowhere of its own
+to live and hangs off the last row — so it disappears with the last row, 30s after the final agent.
+
+**No per-agent identity — a hard limit of the data, not a bug.** `.type` is always the literal string
+`"local_agent"`, and `.name` is always `null` for Task-tool sub-agents (it is the `agentNameRegistry`
+entry, which only teammates and named background agents get; it is rendered when present). Both
+verified by capturing raw stdin payloads. The task object carries a real `agentType` internally — the
+bundle filters on `agentType !== "main-session"` — but it is deliberately not copied into this
+payload, and OTEL doesn't fill the gap either: its `gen_ai.turn.subagent_type` attribute is defined
+but never populated ([anthropics/claude-code#14784](https://github.com/anthropics/claude-code/issues/14784)),
+and OTEL is push-based batch export to an external collector regardless, unusable inside a
+synchronous 5s tick. So *declared-vs-actual model drift* stays uncheckable here; only the tier/effort
+rules that need no identity run.
+
+To inspect the raw payload yourself, `touch ~/.claude/subagent-statusline-debug` — every tick is then
+appended to `~/.claude/subagent-statusline-debug.jsonl`. Delete the marker file to stop. The gate is
+a file rather than an env var because the panel runs the script from inside Claude Code, where there
+is no shell in which to export one.
 
 Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; ids left unemitted keep
-the built-in `name · description · tokens` row. Only live rows appear — completed agents linger
-briefly, then drop. For history that survives the panel, use
+the built-in `name · description · tokens` row. For history that survives the session entirely, use
 `scripts/analyze-subagent-models.py`, which reads the same data from
 `~/.claude/projects/**/*.jsonl` after the fact.
 
