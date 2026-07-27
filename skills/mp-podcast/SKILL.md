@@ -114,7 +114,7 @@ about 15 lines; describe work-repo patterns in prose instead of pasting propriet
 
 Follow [`reference/NOTEBOOKLM_FLOW.md`](reference/NOTEBOOKLM_FLOW.md): create notebook → add
 the brief as a source → wait → `generate audio --prompt-file <prompt> --format deep-dive
---length <length> --json` → background `general-purpose` waiter with `model: "sonnet"` →
+--length <length> --json` → background `general-purpose` waiter with `model: "haiku"` →
 `download audio`. Full CLI surface: [`../notebooklm/SKILL.md`](../notebooklm/SKILL.md).
 
 Length maps straight through, and the same choice sets the prompt's closing duration line:

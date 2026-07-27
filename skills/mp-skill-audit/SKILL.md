@@ -111,7 +111,7 @@ Runs once for the repo. Glob `skills/*/SKILL.md`, `agents/*.md`, `hooks/*` and d
 
 ### Check 13: Model Specification
 
-Rules and evidence: [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) §§ 1-3. Only a real `model` parameter selects a model; prose is measured at 0% obeyed. Three distinct defects:
+Rules and evidence: [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) §§ 1-3. Only a real `model` parameter selects a model; prose is measured at 0% obeyed, and `effort` is not a call-site parameter at all. Four distinct defects:
 
 **13a — Prose model mention (no-op).** Grep the body case-insensitively for `sonnet`, `haiku`, `opus`, `fable`. Flag every occurrence that sits in an English sentence rather than in a `model:` field — `Spawn a Sonnet sub-agent`, `(Haiku)`, `10 Sonnet Sub-Agents`, `the Opus orchestrator`. Each one reads as an instruction and does nothing.
 
@@ -123,7 +123,9 @@ Prose that describes the *main thread* rather than a spawn ("handle this at the 
 
 **13b — Redundant `model` parameter.** Flag a `model` parameter passed to an agent type whose `agents/<type>.md` declares its own `model` — the call site duplicates the declaration and drifts when the agent changes.
 
-**13c — Missing `model` parameter.** Flag a spawn of `general-purpose`, `claude`, `Plan`, or `fork` with no `model` parameter. These declare no model, so they inherit the main conversation's model — the most expensive option. State the intended model explicitly.
+**13c — Missing `model` parameter.** Flag a spawn of `general-purpose`, `claude`, `Plan`, or `fork` with no `model` parameter. These declare no model, so they inherit the main conversation's model — the most expensive option. State the intended model explicitly. Also flag `model: "fable"` — only `opus`, `sonnet` and `haiku` are permitted.
+
+**13d — `effort` passed to the `Agent` tool.** The tool takes `description`, `isolation`, `model`, `prompt`, `subagent_type` and nothing else, so an `effort:` at a call site is inert text that reads as an instruction — the same defect as 13a. Flag it and delete it. Effort is a frontmatter-only lever: a spawn that genuinely needs a non-default effort has to be a real `mp-*` agent with `effort:` pinned in its own frontmatter, not a `general-purpose` or `claude` call site. Where the call site only wants to nudge depth, say so in the prompt text instead ("keep the analysis brief — this is a scan").
 
 ### Check 14: Shared Reference Integrity
 

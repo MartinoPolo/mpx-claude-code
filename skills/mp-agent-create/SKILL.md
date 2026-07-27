@@ -149,7 +149,8 @@ on `inherit` gets silently expensive the moment the session model changes.
 - GitHub CLI: specify exact `gh` command (e.g., `gh pr list`)
 - Bash commands: name exact command/script
 - Sub-agent spawns: name the exact agent type, and pass `model` only when that type
-  declares none — [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3
+  declares none — [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3.
+  `effort` is not a spawn parameter; pin it in the agent's frontmatter instead (§ 10)
 - Describe a model in prose nowhere: only a real `model` parameter selects one (§ 1)
 
 ### Step 4: Validate Against Guidelines

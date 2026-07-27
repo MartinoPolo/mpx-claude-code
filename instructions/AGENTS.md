@@ -13,9 +13,13 @@ docs when behaviour changes.
 Name the agent type at every spawn. Only a real `model` parameter selects a model — naming one
 in prose does nothing.
 
-`Explore` and every `mp-*` agent declare their own model: omit `model`. `general-purpose`,
-`claude`, `Plan`, `fork` declare none: pass one, or the spawn inherits the session model, the
-most expensive option.
+`Explore` and every `mp-*` agent declare their own model and effort: omit both. `general-purpose`,
+`claude`, `Plan`, `fork` declare neither: pass both, or the spawn inherits the session's, the most
+expensive option.
+
+Only `opus`, `sonnet`, `haiku` — never `fable`. `high` is the effort ceiling, and `sonnet` never
+pairs with `high`. Opus for orchestration, analysis, design, and implementation; sonnet `medium`
+for review, `low` for exploration; haiku only for bounded work needing no judgment.
 
 Delegate codebase searches to `Explore`; state breadth `quick`, `medium`, or `very thorough`.
 It skips CLAUDE.md, so restate what the search depends on inside the prompt.

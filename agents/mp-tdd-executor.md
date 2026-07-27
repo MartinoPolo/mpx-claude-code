@@ -3,6 +3,7 @@ name: mp-tdd-executor
 description: Executes TDD red-green-refactor cycles. Receives behaviors to implement, writes tests first, then minimal code to pass.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
+effort: medium
 color: green
 ---
 

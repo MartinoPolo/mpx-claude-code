@@ -106,7 +106,7 @@ If the PR has **no checks at all** (`gh pr checks` exits non-zero with "no check
 
 ## Step 6: CI Fix Loop (delegated — main never reads CI logs)
 
-On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "sonnet"`:
+On CI failure, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn a `general-purpose` sub-agent with `model: "opus"`:
 
 > First Read `${CLAUDE_SKILL_DIR}/../shared/CI_FIX_AGENT.md` and follow it exactly.
 > Then fix failing run <run_id> on branch <branch> for PR #<pr_number>.

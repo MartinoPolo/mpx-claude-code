@@ -105,6 +105,9 @@ Other valid frontmatter fields, used only when needed: `arguments`, `user-invoca
   that names no type leaves tools and model to chance
 - Pass `model` **only** for types that declare none — `general-purpose`, `claude`,
   `Plan`, `fork`. Omit it for every `mp-*` agent and for `Explore`
+- `effort` is not an `Agent` tool parameter, so a call site cannot set it. A spawn that
+  needs a specific effort must be a real `mp-*` agent with `effort:` in its frontmatter;
+  otherwise nudge depth through the prompt text
 - Never name a model in prose. "Spawn a Sonnet sub-agent" is measured at 0% obeyed —
   it reads like an instruction and does nothing
 - Delegate codebase searches to `Explore` with the breadth stated
@@ -187,7 +190,8 @@ Before finalizing, verify:
 - [ ] Category is set correctly in metadata
 - [ ] All tool references are explicit (exact agent names, `gh` commands, script paths)
 - [ ] Every spawn instruction names an agent type
-- [ ] `model` passed only to `general-purpose`, `claude`, `Plan`, `fork` — omitted elsewhere
+- [ ] `model` passed to `general-purpose`, `claude`, `Plan`, `fork` — omitted elsewhere
+- [ ] No `effort` parameter on any spawn — it is frontmatter-only
 - [ ] No model named in prose anywhere in the body
 - [ ] Codebase searches delegated to `Explore` rather than run in the main thread
 - [ ] Shared rules linked, not restated

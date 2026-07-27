@@ -52,7 +52,7 @@ For each interrupted `agentId`, in order:
    - Failure (`"No transcript found for agent ID"`) — the transcript did not survive. Go to the fallback.
 2. Fallback: spawn a fresh `Agent` scoped to **only the remaining work** from Step 2, pointed at the surviving artifacts. Instruct it to inventory what exists first and fill gaps, not restart from zero.
 
-Match the fresh agent's type to the original task (e.g. `mp-executor`, `mp-chrome-devtools-tester`). Omit `model` for agents that define their own; pass it explicitly when resuming as `general-purpose` or `claude`, which do not.
+Match the fresh agent's type to the original task (e.g. `mp-executor`, `mp-chrome-devtools-tester`). Omit `model` for agents that define their own; pass it explicitly when resuming as `general-purpose` or `claude`, which do not — match the original task's shape (`opus` for edits and orchestration, `sonnet` for search and review, `haiku` for a poll or a single command).
 
 ### Step 4: Recover orphaned background tasks
 

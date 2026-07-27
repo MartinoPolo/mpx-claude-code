@@ -38,7 +38,7 @@ Step 5 returns immediately with `status: pending`. Audio takes 10-20 minutes.
 
 ## Waiting without blocking
 
-Hand the wait to a background `general-purpose` sub-agent with `model: "sonnet"` — it declares
+Hand the wait to a background `general-purpose` sub-agent with `model: "haiku"` — it declares
 no model of its own ([`../../shared/SUBAGENT_PROTOCOL.md`](../../shared/SUBAGENT_PROTOCOL.md)
 § 3). Give it the notebook id, the task id, the output path, and this instruction:
 
