@@ -3,10 +3,10 @@ name: mp-design-refine
 description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the GitHub issues that were gated on the design."
 when_to_use: "User asks to refine a design, accept or select a variant, polish a mockup, or refine all pending designs."
 argument-hint: "all | <variant-letter> [refinement requirements...]"
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(mkdir *), Bash(ls *), Bash(gh *), Bash(npx *), Bash(pnpm *), Bash(yarn *), Bash(bunx *), Bash(bun *), mcp__chrome-devtools__new_page
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(npx *), Bash(pnpm *), Bash(yarn *), Bash(bunx *), mcp__chrome-devtools__new_page
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: design
 ---
 

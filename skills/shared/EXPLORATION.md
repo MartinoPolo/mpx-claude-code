@@ -78,7 +78,13 @@ runtime — `env | grep '^MPX_'` — rather than guessing.
 | `MPX_CLONED`         | Cloned OSS repositories  |
 | `MPX_APPS`           | Local apps               |
 | `MPX_ONEDRIVE`       | OneDrive root            |
+| `MPX_AI_GENERATED`   | AI-generated assets      |
 | `MPX_OBSIDIAN_VAULT` | Obsidian vault           |
+
+Every skill deliverable meant for the user — podcasts, tutorials, video sheets —
+lands under `MPX_AI_GENERATED` in an all-caps, underscore-prefixed folder
+(`_PODCASTS`, `_TUTORIALS`, `_VIDEO_SHEETS`), one sub-folder per run holding the
+inputs, the prompt, and the finished asset together.
 
 Values are per-machine and never committed — this repo is public. Treat an unset
 variable as unavailable and say so; do not substitute a guessed path.

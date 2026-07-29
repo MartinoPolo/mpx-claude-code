@@ -3,10 +3,10 @@ name: mp-setup-react-native
 description: "Creates a React and React Native monorepo from template, with GitHub repo, branch protection, and CI."
 argument-hint: <project-name>
 disable-model-invocation: true
-allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
+allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: setup
 ---
 
@@ -78,7 +78,7 @@ EOF
 - Require PR for merges
 - Require CI checks to pass
 - No required reviewers
-- Do not enforce for admins
+- Leave admin enforcement off
 
 ### Step 5: Install Dependencies and Verify
 
@@ -88,7 +88,7 @@ pnpm --dir <project-path> --filter web run check:all
 pnpm --dir <project-path> --filter shared run check:all
 ```
 
-If checks fail, report errors but do NOT abort. Continue to next steps.
+If checks fail, report errors and continue to the next steps.
 
 ### Step 6: Initialize .mpx documentation
 
@@ -157,7 +157,7 @@ If the current terminal is **not elevated**, inform the user:
 > ```
 > Alternatively, enable Windows Developer Mode to allow symlinks without admin.
 
-Do NOT abort setup if symlinking fails — report the manual command and continue.
+If symlinking fails, report the manual command and continue.
 
 #### Detect mpx-claude-code repo location
 
@@ -210,7 +210,7 @@ packages/
 - Always use pnpm (standardized package manager)
 - Template repo name: `template-react-native-monorepo` (user's GitHub account)
 - No Svelte MCP prompt (this is React, not Svelte)
-- If checks fail, report errors but don't abort
+- If checks fail, report errors and continue
 - Branch protection: require PR + require CI checks, no required reviewers
 - Always use `git -C <path>` instead of `cd <path> && git`
 

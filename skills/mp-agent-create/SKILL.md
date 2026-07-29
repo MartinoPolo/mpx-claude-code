@@ -3,10 +3,10 @@ name: mp-agent-create
 description: "Creates a new Claude Code sub-agent following this repo's conventions, with a review checklist."
 argument-hint: "[agent name or description]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
+allowed-tools: Read, Write, Edit, Agent
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: utility
 ---
 

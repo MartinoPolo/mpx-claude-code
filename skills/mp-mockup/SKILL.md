@@ -3,10 +3,10 @@ name: mp-mockup
 description: "Generates self-contained HTML variant mockups from a design brief, one by default or N in parallel, and opens them for comparison."
 when_to_use: "User asks to create a mockup, mock up a component, visualize a design, or produce design variants."
 argument-hint: "[count] [component-name or 'all']"
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash(mkdir *), Bash(ls *), mcp__chrome-devtools__new_page, mcp__chrome-devtools__list_pages
+allowed-tools: Read, Write, Glob, Grep, Agent, mcp__chrome-devtools__new_page, mcp__chrome-devtools__list_pages
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: design
 ---
 

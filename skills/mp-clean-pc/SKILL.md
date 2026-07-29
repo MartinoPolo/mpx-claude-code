@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Agent, Artifact, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: utility
 ---
 

@@ -31,8 +31,9 @@ env | grep '^MPX_' | sort
 ```
 
 `MPX_PROJECTS` personal projects · `MPX_WORK` work repos · `MPX_CLONED` cloned OSS
-repos · `MPX_APPS` local apps · `MPX_ONEDRIVE` OneDrive root · `MPX_OBSIDIAN_VAULT`
-Obsidian vault. Any that is unset is simply unavailable — say so instead of guessing.
+repos · `MPX_APPS` local apps · `MPX_ONEDRIVE` OneDrive root · `MPX_AI_GENERATED`
+AI-generated assets · `MPX_OBSIDIAN_VAULT` Obsidian vault. Any that is unset is simply
+unavailable — say so instead of guessing.
 
 ## Library documentation
 

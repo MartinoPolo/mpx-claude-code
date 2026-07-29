@@ -7,7 +7,7 @@ Camera-origin images and anything inside a memories/keep/favourites/album folder
 reported as Protected. Everything else older than -OlderThanMonths is a Candidate.
 
 .EXAMPLE
-powershell -NoProfile -File Find-Screenshots.ps1 -Root "C:\Users\me" -OlderThanMonths 3 -OutCsv "$env:TEMP\shots.csv"
+powershell -NoProfile -File Find-Screenshots.ps1 -Root "$env:USERPROFILE" -OlderThanMonths 3 -OutCsv "$env:TEMP\shots.csv"
 #>
 [CmdletBinding()]
 param(

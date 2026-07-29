@@ -2,10 +2,10 @@
 name: mp-architecture-review
 description: "Reviews codebase architecture and opens a refactor issue with the findings."
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(git *), AskUserQuestion, Agent
+allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.6"
+  version: "0.7"
   category: planning
 ---
 
@@ -25,7 +25,7 @@ Before starting:
 
 ### 1. Explore the codebase
 
-Spawn `Explore` sub-agent (breadth: very thorough) to navigate the codebase naturally. Do NOT follow rigid heuristics — explore organically and note where you experience friction:
+Spawn `Explore` sub-agent (breadth: very thorough) to navigate the codebase naturally. Explore the codebase organically, noting where you experience friction, rather than following rigid heuristics:
 
 - Where does understanding one concept require bouncing between many small files?
 - Where are modules so shallow that the interface is nearly as complex as the implementation?
@@ -44,7 +44,7 @@ Present a numbered list of deepening opportunities. For each candidate, show:
 - **Dependency category**: See `${CLAUDE_SKILL_DIR}/REFERENCE.md` for the four categories
 - **Test impact**: What existing tests would be replaced by boundary tests
 
-Do NOT propose interfaces yet. Ask the user: "Which of these would you like to explore?"
+Ask the user which candidate to explore next — interfaces come later, in Step 5: "Which of these would you like to explore?"
 
 ### 3. User picks a candidate
 
@@ -85,7 +85,7 @@ After comparing, give your own recommendation: which design you think is stronge
 
 ### 7. Create GitHub issue
 
-Create a refactor RFC as a GitHub issue. Use the template in `${CLAUDE_SKILL_DIR}/REFERENCE.md`. Do NOT ask the user to review before creating — just create it and share the URL.
+Create a refactor RFC as a GitHub issue. Use the template in `${CLAUDE_SKILL_DIR}/REFERENCE.md`. Create the issue immediately and share the URL — skip a review step first.
 
 ```bash
 gh issue create --title "refactor: [module description]" --label "refactor" --body "$(cat <<'EOF'

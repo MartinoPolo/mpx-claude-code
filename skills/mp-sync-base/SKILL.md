@@ -1,11 +1,11 @@
 ---
 name: mp-sync-base
-description: "Merges the target base branch into the current branch."
+description: "Merges the target base branch into the current branch, resolving conflicts and pushing the result."
 disable-model-invocation: true
-allowed-tools: Bash(git *), Agent, Read, Edit, Bash(gh *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
+allowed-tools: Bash(git *), Read, Edit, Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
-  version: "1.3"
+  version: "1.4"
   category: git-workflow
 ---
 

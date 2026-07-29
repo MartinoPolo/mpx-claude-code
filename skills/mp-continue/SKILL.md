@@ -3,10 +3,10 @@ name: mp-continue
 description: "Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then resumes it."
 argument-hint: "[optional focus or task to resume first]"
 disable-model-invocation: true
-allowed-tools: Agent, SendMessage, TaskList, Bash, Read, Grep, Glob
+allowed-tools: Agent, SendMessage, TaskList, Bash, PowerShell, Read, Grep, Glob
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: utility
 ---
 

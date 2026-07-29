@@ -3,10 +3,10 @@ name: mp-review
 description: "Reviews a branch, working diff, or PR across specialist axes (security, performance, tests, quality) and optionally applies the fixes."
 when_to_use: "User asks to review code, changes, or a pull request."
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
-allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git branch --show-current *), Bash(git branch -r *), Bash(git merge-base *), Bash(git diff *), Bash(git log *), Bash(gh pr view *), Bash(gh pr diff *), Bash(gh pr list *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
+allowed-tools: Read, Write, Agent, AskUserQuestion, Bash(git branch --show-current *), Bash(git diff *), Bash(gh pr view *), Bash(gh pr diff *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
-  version: "0.6"
+  version: "0.7"
   category: code-review
 ---
 
@@ -28,8 +28,8 @@ If `scope` missing or invalid, ask the user.
 ### Optional
 
 - Coverage parameter decides reviewer set:
-  - `full` → 6 reviewers
-  - `partial` or `half` → 3 reviewers
+  - `full` → 7 reviewers
+  - `partial` or `half` → 4 reviewers
 
 Default coverage: `full`
 
@@ -102,7 +102,7 @@ Report shape:
 - Nice-to-Have
   - Minor observations
 
-If no findings, do NOT create report file. Return clean summary in conversation.
+If no findings, skip the report file and return a clean summary in conversation.
 
 ### Step 3: Autofix decision
 

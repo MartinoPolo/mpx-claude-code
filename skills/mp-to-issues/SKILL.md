@@ -3,10 +3,10 @@ name: mp-to-issues
 description: "Breaks a PRD issue into vertical-slice sub-issues with blocking relationships."
 argument-hint: <PRD issue URL or number>
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(gh *)
+allowed-tools: Read, Agent, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.10"
+  version: "0.11"
   category: project-management
 ---
 
@@ -17,13 +17,13 @@ Break a PRD GitHub issue into independently implementable vertical slices. $ARGU
 ## Rules
 
 - Fetch and read the PRD issue AND its comments before anything else
-- Resolve all ambiguities before decomposition — ask the user, don't guess
+- Resolve all ambiguities before decomposition by asking the user
 - Vertical slices, not horizontal layers — each issue cuts through all relevant layers
 - Each issue must have acceptance criteria and map to PRD requirements
 - Show full breakdown to user before creating any issues
 - Use `gh` CLI for all GitHub operations
 - Label every sub-issue with `task` and either `HITL` or `AFK` (create labels if missing)
-- HITL/AFK classification lives on the label only — never in the issue body
+- HITL/AFK classification lives on the label only
 - Link every sub-issue as a native GitHub sub-issue of the PRD using the `addSubIssue` GraphQL mutation
 
 ## Workflow
@@ -60,7 +60,7 @@ Before any decomposition, review the PRD body and comments for ambiguous or cont
 - Only split into a follow-up round when answers to earlier questions would materially change later ones.
 - Provide a recommended answer with each question.
 - If a question can be answered by exploring the codebase, explore instead of asking.
-- Do not proceed to Step 3 until every question is answered.
+- Proceed to Step 3 only after every question is answered.
 
 **Exception — question-heavy sub-issue:** if a large cluster of questions applies to one specific slice (not the PRD overall), defer those questions by creating that sub-issue as HITL with the unanswered questions listed in its blockquote.
 

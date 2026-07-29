@@ -3,10 +3,10 @@ name: mp-consolidate-context
 description: "Consolidates CONTEXT.md by removing duplicates and outdated items and tightening the language."
 argument-hint: "[path to CONTEXT.md]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Glob
 metadata:
   author: MartinoPolo
-  version: "2.1"
+  version: "2.2"
   category: utility
 ---
 
@@ -39,7 +39,7 @@ Read the full file. Scan for each issue type and build a findings list:
 
 ### Step 2: Rewrite
 
-Apply all changes directly — do not ask for confirmation. Produce the consolidated file:
+Apply all changes directly and automatically. Produce the consolidated file:
 
 - § Domain Language: one sentence max per definition, definition-list format (`**Term** — Definition.`)
 - § Core Features: index only (name + status + PRD#), no implementation details

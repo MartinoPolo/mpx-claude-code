@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*)
 metadata:
   author: MartinoPolo
-  version: "0.9"
+  version: "0.10"
   category: project-management
 ---
 
@@ -57,7 +57,7 @@ git checkout -b batch/<slug>
 For each work item, in order:
 
 1. Set its Task `in_progress`.
-2. Spawn a `claude` sub-agent with `model: "opus"` and a prescriptive prompt — the plan is already made, so it applies rather than re-decides: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only — do not push or open a PR.**
+2. Spawn a `claude` sub-agent with `model: "opus"` and a prescriptive prompt — the plan is already made, so it applies rather than re-decides: the exact issue/board text, the resolved screenshots, the target files (run a quick `Explore` first if the files are unknown), requirements as REQ-1..N, and the **exact** conventional commit message (`<type>: <subject>` plus a `Refs #<N>` trailer when an issue exists). Instruct it to **commit to the current branch only, leaving push and PR creation for Step 7.**
 3. On the completion notification, confirm the commit landed. If the sub-agent died mid-run (e.g. `API Error: Overloaded`) leaving a partial edit, diagnose and finish/commit it yourself, or re-spawn — never leave a half-applied fix.
 4. Mark the Task `completed`.
 
@@ -78,7 +78,7 @@ bash $HOME/.claude/scripts/detect-check-scripts.sh
 - **Static checks** (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`) — always.
 - **Unit tests** (`TEST`/`TEST_UNIT`) — always; **e2e** (`TEST_E2E`) when source, route, component, spec, config, or dependency files changed.
 
-Fix failures via an `mp-executor` sub-agent, up to 3 iterations. Still failing → **hard blocker**: stop, report, do not open the PR.
+Fix failures via an `mp-executor` sub-agent, up to 3 iterations. Still failing → **hard blocker**: stop and report, leaving the PR unopened.
 
 ### 5b. Code review (batch diff)
 

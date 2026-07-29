@@ -12,7 +12,7 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "opus[1m]",
+  "model": "sonnet",
   "disableClaudeAiConnectors": true,
   "hooks": {
     "PostToolUse": [

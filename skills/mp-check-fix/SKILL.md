@@ -6,7 +6,7 @@ compatibility: Requires package.json scripts for check:all/check-all or typechec
 allowed-tools: Bash(bash *detect-check-scripts*), Bash(*run build*), Bash(*run check*), Bash(*run check:all*), Bash(*run check-all*), Bash(*run typecheck*), Bash(*run type-check*), Bash(*run tsc*), Bash(*run check:types*), Bash(*run lint*), Bash(*run eslint*), Bash(*run lint:check*), Bash(*run lint:css*), Bash(*run format*), Bash(*run fmt*), Bash(*run format:check*), Bash(*run prettier*), Bash(cd * && *run build*), Bash(cd * && *run check*), Bash(cd * && *run check:all*), Bash(cd * && *run check-all*), Bash(cd * && *run typecheck*), Bash(cd * && *run type-check*), Bash(cd * && *run tsc*), Bash(cd * && *run check:types*), Bash(cd * && *run lint*), Bash(cd * && *run eslint*), Bash(cd * && *run lint:check*), Bash(cd * && *run lint:css*), Bash(cd * && *run format*), Bash(cd * && *run fmt*), Bash(cd * && *run format:check*), Bash(cd * && *run prettier*), Read, Edit, Glob, Grep, Bash(yarn *), Bash(npm *), Bash(pnpm *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: code-review
 ---
 
@@ -51,7 +51,7 @@ Per scope:
 - If `CHECK_ALL` exists: run `CHECK_ALL`, then `BUILD` (if present).
 - If `CHECK_ALL` does not exist: run detected `TYPECHECK`, `LINT`, `FORMAT`, then `BUILD`.
 
-Never filter checks by user arguments. The detector output fully determines what runs.
+Run exactly what the detector output specifies, regardless of any user arguments.
 
 ## Step 3: Run Checks
 
@@ -117,6 +117,6 @@ Scope | Command | Status | Notes
 ## Rules
 
 - Fix underlying issues rather than suppressing (`@ts-ignore`, `eslint-disable`)
-- Keep tests truthful; do not weaken assertions to force a pass
+- Keep tests truthful: assertions must verify real passing behavior
 - If a fix needs architectural changes outside check-fix scope, report a blocker
 - For monorepos, report failing scopes explicitly

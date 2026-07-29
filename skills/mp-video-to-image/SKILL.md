@@ -3,10 +3,10 @@ name: mp-video-to-image
 description: "Turns any YouTube video into a printable one-page sheet image, reading the video with the Gemini API and handing the composed prompt to ChatGPT for generation. Workout videos get a dedicated exercise mode; everything else becomes an infographic overview."
 when_to_use: "User asks for a cheat sheet, overview image, infographic or visual summary of a YouTube video — including a workout or exercise video."
 argument-hint: "<youtube-url> [focus instructions] [--mode exercise|generic] [--out <dir>] [--model <id>]"
-allowed-tools: Read, Write, Bash(env*), Bash(node *), Bash(yt-dlp*), Bash(ffmpeg*)
+allowed-tools: Read, Write, Bash(node *), Bash(yt-dlp*), Bash(ffmpeg*)
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: utility
 ---
 

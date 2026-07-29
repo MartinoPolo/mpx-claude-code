@@ -2,10 +2,10 @@
 name: mp-fallow-fix
 description: "Diagnoses and fixes fallow dead-code audit failures, suppressing or baselining findings when justified."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Glob, Grep, Bash(*fallow*), Bash(pnpm *fallow*), Bash(git diff*), Bash(git log*)
+allowed-tools: Read, Edit, Bash(*fallow*), Bash(pnpm *fallow*), Bash(pnpm remove*)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: code-quality
 ---
 
@@ -45,7 +45,7 @@ For each issue, determine the correct action:
 | High-complexity function that can't be split now  | `// fallow-ignore-next-line complexity`                                      |
 | Entire generated file                             | `// fallow-ignore-file` at top                                               |
 
-**Never** use blanket `// fallow-ignore-next-line` without specifying the kind.
+**Always** specify the suppression kind in `// fallow-ignore-next-line`.
 
 ### Available suppression kinds
 
@@ -74,6 +74,6 @@ Re-run the original failing check:
 
 - Prefer removing dead code over suppressing it
 - Every suppression must have a clear reason (public API, framework requirement, etc.)
-- Never suppress to make checks pass without understanding why the code is unused
+- Suppress only after understanding why the code is unused
 - Always commit baseline updates in the same PR as the code changes that caused them
 - `stale-suppressions` is set to `error` — orphaned suppression comments will fail checks

@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: code-review
 ---
 
@@ -28,7 +28,7 @@ Parse `$ARGUMENTS` as file/s or folder/s scope, then build meaningful module gro
 
 - Group by feature/module boundaries (example: full dashboard module)
 - Preserve relationships between files in each group
-- Never split one logical module across unrelated groups
+- Keep each logical module within a single group
 
 Rules:
 
@@ -87,7 +87,7 @@ Required actions:
 1) Apply deduplication and repetition removal.
 2) Remove dead/unused code safely.
 3) Keep public contracts stable unless plan explicitly allows change.
-4) Avoid broad rewrites and feature changes.
+4) Keep edits narrow and scoped to the approved plan.
 5) Run targeted checks/tests for touched files when available.
 
 Required output:

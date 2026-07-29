@@ -6,7 +6,7 @@ argument-hint: "[skill name or description]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.7"
   category: utility
 ---
 
@@ -108,8 +108,8 @@ Other valid frontmatter fields, used only when needed: `arguments`, `user-invoca
 - `effort` is not an `Agent` tool parameter, so a call site cannot set it. A spawn that
   needs a specific effort must be a real `mp-*` agent with `effort:` in its frontmatter;
   otherwise nudge depth through the prompt text
-- Never name a model in prose. "Spawn a Sonnet sub-agent" is measured at 0% obeyed —
-  it reads like an instruction and does nothing
+- Name a model only through a real `model:` parameter — prose is measured at 0% obeyed
+  and reads like an instruction while doing nothing
 - Delegate codebase searches to `Explore` with the breadth stated
   ([`../shared/EXPLORATION.md`](../shared/EXPLORATION.md))
 
@@ -195,4 +195,8 @@ Before finalizing, verify:
 - [ ] No model named in prose anywhere in the body
 - [ ] Codebase searches delegated to `Explore` rather than run in the main thread
 - [ ] Shared rules linked, not restated
-- [ ] Instructions are positive (say what to do, not what to avoid)
+- [ ] Instructions are phrased positively, stating what to do
+- [ ] Every filesystem root outside the working directory is an `MPX_*` variable — no
+      personal absolute path, and no username, in prose, examples or scripts
+- [ ] A skill that produces an asset for the user writes it under `MPX_AI_GENERATED`,
+      one folder per run, and fails loudly when the root is unresolvable

@@ -1,11 +1,11 @@
 ---
 name: mp-decompose
-description: "Splits a large source file into logical modules while preserving behavior."
+description: "Splits a large source file or a folder of them into logical modules while preserving behavior."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: refactor
 ---
 
@@ -34,7 +34,7 @@ Parse `$ARGUMENTS` into explicit targets (files or folders).
 Spawn one `general-purpose` sub-agent with `model: "opus"` per large-file unit.
 
 - Use fresh context per unit
-- Never mix unrelated large files in one subagent
+- Keep each large file's decomposition in its own subagent
 - For multi-file requests, always spawn separate subagents in parallel
 
 Use this exact prompt shape for each unit:
@@ -67,7 +67,7 @@ Required output:
 - Residual risks (if any)
 ```
 
-Subagent must fail fast if it cannot split into multiple modules safely.
+Subagent fails fast when a safe multi-module split isn't possible.
 
 ### Step 3: Validate Preservation
 

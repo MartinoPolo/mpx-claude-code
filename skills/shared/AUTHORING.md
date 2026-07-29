@@ -95,6 +95,20 @@ markdown (`skills.md:303`). Arbitrary environment variables are **not** interpol
 any markdown — not SKILL.md, not agent files, not CLAUDE.md. A written `$MPX_WORK` is
 literal text that the reading agent must resolve itself.
 
+The rule covers example paths and sample content as much as real ones: a username in a
+mockup's `file:///` link leaks exactly as much as one in an output path. The user's home
+directory is no exception — a script derives it from `os.homedir()`, `$HOME` or
+`$env:USERPROFILE`, never from a literal, and never from an `MPX_*` variable of its own.
+
+A script that cannot resolve the root it needs **fails with a message naming the missing
+variable**. Falling back to `process.cwd()` writes a personal asset into whichever repo
+happened to be the working directory.
+
+Skill deliverables meant for the user land under `MPX_AI_GENERATED`, in an all-caps
+underscore-prefixed folder (`_PODCASTS`, `_TUTORIALS`, `_VIDEO_SHEETS`), one sub-folder
+per run holding the sources, the prompt and the finished asset together. Intermediates
+stay in the session scratchpad; only the files the user would open get promoted.
+
 ## Size and progressive disclosure
 
 | File | Limit | On exceeding |

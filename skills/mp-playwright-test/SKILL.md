@@ -6,7 +6,7 @@ argument-hint: "[uncommitted | pr | <area of the app>]"
 allowed-tools: Read, Grep, Glob, Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: testing
 ---
 
@@ -16,8 +16,8 @@ Run reliable browser verification over a defined scope. This skill owns **scope 
 
 ## Rules
 
-- **Raw Playwright only** — the project's installed `playwright` dep, run as a Node script. Never a browser MCP (that is the exploratory `mp-chrome-devtools-tester` agent's job, not the reliability path).
-- **Verify only** — assert and screenshot; never edit source.
+- **Raw Playwright only** — the project's installed `playwright` dep, run as a Node script. Browser MCP work belongs to the exploratory `mp-chrome-devtools-tester` agent, not this reliability path.
+- **Verify only** — assert and screenshot, leaving source untouched.
 - This skill encodes **policy**; the runner command, dev-server port, auth endpoint, and seed users come from the project's `AGENTS.md` / memory, not from here.
 
 ## Step 1: Resolve scope

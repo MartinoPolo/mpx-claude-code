@@ -1,12 +1,12 @@
 ---
 name: mp-harvest-decisions
-description: "Scans recent Claude Code sessions for design discussions and folds the decisions into CONTEXT.md and DECISIONS.md."
+description: "Scans recent Claude Code sessions for design discussions, folds the decisions into CONTEXT.md and DECISIONS.md, and flags redundant memory files."
 argument-hint: "[days back to scan, default 30]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Agent, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.4"
+  version: "1.5"
   category: planning
 ---
 
@@ -89,7 +89,7 @@ Present a summary of proposed changes before writing:
 - New decision entries grouped by domain
 - Format: `### Title` + `Decided: date` + `What:` + `Why:` + `Rejected:`
 
-Ask user to confirm before writing. Apply edits to existing files (do not overwrite).
+Ask user to confirm before writing. Apply edits to existing files, preserving their current content.
 
 ## Step 8: Clean Up Memory
 

@@ -3,10 +3,10 @@ name: mp-design-brief
 description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent GitHub issues with a Design needed label."
 when_to_use: "User asks for a design brief, design spec, component spec, or UI spec."
 argument-hint: "[component-name]"
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash(gh *), Bash(ls *)
+allowed-tools: Read, Write, Glob, Grep, Agent, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: design
 ---
 

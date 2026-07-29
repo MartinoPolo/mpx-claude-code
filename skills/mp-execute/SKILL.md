@@ -1,12 +1,12 @@
 ---
 name: mp-execute
-description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, then opens a PR."
+description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, opens a PR, and merges it once CI is green."
 when_to_use: "User asks to execute, implement, or work on an issue, milestone, or task list."
 argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or checklist">'
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "2.5"
+  version: "2.6"
   category: project-management
 ---
 
@@ -72,8 +72,8 @@ Mockups are **inspiration, not source of truth.** When the issue links design fi
 
 - Read the linked files before planning.
 - **Layout** — match the mockup.
-- **Colors** — match intent, but always use existing semantic/theme tokens. Never hardcode mockup hex/OKLCH values when a token exists.
-- **Components** — reuse existing custom components + variants (e.g. `Button`) instead of inlining raw elements. Significantly different look → add a variant to the custom component, don't inline raw elements.
+- **Colors** — match intent using existing semantic/theme tokens, even when the mockup uses a raw hex/OKLCH value a token already covers.
+- **Components** — reuse existing custom components and variants (e.g. `Button`) instead of inlining raw elements. A significantly different look becomes a new variant of the custom component.
 - Pass these mapping decisions to the TDD executor (Step 4) and verify-fix orchestrator (Step 5) as implementation constraints.
 
 ## Step 3: Detect Available Checks

@@ -3,10 +3,10 @@ name: mp-issue-create
 description: "Creates GitHub issues in the repo's standard format, optionally linked to a PRD."
 when_to_use: "User asks to create or file a GitHub issue."
 argument-hint: "<description> [--prd <number>]"
-allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Bash(git log *), Bash(git diff *), Read, Glob, Grep, Agent
+allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Read, Agent
 metadata:
   author: MartinoPolo
-  version: "0.8"
+  version: "0.9"
   category: utility
 ---
 

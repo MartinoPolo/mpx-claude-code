@@ -12,10 +12,11 @@
 // session resume + compaction rewriting earlier history into new .jsonl files.
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 
-const PROJECTS = "C:\\Users\\snapy\\.claude\\projects";
+const PROJECTS = path.join(os.homedir(), ".claude", "projects");
 const SKILLS_DIR = "C:\\_MP_projects\\mpx-claude-code\\skills";
 const AGENTS_DIR = "C:\\_MP_projects\\mpx-claude-code\\agents";
 

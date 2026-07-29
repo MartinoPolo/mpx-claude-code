@@ -7,7 +7,7 @@ Directories holding only empty subdirectories are reported as empty too.
 Scaffolding for installed or active tooling is marked Keep rather than Candidate.
 
 .EXAMPLE
-powershell -NoProfile -File Find-EmptyItems.ps1 -Root "C:\Users\me" -OutCsv "$env:TEMP\empty.csv"
+powershell -NoProfile -File Find-EmptyItems.ps1 -Root "$env:USERPROFILE" -OutCsv "$env:TEMP\empty.csv"
 #>
 [CmdletBinding()]
 param(

@@ -1,12 +1,12 @@
 ---
 name: mp-prd-review
-description: "End-of-PRD review covering code quality, architecture, cleanup, documentation, and unresolved items."
+description: "End-of-PRD review covering code quality, architecture, cleanup, documentation, and unresolved items; optionally executes the resulting fixes."
 argument-hint: "<PRD-number-or-URL>"
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git merge-base *), Bash(git rev-parse *), Bash(git fetch *), Bash(node *)
+allowed-tools: Read, Write, Edit, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.6"
+  version: "1.7"
   category: project-management
 ---
 
@@ -151,7 +151,7 @@ Spawn `Explore` sub-agent (breadth: medium):
 
 > Check if project documentation is stale relative to changes made in PRD #N: "[title]".
 >
-> For each file below, check ONLY if it exists. Skip any that don't exist — do not suggest creating them.
+> For each file below, check only the ones that exist; treat missing files as out of scope.
 >
 > - `.mpx/CONTEXT.md` — are there new domain terms not in § Domain Language? Are features in § Core Features still marked as pending when implemented?
 > - `.mpx/DECISIONS.md` — do structural changes warrant new decision entries?
@@ -180,7 +180,7 @@ Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 >    gh issue list --state open --search "<keywords>" --json number,title --limit 5
 >    ```
 > 3. Classify:
->    - **Complete** — verified implemented in code → skip (don't report)
+>    - **Complete** — verified implemented in code → omit from findings
 >    - **Tracked** — open issue exists → report with issue link, no action needed
 >    - **Needs AFK issue** — clear scope, ready to implement → report with suggested issue title
 >    - **Needs HITL issue** — uncertain scope, needs human decision → report with open questions

@@ -3,10 +3,10 @@ name: mp-hitl
 description: "Resolves HITL-blocked issues into AFK-ready ones by grilling the human decisions out of them."
 argument-hint: "[PRD issue URL or number] [lowest|most-blocking]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(gh *), Agent
+allowed-tools: Read, Bash(gh *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: project-management
 ---
 

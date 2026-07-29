@@ -6,14 +6,14 @@ argument-hint: "[topic, requirements text, or path to requirements file]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "2.3"
+  version: "2.4"
   category: planning
 ---
 
 # Grill
 
 Interview the user relentlessly about every aspect of their plan, design, or requirements until reaching shared understanding. Walk down each branch of the decision tree, resolving dependencies one by one.
-Avoid using AskUserQuestion tool, ask directly in the conversation.
+Ask directly in the conversation instead of using AskUserQuestion.
 
 ## Step 1: Detect Project Docs
 
@@ -35,7 +35,7 @@ If none exist (or outside a repo), proceed as a pure conversational grill.
 
 Interview relentlessly. For each branch of the decision tree:
 
-1. Explore instead of asking — see [EXPLORATION.md](../shared/EXPLORATION.md).
+1. Delegate codebase exploration to the `Explore` agent (breadth: medium) instead of asking the user — see [EXPLORATION.md](../shared/EXPLORATION.md).
 2. **Batch related questions** into thematic groups. Present each group in one round.
 3. **Only split into follow-up rounds** when answers to earlier questions would materially change later ones.
 4. **Provide a recommended answer** with each question.

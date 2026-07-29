@@ -2,10 +2,10 @@
 name: mp-skill-audit
 description: "Audits all active skills for convention drift and common defects, fixing what it can and reporting the rest."
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent
+allowed-tools: Read, Edit, Glob, Grep, Agent
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.9"
   category: utility
 ---
 
@@ -31,7 +31,7 @@ If `$ARGUMENTS` is a skill name or path, audit only that skill.
 
 Spawn parallel `general-purpose` sub-agents with `model: "sonnet"`, each auditing 3-5 skills. `general-purpose` declares no model of its own, so the parameter is load-bearing here — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 3.
 
-Each agent runs all 15 checks against each skill and returns findings. Checks 12 and 14 run once repo-wide, in the main session.
+Each agent runs all 16 checks against each skill and returns findings. Checks 12 and 14 run once repo-wide, in the main session.
 
 ### Check 1: Positive Instructions
 
@@ -142,6 +142,16 @@ Flag main-thread instructions that sweep the codebase — `Grep`, `Glob`, `rg`, 
 Two exemptions, both narrow: a deterministic inventory of a fixed, known path pattern (`Glob skills/*/SKILL.md`), and a search instruction that already sits **inside** a sub-agent prompt.
 
 Also flag delegated searches that state no breadth — `Explore` maps `quick` / `medium` / `very thorough` to concrete stopping criteria in its body, so one of them belongs in every spawn. Breadth is search scope, not the `effort:` reasoning knob.
+
+### Check 16: Hardcoded Personal Paths
+
+Rule: [../shared/AUTHORING.md](../shared/AUTHORING.md) § Paths.
+
+The repo is public. Grep every file in the skill — SKILL.md, references, scripts, sample HTML — for `C:\Users`, `C:/Users`, `/c/Users/`, a literal `C:\_MP_` root, and the machine owner's username. Flag each hit and name the `MPX_*` variable that replaces it. Example paths in sample content count: a username in a mockup's `file:///` link leaks as much as one in an output path.
+
+Also flag, in scripts: a home directory built from a literal instead of `os.homedir()` / `$HOME` / `$env:USERPROFILE`; and a root-resolution fallback that lands on the current working directory rather than failing with a message naming the missing variable.
+
+The only exemptions are `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`, and genuine system paths such as `C:\Windows`.
 
 ## Step 3: Auto-Fix
 

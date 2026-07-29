@@ -2,10 +2,10 @@
 name: mp-suppression-audit
 description: "Repo-wide audit of code-quality suppressions (eslint-disable, ts-ignore, fallow-ignore) that fixes unjustified ones and opens a PR."
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+allowed-tools: Read, Edit, Bash, Agent
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: code-quality
 ---
 

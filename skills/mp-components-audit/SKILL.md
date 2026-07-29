@@ -1,12 +1,12 @@
 ---
 name: mp-components-audit
-description: "Audits design-system component usage, flagging native elements, wrong variants, and hardcoded colors that bypass theme tokens."
+description: "Audits design-system component usage, flagging native elements, wrong variants, missed componentization opportunities, and hardcoded colors that bypass theme tokens."
 argument-hint: "[scan-path] [autofix|autofix=true|autofix=false]"
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(git status *), Bash(git diff *), Bash(npm run *), Bash(pnpm *), Bash(yarn *)
+allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(npm run *), Bash(pnpm *)
 metadata:
   author: MartinoPolo
-  version: "0.1.4"
+  version: "0.1.5"
   category: code-review
 ---
 
@@ -21,7 +21,7 @@ Find where the codebase hand-codes UI that the project's own design-system compo
 
 ## Core Principle
 
-Trust the component's built-in props (variants, sizes, icon slotting) instead of re-applying styles by hand. When a recurring visual need has no variant (e.g. an always-purple button), **add a variant to the component** or **componentize the pattern** — never detach a styled native element from the component it should be.
+Trust the component's built-in props (variants, sizes, icon slotting) instead of re-applying styles by hand. When a recurring visual need has no variant (e.g. an always-purple button), **add a variant to the component** or **componentize the pattern**, keeping every styled native element attached to the component it belongs to.
 
 ## Workflow
 
@@ -33,7 +33,7 @@ Discovery is generalized — no config assumed. Auto-detect, then read real APIs
 2. **Detect the stack.** Check `package.json` and imports for `bits-ui`, `shadcn`, `radix-ui`, `cva`, `tailwind-variants` (`tv`). If the project is **shadcn-svelte / Bits UI**, treat `rules-per-project/shadcn-svelte.md` as the canonical anti-pattern source and feed its rules to the audit agents.
 3. **Read each base component's real prop API.** Open variant definitions (`*_variants.ts`, `cva()`/`tv()` configs, prop/type declarations) to learn actual `variant`/`intent`/`size` values and icon-slot conventions. Read prop names from the source rather than assuming them.
 4. **Build the inventory** — for each component: name, import path, available variants/sizes, and which native element(s) it replaces (`button`→`Button`, `input`→`Input`, calendar/date field→date picker, etc.).
-5. **Record the exclusion set** — the component-implementation folder(s) themselves, plus generated/vendored files. These are never audit targets.
+5. **Record the exclusion set** — the component-implementation folder(s) themselves, plus generated/vendored files. These are always excluded from audit targets.
 
 The inventory string seeds every sub-agent prompt — agents must audit against the components that actually exist, not a generic list.
 
@@ -78,7 +78,7 @@ Run only when `autofix` is ON and actionable findings exist. Apply **A, B, D, an
 
 1. **Pre-analyze each fix** — resolve exact file path, current code, and the precise change (the executor applies; it does not diagnose). For a C-clear variant addition, specify both the edit to the component's variants file and every call-site migration.
 2. Spawn `mp-executor` sub-agent with the concrete per-finding instructions plus the requirement to fix only in-scope findings and preserve each component's public API when refactoring internals.
-3. After the executor completes, **re-read the changed files on disk** (a concurrent rebase/hook can silently revert edits — verify final state, don't trust an earlier diff), then run the project's typecheck (`npm run check`/`pnpm check`/`tsc`). Distinguish pre-existing errors from new ones.
+3. After the executor completes, **re-read the changed files on disk** (a concurrent rebase/hook can silently revert edits — verify the final on-disk state directly, rather than trusting an earlier diff), then run the project's typecheck (`npm run check`/`pnpm check`/`tsc`). Distinguish pre-existing errors from new ones.
 4. In the output, list any new component variants added so the user can review the design changes.
 
 ### Skip list

@@ -13,6 +13,7 @@ const ROOTS = [
   ["MPX_CLONED", "cloned OSS repositories"],
   ["MPX_APPS", "local apps"],
   ["MPX_ONEDRIVE", "OneDrive root"],
+  ["MPX_AI_GENERATED", "AI-generated assets (skill deliverables)"],
   ["MPX_OBSIDIAN_VAULT", "Obsidian vault"],
 ];
 

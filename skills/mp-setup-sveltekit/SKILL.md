@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: setup
 ---
 
@@ -72,7 +72,7 @@ pnpm -C <path> run check:all
 pnpm -C <path> run test
 ```
 
-If checks fail, report errors but do NOT abort.
+If checks fail, report errors and continue.
 
 ### Step 6: Optional Svelte MCP setup
 
@@ -126,7 +126,7 @@ If missing, inform the user:
 
 > Svelte rules not found at `~/.claude/rules/`. Ensure `~/.claude/rules/` is symlinked to your mpx-claude-code `rules/` directory. See `WINDOWS-SETUP.md` for Windows symlink instructions.
 
-Do NOT abort — this is informational only.
+Continue — this is informational only.
 
 ### Step 9: Commit and push
 
@@ -154,6 +154,6 @@ Svelte rules: [found at ~/.claude/rules/ | missing — see instructions above]
 - Always use `pnpm` as the package manager
 - Template repo name is always `template-sveltekit` under the user's GitHub account
 - Svelte MCP setup is optional -- always ask before adding
-- If checks fail, report errors but do not abort the setup
+- If checks fail, report errors and continue the setup
 - Branch protection requires PR reviews (0 required reviewers) and CI checks
-- Use `git -C <path>` for all git commands -- never `cd && git`
+- Use `git -C <path>` for all git commands

@@ -3,10 +3,10 @@ name: mp-to-prd
 description: "Creates a PRD as a GitHub issue from the requirements passed in."
 argument-hint: "[milestone name]"
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion
+allowed-tools: Read, Agent, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.8"
   category: project-management
 ---
 
