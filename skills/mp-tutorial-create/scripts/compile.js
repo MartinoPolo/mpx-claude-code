@@ -17,7 +17,7 @@ import { createHighlighter, bundledLanguages } from "shiki";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = join(SCRIPT_DIR, "..", "TEMPLATE.html");
-const TUTORIALS_ROOT = process.env.TUTORIALS_ROOT || "C:/Users/snapy/OneDrive/tutorials";
+const TUTORIALS_ROOT = resolveTutorialsRoot();
 const SHIKI_THEME = "one-dark-pro";
 
 /* ---------------- helpers ---------------- */
@@ -33,6 +33,13 @@ function escapeHtml(text) {
 function fail(message) {
   console.error(`[compile] ERROR: ${message}`);
   process.exit(1);
+}
+
+function resolveTutorialsRoot() {
+  if (process.env.TUTORIALS_ROOT) return process.env.TUTORIALS_ROOT;
+  if (process.env.MPX_AI_GENERATED) return join(process.env.MPX_AI_GENERATED, "_TUTORIALS");
+  if (process.env.MPX_ONEDRIVE) return join(process.env.MPX_ONEDRIVE, "AI GENERATED", "_TUTORIALS");
+  fail("cannot locate the tutorials root: set the machine environment variable MPX_AI_GENERATED (or TUTORIALS_ROOT / MPX_ONEDRIVE).");
 }
 
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -64,11 +71,23 @@ function renderInline(text) {
     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   });
   html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  // after bold, so any asterisk pair still standing is unambiguously emphasis
+  html = html.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
   html = html.replace(/\x00(\d+)\x00/g, (_, i) => codeSpans[Number(i)]);
   return html;
 }
 
 /* ---------------- source parsing ---------------- */
+
+/* Format presets. `words` is the per-section prose budget (paragraphs, callouts, recap,
+   reveal bodies) — annotated-code notes are excluded, since in `brief` they carry the
+   content rather than padding it. Budgets warn; they never fail the build. */
+const FORMATS = {
+  brief: { words: 60, quiz: false, reveals: false },
+  standard: { words: 200, quiz: true, reveals: true },
+  deep: { words: Infinity, quiz: true, reveals: true },
+};
+const TITLE_MAX_CHARS = 40;
 
 function parseSource(raw) {
   const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
@@ -78,6 +97,8 @@ function parseSource(raw) {
     if (!meta[field]) fail(`frontmatter missing required field: ${field}`);
   }
   if (!["topic", "code-showcase"].includes(meta.type)) fail(`type must be topic|code-showcase, got: ${meta.type}`);
+  meta.format = meta.format || "standard";
+  if (!FORMATS[meta.format]) fail(`format must be ${Object.keys(FORMATS).join("|")}, got: ${meta.format}`);
   const body = raw.slice(fmMatch[0].length);
   const lines = body.split(/\r?\n/);
 
@@ -510,7 +531,8 @@ function renderAnnotatedCode(block) {
     `<div class="mobile-hint">${SVG.tap}Tap a numbered badge in the code to read its note.</div>` +
     `<div class="code-region"><div class="code-block">${codeTopbar(block.fname, block.lang)}` +
     `<pre class="code"><code>${codeHtml}</code></pre></div>` +
-    `<div class="annos">${railCards.join("")}</div></div>`
+    `<div class="annos">${railCards.join("")}</div>` +
+    `<svg class="wires" aria-hidden="true"></svg></div>`
   );
 }
 
@@ -898,22 +920,30 @@ ${qHtml}
 
 /* ---------------- reading time ---------------- */
 
+/* Counts code by LINE, not by block: a four-line diff is not a page of code, and a flat
+   per-block cost made short-form tutorials read as three times longer than they are.
+   Annotation note bodies count as prose — in `brief` they are the actual reading. */
 function estimateReadMinutes(sections) {
   let words = 0;
-  let codeBlocks = 0;
+  let codeLines = 0;
+  const addCode = (code) => { codeLines += code.split("\n").length; };
   for (const section of sections) {
     for (const block of section.blocks) {
-      if (block.kind === "p") words += block.text.split(/\s+/).length;
-      else if (block.kind === "callout") words += block.body.split(/\s+/).length;
-      else if (block.kind === "recap") words += block.bullets.join(" ").split(/\s+/).length;
-      else if (block.kind === "reveal") words += (block.question + " " + block.body).split(/\s+/).length;
+      if (block.kind === "p") words += countWords(block.text);
+      else if (block.kind === "callout") words += countWords(block.body);
+      else if (block.kind === "recap") words += countWords(block.bullets.join(" "));
+      else if (block.kind === "reveal") words += countWords(block.question) + countWords(block.body);
       else if (block.kind === "walkthrough") {
-        codeBlocks++;
-        words += block.steps.map((s) => s.title + " " + s.body.join(" ")).join(" ").split(/\s+/).length;
-      } else codeBlocks++;
+        addCode(block.code);
+        for (const step of block.steps) words += countWords(step.title) + countWords(step.body.join(" "));
+      } else if (block.kind === "code" || block.kind === "annotated-code") {
+        addCode(block.code);
+        for (const note of Object.values(block.notes)) words += countWords(note.title) + countWords(note.body);
+      } else if (block.kind === "mermaid") codeLines += 10;
+      else codeLines += 20; // playground: interactive, so budget more than its config implies
     }
   }
-  return Math.max(1, Math.round(words / 130 + codeBlocks * 0.7));
+  return Math.max(1, Math.round(words / 180 + codeLines / 30));
 }
 
 /* ---------------- index generation ---------------- */
@@ -1123,6 +1153,39 @@ ${empty}
 
 /* ---------------- main ---------------- */
 
+/* ---------------- authoring budget checks (warn only) ---------------- */
+
+function countWords(text) {
+  return (text || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function sectionProseWords(section) {
+  let words = 0;
+  for (const block of section.blocks) {
+    if (block.kind === "p") words += countWords(block.text);
+    else if (block.kind === "callout") words += countWords(block.body);
+    else if (block.kind === "recap") words += block.bullets.reduce((sum, b) => sum + countWords(b), 0);
+    else if (block.kind === "reveal") words += countWords(block.question) + countWords(block.body);
+  }
+  return words;
+}
+
+function lintAuthoring(meta, sections, format) {
+  const warn = (message) => console.warn(`[compile] WARNING: ${message}`);
+  for (const section of sections) {
+    if (section.title.length > TITLE_MAX_CHARS) {
+      warn(`${section.slug}: title is ${section.title.length} chars (max ${TITLE_MAX_CHARS}) — it will wrap in the contents rail`);
+    }
+    const words = sectionProseWords(section);
+    if (words > format.words) {
+      warn(`${section.slug}: ${words} prose words (format: ${meta.format} budget is ${format.words})`);
+    }
+    if (!format.reveals && section.blocks.some((b) => b.kind === "reveal")) {
+      warn(`${section.slug}: :::reveal is not used in format: ${meta.format}`);
+    }
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const sourceArg = args.find((a) => !a.startsWith("--"));
@@ -1137,7 +1200,10 @@ async function main() {
   const { meta, sections, quiz } = parseSource(raw);
 
   if (meta.type === "code-showcase" && quiz) fail("code-showcase tutorials must not contain a quiz");
-  if (meta.type === "topic" && !quiz) console.warn("[compile] WARNING: topic tutorial has no quiz (expected one)");
+  const format = FORMATS[meta.format];
+  if (!format.quiz && quiz) fail(`format: ${meta.format} must not contain a quiz`);
+  if (format.quiz && meta.type === "topic" && !quiz) console.warn("[compile] WARNING: topic tutorial has no quiz (expected one)");
+  lintAuthoring(meta, sections, format);
 
   // collect languages for shiki
   const langs = [];

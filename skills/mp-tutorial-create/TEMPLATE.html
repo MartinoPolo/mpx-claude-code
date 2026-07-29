@@ -19,6 +19,16 @@
       document.documentElement.setAttribute('data-theme', 'light');
     }
   })();
+  /* Sidebar collapse state — also before paint, so a collapsed page never flashes the rail.
+     Below 1400px the 300px rail costs the annotated-code region more than it gives back, so
+     the default flips to collapsed there; an explicit user choice always wins. */
+  (function () {
+    try {
+      var stored = localStorage.getItem('tutorial-sidebar');
+      var open = stored ? stored === 'open' : window.innerWidth >= 1400;
+      if (!open) document.documentElement.classList.add('sidebar-collapsed');
+    } catch (e) { /* storage blocked: leave the rail open */ }
+  })();
 </script>
 <style>
   :root {
@@ -62,6 +72,7 @@
     --ok: #17a06b;
     --err: #e04a5f;
     --glow: transparent;
+    --wire: #c3c9de;
   }
 
   html[data-theme="dark"] {
@@ -94,6 +105,7 @@
     --ok: #35c98a;
     --err: #ff6b7f;
     --glow: 0 0 60px -12px rgba(124,92,255,.45);
+    --wire: #3a3c52;
   }
 
   * { box-sizing: border-box; }
@@ -140,6 +152,26 @@
     letter-spacing: -.01em;
     font-size: 15px;
   }
+  .sidebar-btn {
+    display: grid; place-items: center;
+    width: 32px; height: 32px;
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: var(--text-3);
+    cursor: pointer;
+    transition: color .18s ease, background .18s ease, border-color .18s ease, transform .1s ease;
+  }
+  .sidebar-btn svg { width: 17px; height: 17px; }
+  .sidebar-btn:hover { color: var(--text); background: var(--surface-3); border-color: var(--border-strong); }
+  .sidebar-btn:active { transform: scale(.94); }
+  .sidebar-btn:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+  .sidebar-btn[aria-expanded="true"] { color: var(--accent-1); }
+  /* The panel fill reads as "rail is showing"; hollow reads as "rail is hidden". */
+  .sidebar-btn .panel-fill { opacity: 0; transition: opacity .18s ease; }
+  .sidebar-btn[aria-expanded="true"] .panel-fill { opacity: .35; }
+
   .nav-all {
     display: inline-flex; align-items: center; gap: 7px;
     margin-left: 6px;
@@ -201,12 +233,15 @@
   /* ---------- Layout ---------- */
   .shell {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     gap: 36px;
     max-width: 1700px;
     margin: 0 auto;
     padding: 32px clamp(16px, 4vw, 40px) 96px;
+    transition: grid-template-columns .22s cubic-bezier(.16,1,.3,1), gap .22s cubic-bezier(.16,1,.3,1);
   }
+  .sidebar-collapsed .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .sidebar-collapsed .sidebar { display: none; }
 
   /* ---------- Sidebar ---------- */
   .sidebar { position: relative; }
@@ -510,9 +545,13 @@
   /* ---------- Annotated code ---------- */
   .intro-line { margin: 14px 0 18px; color: var(--text-2); }
   .code-region {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 22px;
+    /* The column gap is the channel the connector wires are drawn in — a narrow
+       gap collapses the beziers into unreadable near-vertical squiggles. */
+    column-gap: 64px;
+    row-gap: 22px;
     align-items: start;
   }
   .code-block {
@@ -577,20 +616,41 @@
   .cl.has-note:hover .note-badge, .cl.has-note.hot .note-badge { transform: scale(1.18); }
 
   /* Right rail annotations */
-  .annos { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 84px; }
+  .annos { position: relative; display: flex; flex-direction: column; gap: 12px; }
   .anno {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 13px 15px;
     box-shadow: var(--shadow-card);
-    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    transition: box-shadow .22s ease, border-color .22s ease;
   }
   .anno.hot {
     border-color: var(--accent-1);
     box-shadow: var(--shadow-pop), 0 0 0 1px var(--accent-1);
-    transform: translateX(-4px);
   }
+
+  /* Connector wires: cards are lifted out of flow and pinned to their code line,
+     so the rail cannot be sticky while wired. */
+  .code-region.wired .annos { display: block; }
+  .code-region.wired .anno { position: absolute; left: 0; right: 0; }
+  .wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .wires path {
+    fill: none;
+    stroke: var(--wire);
+    stroke-width: 1.5;
+    transition: stroke .2s ease, stroke-width .2s ease;
+  }
+  .wires path.hot { stroke: var(--accent-1); stroke-width: 2.2; }
+  .wires circle { fill: var(--wire); transition: fill .2s ease; }
+  .wires circle.hot { fill: var(--accent-1); }
   .anno-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
   .anno-num {
     display: grid; place-items: center;
@@ -1280,8 +1340,9 @@
     .sidebar-inner { position: static; flex-direction: row; flex-wrap: wrap; gap: 14px; }
     .progress-card { flex: 1 1 240px; }
     .toc-card { flex: 1 1 300px; }
-    .code-region { grid-template-columns: 1fr; }
+    .code-region { grid-template-columns: 1fr; min-height: 0 !important; }
     .annos { display: none; }         /* right rail hidden on mobile */
+    .wires { display: none; }
     .cl.has-note { cursor: pointer; }
     .mobile-hint { display: flex; }
 
@@ -1327,6 +1388,13 @@
 
 <header class="topbar">
   <div class="topbar-left">
+    <button class="sidebar-btn" id="sidebarToggle" type="button" aria-controls="sidebar" aria-expanded="true"
+            aria-label="Toggle contents sidebar" title="Toggle contents sidebar ([)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect class="panel-fill" x="3" y="4" width="6" height="16" rx="1" fill="currentColor" stroke="none"/>
+        <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>
+      </svg>
+    </button>
     <div class="brand">
       <span class="logo" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -1358,7 +1426,7 @@
 
 <div class="shell">
   <!-- ===== SIDEBAR ===== -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-inner">
       <div class="progress-card">
         <div class="ring">
@@ -1430,6 +1498,7 @@
     <div class="kbd-row"><span class="kr-label">Next section</span><span class="kr-keys"><kbd>j</kbd><kbd>Alt</kbd><kbd>↓</kbd></span></div>
     <div class="kbd-row"><span class="kr-label">Previous section</span><span class="kr-keys"><kbd>k</kbd><kbd>Alt</kbd><kbd>↑</kbd></span></div>
     <div class="kbd-row"><span class="kr-label">Mark current section understood</span><span class="kr-keys"><kbd>Enter</kbd></span></div>
+    <div class="kbd-row"><span class="kr-label">Show / hide contents sidebar</span><span class="kr-keys"><kbd>[</kbd></span></div>
     <div class="kbd-row"><span class="kr-label">Toggle this help</span><span class="kr-keys"><kbd>?</kbd></span></div>
     <div class="kbd-row"><span class="kr-label">Close</span><span class="kr-keys"><kbd>Esc</kbd></span></div>
     <button class="kbd-close" id="kbdClose" type="button">Close (Esc)</button>
@@ -1469,6 +1538,79 @@
   /* ---------- ANNOTATED CODE (desktop rail hover-link + mobile inline accordion) ---------- */
   function isMobile() { return window.matchMedia('(max-width: 1100px)').matches; }
 
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // Highlights a note across all four of its representations: code line, rail card, wire, wire dot.
+  function setNoteHot(region, n, on) {
+    var method = on ? 'add' : 'remove';
+    region.querySelectorAll(
+      '.cl.has-note[data-line="' + n + '"], .anno[data-anno="' + n + '"], .wires [data-wire="' + n + '"]'
+    ).forEach(function (el) { el.classList[method]('hot'); });
+  }
+
+  /* Pins each rail card next to its code line and draws the bezier connecting them.
+     Cards go absolute (so the rail cannot be sticky here) and are pushed down past the
+     previous card when their natural positions would overlap. */
+  function layoutWires(region) {
+    var svg = region.querySelector('.wires');
+    if (!svg) return;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    var cards = Array.prototype.slice.call(region.querySelectorAll('.anno'));
+    if (isMobile()) {
+      region.classList.remove('wired');
+      cards.forEach(function (card) { card.style.top = ''; });
+      region.style.minHeight = '';
+      return;
+    }
+
+    region.classList.add('wired');
+    var codeBlock = region.querySelector('.code-block');
+    if (!codeBlock) return;
+    var regionRect = region.getBoundingClientRect();
+    var codeRect = codeBlock.getBoundingClientRect();
+    var lastBottom = -12;
+    var placements = [];
+
+    cards.forEach(function (card) {
+      var n = card.dataset.anno;
+      var line = region.querySelector('.cl.has-note[data-line="' + n + '"]');
+      if (!line) return;
+      var lineRect = line.getBoundingClientRect();
+      var top = Math.max(lineRect.top - regionRect.top - 10, lastBottom + 12);
+      card.style.top = top + 'px';
+      lastBottom = top + card.offsetHeight;
+      placements.push({
+        id: n,
+        lineY: lineRect.top - regionRect.top + lineRect.height / 2,
+        cardY: top + Math.min(24, card.offsetHeight / 2),
+        cardX: card.getBoundingClientRect().left - regionRect.left
+      });
+    });
+
+    region.style.minHeight = Math.max(codeBlock.offsetHeight, lastBottom + 4) + 'px';
+
+    var startX = codeRect.right - regionRect.left + 3;
+    placements.forEach(function (p) {
+      var endX = p.cardX - 5;
+      var midX = startX + (endX - startX) * 0.55;
+      var path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d',
+        'M ' + startX + ' ' + p.lineY +
+        ' C ' + midX + ' ' + p.lineY + ', ' + midX + ' ' + p.cardY + ', ' + endX + ' ' + p.cardY);
+      path.setAttribute('data-wire', p.id);
+      svg.appendChild(path);
+      var dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('cx', String(startX));
+      dot.setAttribute('cy', String(p.lineY));
+      dot.setAttribute('r', '3');
+      dot.setAttribute('data-wire', p.id);
+      svg.appendChild(dot);
+    });
+  }
+
+  function layoutAllWires() { document.querySelectorAll('.code-region').forEach(layoutWires); }
+
   document.querySelectorAll('.code-region').forEach(function (region) {
     var railCards = {};
     region.querySelectorAll('.annos .anno').forEach(function (a) { railCards[a.dataset.anno] = a; });
@@ -1479,13 +1621,9 @@
 
       line.addEventListener('mouseenter', function () {
         if (isMobile()) return;
-        if (railCards[n]) railCards[n].classList.add('hot');
-        line.classList.add('hot');
+        setNoteHot(region, n, true);
       });
-      line.addEventListener('mouseleave', function () {
-        if (railCards[n]) railCards[n].classList.remove('hot');
-        line.classList.remove('hot');
-      });
+      line.addEventListener('mouseleave', function () { setNoteHot(region, n, false); });
 
       function toggleInline() {
         if (!isMobile() || !inline) return;
@@ -1503,18 +1641,53 @@
     // Rail card hover highlights matching line
     Object.keys(railCards).forEach(function (n) {
       var card = railCards[n];
-      var line = region.querySelector('.cl.has-note[data-line="' + n + '"]');
-      card.addEventListener('mouseenter', function () { card.classList.add('hot'); if (line) line.classList.add('hot'); });
-      card.addEventListener('mouseleave', function () { card.classList.remove('hot'); if (line) line.classList.remove('hot'); });
+      card.addEventListener('mouseenter', function () { setNoteHot(region, n, true); });
+      card.addEventListener('mouseleave', function () { setNoteHot(region, n, false); });
     });
   });
 
-  // Collapse any open inline notes when growing back to the desktop rail layout.
+  var wireTimer = null;
   window.addEventListener('resize', function () {
+    clearTimeout(wireTimer);
+    wireTimer = setTimeout(layoutAllWires, 120);
+
+    // Collapse any open inline notes when growing back to the desktop rail layout.
     if (isMobile()) return;
     document.querySelectorAll('.cl-note-inline.open').forEach(function (el) { el.classList.remove('open'); });
     document.querySelectorAll('.cl.has-note[aria-expanded="true"]').forEach(function (l) { l.setAttribute('aria-expanded', 'false'); });
   });
+
+  /* ---------- SIDEBAR COLLAPSE ---------- */
+  /* The initial class is set before paint in <head>; this only wires the control and keeps the
+     wires honest, since collapsing changes the code-region width without firing a resize event. */
+  var STORAGE_SIDEBAR = 'tutorial-sidebar';
+  var sidebarToggle = document.getElementById('sidebarToggle');
+  var shell = document.querySelector('.shell');
+
+  function sidebarOpen() { return !document.documentElement.classList.contains('sidebar-collapsed'); }
+
+  function setSidebar(open, persist) {
+    document.documentElement.classList.toggle('sidebar-collapsed', !open);
+    if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', String(open));
+    if (persist) { try { localStorage.setItem(STORAGE_SIDEBAR, open ? 'open' : 'closed'); } catch (e) { /* ignore */ } }
+    // Re-measure once the column animation has settled; transitionend covers the normal path,
+    // the timeout covers reduced-motion and browsers that don't animate grid tracks.
+    setTimeout(layoutAllWires, 260);
+  }
+
+  if (shell) {
+    shell.addEventListener('transitionend', function (e) {
+      if (e.propertyName === 'grid-template-columns') layoutAllWires();
+    });
+  }
+  if (sidebarToggle) {
+    sidebarToggle.setAttribute('aria-expanded', String(sidebarOpen()));
+    sidebarToggle.addEventListener('click', function () { setSidebar(!sidebarOpen(), true); });
+  }
+
+  // Web-font metrics change line heights, so the first measurement is only provisional.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutAllWires);
+  layoutAllWires();
 
   /* ---------- PROGRESS + CHECKMARKS ---------- */
   var RING_CIRC = 2 * Math.PI * 31; // ≈194.78
@@ -2106,6 +2279,7 @@
     if (e.ctrlKey || e.metaKey) return;
 
     if (e.key === '?') { e.preventDefault(); openOverlay(); return; }
+    if (e.key === '[') { e.preventDefault(); setSidebar(!sidebarOpen(), true); return; }
     if (tipVisible && e.key === 'Escape') { hideTip(); return; }
 
     var idx = SLUGS.indexOf(currentSlug);

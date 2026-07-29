@@ -1,34 +1,34 @@
 #!/usr/bin/env node
 /**
- * Reads a YouTube workout video with the Gemini API and writes an exercise table plus an
- * image prompt. Every decision this file makes is I/O; the composing lives in lib/compose.mjs.
+ * Reads a YouTube video with the Gemini API and writes a sheet table plus an image prompt.
+ * Every decision this file makes is I/O; the composing lives in lib/compose.mjs.
  */
-import { mkdir, writeFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 
 import {
   slugify,
+  composeFolderName,
   assertApiKey,
   describeApiError,
   buildExtractionRequest,
   renderSheetDocument,
   composeImagePrompt,
+  countItems,
+  resolveMode,
 } from "./lib/compose.mjs";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const GENERATE_CONTENT_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/models";
-const CHATGPT_URL = "https://chatgpt.com/";
-const OUTPUT_SUBDIRECTORY = path.join("AI GENERATED", "workout sheets");
+const OEMBED_ENDPOINT = "https://www.youtube.com/oembed";
+const OEMBED_TIMEOUT_MS = 10_000;
+const SHEETS_FOLDER_NAME = "_VIDEO_SHEETS";
+const AI_GENERATED_FOLDER_NAME = "AI GENERATED";
 const RAW_TEXT_PREVIEW_LENGTH = 300;
 const NETWORK_ATTEMPTS = 3;
 const USAGE =
-  'Usage: node video-to-sheet.mjs <youtube-url> [--focus "<text>"] [--out <dir>] [--model <id>] [--media-resolution low] [--no-clipboard]';
-
-const execFileAsync = promisify(execFile);
+  'Usage: node video-to-sheet.mjs <youtube-url> --mode exercise|generic [--focus "<text>"] [--out <dir>] [--model <id>] [--media-resolution low]';
 
 function exitWithError(message) {
   console.error(message);
@@ -42,7 +42,7 @@ function parseArguments(argumentList) {
     outputDirectory: "",
     model: DEFAULT_MODEL,
     mediaResolution: "",
-    copyToClipboard: true,
+    mode: "",
   };
 
   for (let index = 0; index < argumentList.length; index += 1) {
@@ -64,8 +64,9 @@ function parseArguments(argumentList) {
         index += 1;
         options.mediaResolution = argumentList[index] ?? "";
         break;
-      case "--no-clipboard":
-        options.copyToClipboard = false;
+      case "--mode":
+        index += 1;
+        options.mode = argumentList[index] ?? "";
         break;
       default:
         if (!options.youtubeUrl) options.youtubeUrl = argument;
@@ -83,12 +84,36 @@ function parseJsonOrNull(text) {
   }
 }
 
-async function requestExerciseSheet({
+/**
+ * The video's own title and channel, from YouTube's oEmbed endpoint — public, keyless, and
+ * answered in one request, so it costs the run nothing.
+ *
+ * Returns null for every failure. The metadata only names the run folder, and a finished
+ * extraction is worth far more than the folder it lands in, so a lookup that fails degrades
+ * to the slug instead of stopping the run.
+ */
+async function fetchVideoMetadata(youtubeUrl) {
+  try {
+    const response = await fetch(
+      `${OEMBED_ENDPOINT}?url=${encodeURIComponent(youtubeUrl)}&format=json`,
+      { signal: AbortSignal.timeout(OEMBED_TIMEOUT_MS) },
+    );
+    if (!response.ok) return null;
+    const body = parseJsonOrNull(await response.text());
+    if (!body?.title) return null;
+    return { title: body.title, channel: body.author_name ?? "" };
+  } catch {
+    return null;
+  }
+}
+
+async function requestSheet({
   geminiApiKey,
   model,
   youtubeUrl,
   focus,
   mediaResolution,
+  mode,
 }) {
   // Gemini pulls the video itself, so the connection stays open for tens of seconds and
   // drops often enough that a single attempt loses roughly one run in three.
@@ -101,7 +126,7 @@ async function requestExerciseSheet({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            buildExtractionRequest(youtubeUrl, focus, { mediaResolution }),
+            buildExtractionRequest(youtubeUrl, focus, { mediaResolution, mode }),
           ),
         },
       );
@@ -142,44 +167,47 @@ function parseSheet(sheetText) {
   );
 }
 
-function resolveOutputDirectory(requestedDirectory) {
-  if (requestedDirectory) return path.resolve(requestedDirectory);
-  const oneDriveRoot = (process.env.MPX_ONEDRIVE ?? "").trim();
-  if (oneDriveRoot) return path.join(oneDriveRoot, OUTPUT_SUBDIRECTORY);
-  return process.cwd();
-}
-
-function countExercises(sheet) {
-  return (sheet.sections ?? []).reduce(
-    (total, section) => total + (section.exercises ?? []).length,
-    0,
-  );
-}
-
-function runPowerShell(command) {
-  return execFileAsync("powershell", ["-NoProfile", "-Command", command]);
-}
-
-async function copyPromptAndOpenChatGpt(prompt, slug) {
-  // PowerShell reads the prompt off disk rather than taking it as an argument, so no amount
-  // of quoting or newlines inside the prompt can corrupt what reaches the clipboard. The
-  // scratch copy is deleted straight after, leaving the sheet as the only file produced.
-  const scratchFile = path.join(tmpdir(), `${slug}-prompt.txt`);
-  await writeFile(scratchFile, prompt, "utf8");
-  try {
-    await runPowerShell(
-      `Get-Content -Raw -LiteralPath '${scratchFile.replaceAll("'", "''")}' | Set-Clipboard`,
-    );
-    // Opening the tab is the only permitted interaction with chatgpt.com; the paste stays manual.
-    await runPowerShell(`Start-Process '${CHATGPT_URL}'`);
-  } finally {
-    await rm(scratchFile, { force: true });
+/**
+ * The run folder, `<root>/_VIDEO_SHEETS/[Channel] Video Title/`. There is deliberately no
+ * working-directory fallback: a sheet written into whatever repo the user happened to be
+ * standing in is lost work, so an unconfigured machine stops here with the variable to set.
+ */
+function resolveOutputDirectory(requestedDirectory, folderName) {
+  if (requestedDirectory) {
+    return path.join(path.resolve(requestedDirectory), folderName);
   }
+
+  const aiGeneratedRoot = (process.env.MPX_AI_GENERATED ?? "").trim();
+  if (aiGeneratedRoot) {
+    return path.join(aiGeneratedRoot, SHEETS_FOLDER_NAME, folderName);
+  }
+
+  const oneDriveRoot = (process.env.MPX_ONEDRIVE ?? "").trim();
+  if (oneDriveRoot) {
+    return path.join(
+      oneDriveRoot,
+      AI_GENERATED_FOLDER_NAME,
+      SHEETS_FOLDER_NAME,
+      folderName,
+    );
+  }
+
+  exitWithError(
+    "No output location: set the machine environment variable MPX_AI_GENERATED to the " +
+      `"${AI_GENERATED_FOLDER_NAME}" folder inside OneDrive, or pass --out <dir>.\n` +
+      '  setx MPX_AI_GENERATED "<path-to-AI-GENERATED>"\n' +
+      "Open a new terminal afterwards so the variable is visible.",
+  );
 }
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (!options.youtubeUrl) exitWithError(USAGE);
+  try {
+    resolveMode(options.mode);
+  } catch (error) {
+    exitWithError(error.message);
+  }
 
   let geminiApiKey;
   try {
@@ -188,42 +216,49 @@ async function main() {
     exitWithError(error.message);
   }
 
-  const responseBody = await requestExerciseSheet({
-    geminiApiKey,
-    model: options.model,
-    youtubeUrl: options.youtubeUrl,
-    focus: options.focus,
-    mediaResolution: options.mediaResolution,
-  });
+  // Both reach out over the network and neither needs the other's answer, so the cheap
+  // metadata lookup hides entirely behind the minute Gemini spends reading the video.
+  const [responseBody, videoMetadata] = await Promise.all([
+    requestSheet({
+      geminiApiKey,
+      model: options.model,
+      youtubeUrl: options.youtubeUrl,
+      focus: options.focus,
+      mediaResolution: options.mediaResolution,
+      mode: options.mode,
+    }),
+    fetchVideoMetadata(options.youtubeUrl),
+  ]);
 
   const sheet = parseSheet(readSheetText(responseBody));
   const slug = slugify(sheet.title);
-  const outputDirectory = resolveOutputDirectory(options.outputDirectory);
+  const folderName = composeFolderName(videoMetadata, slug);
+  const outputDirectory = resolveOutputDirectory(
+    options.outputDirectory,
+    folderName,
+  );
   await mkdir(outputDirectory, { recursive: true });
 
   const sheetFile = path.join(outputDirectory, `${slug}.md`);
-  await writeFile(sheetFile, renderSheetDocument(sheet), "utf8");
+  await writeFile(sheetFile, renderSheetDocument(sheet, options.mode), "utf8");
 
-  let clipboard = false;
-  if (options.copyToClipboard) {
-    try {
-      await copyPromptAndOpenChatGpt(composeImagePrompt(sheet), slug);
-      clipboard = true;
-    } catch (error) {
-      // The sheet on disk is the deliverable, so a clipboard failure stays a warning.
-      console.error(
-        `Could not copy the prompt to the clipboard: ${error.message}\nCopy it by hand from the image prompt section of ${sheetFile}`,
-      );
-    }
-  }
+  // The prompt is a file of its own as well as a fenced block in the sheet, so the user can
+  // copy it whole without picking it out of the table.
+  const promptFile = path.join(outputDirectory, "prompt.txt");
+  await writeFile(promptFile, composeImagePrompt(sheet, options.mode), "utf8");
 
   console.log(
     JSON.stringify({
       slug,
+      folderName,
       title: sheet.title,
-      exerciseCount: countExercises(sheet),
+      // Empty when the oEmbed lookup failed, which is also why folderName fell back to slug.
+      videoTitle: videoMetadata?.title ?? "",
+      channel: videoMetadata?.channel ?? "",
+      mode: options.mode,
+      itemCount: countItems(sheet, options.mode),
       sheetFile,
-      clipboard,
+      promptFile,
       promptTokenCount: responseBody?.usageMetadata?.promptTokenCount ?? 0,
     }),
   );

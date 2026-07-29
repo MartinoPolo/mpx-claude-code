@@ -1,12 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
   slugify,
+  composeFolderName,
   assertApiKey,
   describeApiError,
   buildExtractionRequest,
-  renderExerciseTable,
+  renderSheetTable,
   renderSheetDocument,
   composeImagePrompt,
+  composePerformerSentence,
+  countItems,
+  resolveMode,
 } from "../scripts/lib/compose.mjs";
 
 const YOUTUBE_URL = "https://www.youtube.com/watch?v=abc123";
@@ -34,6 +38,75 @@ describe("slugify", () => {
 
   it("falls back to 'video' when nothing slugifiable remains", () => {
     expect(slugify("???")).toBe("video");
+  });
+});
+
+describe("composeFolderName", () => {
+  it("names the folder after the channel and the video's own full title", () => {
+    expect(
+      composeFolderName(
+        {
+          title: "Best Stretches For YOUR Lower Back Pain [SO IMPORTANT!]",
+          channel: "Tone and Tighten",
+        },
+        "lower-back-stretches",
+      ),
+    ).toBe("[Tone and Tighten] Best Stretches For YOUR Lower Back Pain [SO IMPORTANT!]");
+  });
+
+  it("keeps the title alone when the channel is unknown", () => {
+    expect(composeFolderName({ title: "Deep Squat Drills" }, "slug")).toBe(
+      "Deep Squat Drills",
+    );
+  });
+
+  it("falls back to the slug when the metadata lookup returned nothing", () => {
+    expect(composeFolderName(null, "daily-mobility-routine")).toBe(
+      "daily-mobility-routine",
+    );
+    expect(composeFolderName({ title: "   " }, "daily-mobility-routine")).toBe(
+      "daily-mobility-routine",
+    );
+  });
+
+  it("replaces the characters Windows refuses in a path", () => {
+    const folder = composeFolderName(
+      { title: 'Push/Pull: Legs? <Part 2> | "Full" *Guide*', channel: "Ch\\an" },
+      "slug",
+    );
+    expect(folder).not.toMatch(/[<>:"/\\|?*]/);
+    expect(folder).toBe("[Ch an] Push Pull Legs Part 2 Full Guide");
+  });
+
+  it("collapses the whitespace a newline in the title would leave behind", () => {
+    expect(composeFolderName({ title: "Morning\nRoutine" }, "slug")).toBe(
+      "Morning Routine",
+    );
+  });
+
+  it("strips a trailing dot or space Windows would silently drop", () => {
+    expect(composeFolderName({ title: "Stretch Harder..." }, "slug")).toBe(
+      "Stretch Harder",
+    );
+  });
+
+  it("caps the name so the files inside stay under the path limit", () => {
+    const folder = composeFolderName(
+      { title: "Mobility ".repeat(40), channel: "A Very Long Channel Name" },
+      "slug",
+    );
+    expect(folder.length).toBeLessThanOrEqual(120);
+  });
+
+  it("escapes a reserved device name Windows cannot use as a folder", () => {
+    expect(composeFolderName({ title: "CON" }, "slug")).toBe("CON_");
+    expect(composeFolderName({ title: "com1" }, "slug")).toBe("com1_");
+  });
+
+  it("keeps a title that sanitises away from erasing the folder", () => {
+    expect(composeFolderName({ title: "???" }, "daily-mobility")).toBe(
+      "daily-mobility",
+    );
   });
 });
 
@@ -104,14 +177,14 @@ describe("describeApiError", () => {
 describe("buildExtractionRequest", () => {
   it("passes the YouTube URL as the only file_data part", () => {
     const fileDataParts = partsOf(
-      buildExtractionRequest(YOUTUBE_URL, "", {}),
+      buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }),
     ).filter((part) => part.file_data);
     expect(fileDataParts).toHaveLength(1);
     expect(fileDataParts[0].file_data.file_uri).toBe(YOUTUBE_URL);
   });
 
   it("adds exactly one text instruction part", () => {
-    const textParts = partsOf(buildExtractionRequest(YOUTUBE_URL, "", {})).filter(
+    const textParts = partsOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" })).filter(
       (part) => typeof part.text === "string",
     );
     expect(textParts).toHaveLength(1);
@@ -119,29 +192,30 @@ describe("buildExtractionRequest", () => {
 
   it("includes the focus instruction verbatim when a focus is given", () => {
     const focus = "only the shoulder mobility drills";
-    expect(textPartOf(buildExtractionRequest(YOUTUBE_URL, focus, {}))).toContain(
+    expect(textPartOf(buildExtractionRequest(YOUTUBE_URL, focus, { mode: "exercise" }))).toContain(
       focus,
     );
   });
 
   it("omits the focus sentence when no focus is given", () => {
-    expect(textPartOf(buildExtractionRequest(YOUTUBE_URL, "", {}))).not.toMatch(
+    expect(textPartOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }))).not.toMatch(
       /focus/i,
     );
   });
 
   it("requests JSON output against the exercise schema", () => {
-    const { generationConfig } = buildExtractionRequest(YOUTUBE_URL, "", {});
+    const { generationConfig } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" });
     expect(generationConfig.responseMimeType).toBe("application/json");
     expect(generationConfig.responseSchema).toBeDefined();
   });
 
   it("orders the schema properties so the model emits them predictably", () => {
-    const { responseSchema } = buildExtractionRequest(YOUTUBE_URL, "", {})
+    const { responseSchema } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" })
       .generationConfig;
     expect(responseSchema.propertyOrdering).toEqual([
       "title",
       "summary",
+      "performer",
       "sections",
     ]);
     expect(
@@ -158,7 +232,7 @@ describe("buildExtractionRequest", () => {
   });
 
   it("asks for drawable start and end positions separate from the coaching cue", () => {
-    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", {}));
+    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }));
     expect(instruction).toMatch(/startPose/);
     expect(instruction).toMatch(/endPose/);
     expect(instruction).toMatch(/movementDirection/);
@@ -166,20 +240,61 @@ describe("buildExtractionRequest", () => {
   });
 
   it("requires third-person pose descriptions so coaching voice cannot leak in", () => {
-    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", {}));
+    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }));
     expect(instruction).toMatch(/third person/i);
   });
 
   it("downgrades media resolution when low resolution is requested", () => {
     const { generationConfig } = buildExtractionRequest(YOUTUBE_URL, "", {
+      mode: "exercise",
       mediaResolution: "low",
     });
     expect(generationConfig.mediaResolution).toBe("MEDIA_RESOLUTION_LOW");
   });
 
   it("omits media resolution when it is not requested", () => {
-    const { generationConfig } = buildExtractionRequest(YOUTUBE_URL, "", {});
+    const { generationConfig } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" });
     expect(generationConfig).not.toHaveProperty("mediaResolution");
+  });
+
+  it("asks for the performer's visible appearance and forbids inventing it", () => {
+    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }));
+    expect(instruction).toMatch(/performer/);
+    expect(instruction).toMatch(/only what is visible/i);
+    expect(instruction).toMatch(/Omit any field you cannot see/i);
+  });
+
+  it("leaves performer optional so an absent presenter is not invented", () => {
+    const { responseSchema } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" })
+      .generationConfig;
+    expect(responseSchema.required).not.toContain("performer");
+    expect(responseSchema.properties.performer.required).toBeUndefined();
+  });
+
+  it("swaps in the point schema and instruction in generic mode", () => {
+    const request = buildExtractionRequest(YOUTUBE_URL, "", { mode: "generic" });
+    expect(
+      request.generationConfig.responseSchema.properties.sections.items
+        .properties.points.items.propertyOrdering,
+    ).toEqual(["label", "detail", "visual"]);
+    expect(textPartOf(request)).toMatch(/an illustration of/i);
+    expect(textPartOf(request)).not.toMatch(/startPose/);
+  });
+
+  it("rejects an unknown mode rather than silently extracting the wrong shape", () => {
+    expect(() => buildExtractionRequest(YOUTUBE_URL, "", { mode: "poster" })).toThrow(
+      /Unknown --mode/,
+    );
+  });
+});
+
+describe("resolveMode", () => {
+  it("throws when no mode is given", () => {
+    expect(() => resolveMode(undefined)).toThrow(/--mode is required/);
+  });
+
+  it("names the valid modes when given an unknown one", () => {
+    expect(() => resolveMode("poster")).toThrow(/exercise, generic/);
   });
 });
 
@@ -272,9 +387,9 @@ function everyExercise(sheet) {
   return sheet.sections.flatMap((section) => section.exercises);
 }
 
-describe("renderExerciseTable", () => {
+describe("renderSheetTable", () => {
   it("writes one row for every exercise across every section", () => {
-    const rows = renderExerciseTable(PANEL_SHEET)
+    const rows = renderSheetTable(PANEL_SHEET, "exercise")
       .split("\n")
       .filter((line) => line.startsWith("| ") && !line.includes("---"));
     // Two header rows, one per section, plus the six exercise rows.
@@ -282,12 +397,12 @@ describe("renderExerciseTable", () => {
   });
 
   it("keeps the sections in the order the video used them", () => {
-    const table = renderExerciseTable(PANEL_SHEET);
+    const table = renderSheetTable(PANEL_SHEET, "exercise");
     expect(table.indexOf("## Standing")).toBeLessThan(table.indexOf("## Floor"));
   });
 
   it("carries the name, amount and form cue of every exercise", () => {
-    const table = renderExerciseTable(PANEL_SHEET);
+    const table = renderSheetTable(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(table).toContain(exercise.name);
       expect(table).toContain(exercise.amount);
@@ -296,7 +411,7 @@ describe("renderExerciseTable", () => {
   });
 
   it("titles the sheet with the video title", () => {
-    expect(renderExerciseTable(PANEL_SHEET)).toContain("# Daily Mobility Routine");
+    expect(renderSheetTable(PANEL_SHEET, "exercise")).toContain("# Daily Mobility Routine");
   });
 
   it("escapes pipe characters so a cell cannot break the table", () => {
@@ -312,7 +427,7 @@ describe("renderExerciseTable", () => {
         },
       ],
     };
-    const row = renderExerciseTable(piped)
+    const row = renderSheetTable(piped, "exercise")
       .split("\n")
       .find((line) => line.includes("Push"));
     expect(row).toContain("Push \\| Pull");
@@ -321,45 +436,45 @@ describe("renderExerciseTable", () => {
   });
 
   it("returns a sheet without throwing when no exercises were found", () => {
-    expect(() => renderExerciseTable(EMPTY_SHEET)).not.toThrow();
+    expect(() => renderSheetTable(EMPTY_SHEET, "exercise")).not.toThrow();
   });
 });
 
 describe("renderSheetDocument", () => {
   it("carries the whole exercise table", () => {
-    const document = renderSheetDocument(PANEL_SHEET);
-    expect(document).toContain(renderExerciseTable(PANEL_SHEET).trim());
+    const document = renderSheetDocument(PANEL_SHEET, "exercise");
+    expect(document).toContain(renderSheetTable(PANEL_SHEET, "exercise").trim());
   });
 
   it("carries the image prompt verbatim, so pasting it needs no reassembly", () => {
-    const document = renderSheetDocument(PANEL_SHEET);
-    expect(document).toContain(composeImagePrompt(PANEL_SHEET));
+    const document = renderSheetDocument(PANEL_SHEET, "exercise");
+    expect(document).toContain(composeImagePrompt(PANEL_SHEET, "exercise"));
   });
 
   it("fences the prompt so a copy button takes the prompt and nothing else", () => {
-    const [, fenced] = renderSheetDocument(PANEL_SHEET).split("```");
-    expect(fenced.trim()).toBe(composeImagePrompt(PANEL_SHEET));
+    const [, fenced] = renderSheetDocument(PANEL_SHEET, "exercise").split("```");
+    expect(fenced.trim()).toBe(composeImagePrompt(PANEL_SHEET, "exercise"));
   });
 
   it("heads the prompt section so the table stays the part a human reads", () => {
-    expect(renderSheetDocument(PANEL_SHEET)).toContain("## Image prompt");
+    expect(renderSheetDocument(PANEL_SHEET, "exercise")).toContain("## Image prompt");
   });
 
   it("renders a document without throwing when no exercises were found", () => {
-    expect(() => renderSheetDocument(EMPTY_SHEET)).not.toThrow();
+    expect(() => renderSheetDocument(EMPTY_SHEET, "exercise")).not.toThrow();
   });
 });
 
 describe("composeImagePrompt", () => {
   it("names every exercise in the sheet", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(prompt).toContain(exercise.name);
     }
   });
 
   it("draws both the start and the end position of every exercise", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(prompt).toContain(exercise.startPose);
       expect(prompt).toContain(exercise.endPose);
@@ -367,7 +482,7 @@ describe("composeImagePrompt", () => {
   });
 
   it("places a movement arrow between the two positions", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(prompt).toContain(`an arrow ${exercise.movementDirection}`);
     }
@@ -389,7 +504,7 @@ describe("composeImagePrompt", () => {
         },
       ],
     };
-    const prompt = composeImagePrompt(withArrowNoun);
+    const prompt = composeImagePrompt(withArrowNoun, "exercise");
     expect(prompt).toContain("an arrow sweeping upward");
     expect(prompt).not.toMatch(/arrow\s+a\s+curved\s+arrow/i);
   });
@@ -406,25 +521,25 @@ describe("composeImagePrompt", () => {
         },
       ],
     };
-    expect(composeImagePrompt(noDirection)).not.toMatch(/with\s+drawn between/);
+    expect(composeImagePrompt(noDirection, "exercise")).not.toMatch(/with\s+drawn between/);
   });
 
   it("opens by naming the artifact and its exercise count", () => {
-    expect(composeImagePrompt(PANEL_SHEET)).toMatch(/6-panel .*infographic/i);
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toMatch(/6-panel .*infographic/i);
   });
 
   it("includes the video title", () => {
-    expect(composeImagePrompt(PANEL_SHEET)).toContain("Daily Mobility Routine");
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toContain("Daily Mobility Routine");
   });
 
   it("carries the flat vector style block", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     expect(prompt).toMatch(/flat vector/i);
     expect(prompt).toMatch(/white background/i);
   });
 
   it("restates the exercises verbatim so the labels come back unparaphrased", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     const tail = prompt.slice(prompt.indexOf("For your reference"));
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(tail).toContain(exercise.formCue);
@@ -432,22 +547,22 @@ describe("composeImagePrompt", () => {
   });
 
   it("labels each panel with the amount when the video stated one", () => {
-    const prompt = composeImagePrompt(PANEL_SHEET);
+    const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(prompt).toContain(exercise.amount);
     }
   });
 
   it("switches to an icon grid past the panel limit", () => {
-    const prompt = composeImagePrompt(GRID_SHEET);
+    const prompt = composeImagePrompt(GRID_SHEET, "exercise");
     expect(prompt).toMatch(/grid/i);
     expect(prompt).toMatch(/2-5 word/i);
     expect(prompt).toMatch(/12 exercises/i);
   });
 
   it("groups the panels by section when the video used more than one", () => {
-    expect(composeImagePrompt(PANEL_SHEET)).toMatch(/Standing/);
-    expect(composeImagePrompt(PANEL_SHEET)).toMatch(/Floor/);
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toMatch(/Standing/);
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toMatch(/Floor/);
   });
 
   it("skips grouping when every section holds a single exercise", () => {
@@ -458,14 +573,220 @@ describe("composeImagePrompt", () => {
         .flatMap((section) => section.exercises)
         .map((exercise) => ({ name: `The ${exercise.name}`, exercises: [exercise] })),
     };
-    expect(composeImagePrompt(soloSections)).not.toMatch(/labelled rows/i);
+    expect(composeImagePrompt(soloSections, "exercise")).not.toMatch(/labelled rows/i);
   });
 
   it("groups only when a section actually holds more than one exercise", () => {
-    expect(composeImagePrompt(PANEL_SHEET)).toMatch(/labelled rows/i);
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toMatch(/labelled rows/i);
   });
 
   it("returns a prompt without throwing when no exercises were found", () => {
-    expect(() => composeImagePrompt(EMPTY_SHEET)).not.toThrow();
+    expect(() => composeImagePrompt(EMPTY_SHEET, "exercise")).not.toThrow();
+  });
+});
+
+const PERFORMER = {
+  build: "slim and athletic",
+  hair: "long dark hair tied back",
+  clothing: "a red t-shirt and black leggings",
+  setting: "a bright home studio",
+};
+
+const PERFORMER_SHEET = { ...PANEL_SHEET, performer: PERFORMER };
+
+describe("composePerformerSentence", () => {
+  it("carries every trait the model returned", () => {
+    const sentence = composePerformerSentence(PERFORMER_SHEET, "exercise");
+    for (const trait of Object.values(PERFORMER)) {
+      expect(sentence).toContain(trait);
+    }
+  });
+
+  it("returns nothing when no performer was extracted", () => {
+    expect(composePerformerSentence(PANEL_SHEET, "exercise")).toBe("");
+  });
+
+  it("skips the traits the model could not see", () => {
+    const sentence = composePerformerSentence(
+      { performer: { clothing: "a blue apron" } },
+      "generic",
+    );
+    expect(sentence).toContain("a blue apron");
+    expect(sentence).not.toMatch(/setting/i);
+  });
+
+  it("conditions the figure on a person appearing at all in generic mode", () => {
+    expect(composePerformerSentence(PERFORMER_SHEET, "generic")).toMatch(
+      /Wherever a panel shows a person/i,
+    );
+  });
+});
+
+describe("composeImagePrompt with a performer", () => {
+  it("applies one consistent-character sentence to the panel prompt", () => {
+    const prompt = composeImagePrompt(PERFORMER_SHEET, "exercise");
+    expect(prompt).toContain(composePerformerSentence(PERFORMER_SHEET, "exercise"));
+  });
+
+  it("applies it to the grid prompt too", () => {
+    const prompt = composeImagePrompt(
+      { ...GRID_SHEET, performer: PERFORMER },
+      "exercise",
+    );
+    expect(prompt).toContain(PERFORMER.clothing);
+  });
+
+  it("omits the sentence entirely when the performer came back empty", () => {
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).not.toMatch(
+      /Draw the same person/i,
+    );
+  });
+});
+
+describe("renderSheetTable with a performer", () => {
+  it("surfaces the traits so the user can check them against the video", () => {
+    const table = renderSheetTable(PERFORMER_SHEET, "exercise");
+    expect(table).toContain("## On screen");
+    for (const trait of Object.values(PERFORMER)) {
+      expect(table).toContain(trait);
+    }
+  });
+
+  it("omits the block when no performer was extracted", () => {
+    expect(renderSheetTable(PANEL_SHEET, "exercise")).not.toContain("## On screen");
+  });
+});
+
+const GENERIC_SHEET = {
+  title: "How Sourdough Works",
+  summary: "What actually happens in the jar.",
+  performer: { clothing: "a blue apron", setting: "a home kitchen" },
+  sections: [
+    {
+      name: "The starter",
+      points: [
+        {
+          label: "Wild yeast culture",
+          detail: "Flour and water culture wild yeast over several days.",
+          visual: "a glass jar of bubbling starter beside a flour scoop",
+        },
+        {
+          label: "Daily feeding",
+          detail: "Discard half and refeed to keep the culture active.",
+          visual: "a hand pouring flour into a half-empty jar",
+        },
+      ],
+    },
+    {
+      name: "The bake",
+      points: [
+        {
+          label: "Bulk fermentation",
+          detail: "The dough rises until nearly doubled.",
+          visual: "a covered bowl of dough rising on a counter",
+        },
+      ],
+    },
+  ],
+};
+
+function everyPoint(sheet) {
+  return sheet.sections.flatMap((section) => section.points);
+}
+
+describe("generic mode", () => {
+  it("renders a point-and-detail table rather than an exercise table", () => {
+    const table = renderSheetTable(GENERIC_SHEET, "generic");
+    expect(table).toContain("| Point | Detail |");
+    for (const point of everyPoint(GENERIC_SHEET)) {
+      expect(table).toContain(point.label);
+      expect(table).toContain(point.detail);
+    }
+  });
+
+  it("keeps the drawable field out of the human-readable table", () => {
+    const table = renderSheetTable(GENERIC_SHEET, "generic");
+    expect(table).not.toContain("a covered bowl of dough rising on a counter");
+  });
+
+  it("draws every point from its visual field", () => {
+    const prompt = composeImagePrompt(GENERIC_SHEET, "generic");
+    for (const point of everyPoint(GENERIC_SHEET)) {
+      expect(prompt).toContain(`an illustration of ${point.visual}`);
+    }
+  });
+
+  it("normalises a visual that already names an illustration", () => {
+    const prefixed = {
+      ...GENERIC_SHEET,
+      sections: [
+        {
+          name: "Only",
+          points: [
+            {
+              label: "Jar",
+              detail: "A jar.",
+              visual: "an illustration of a glass jar",
+            },
+          ],
+        },
+      ],
+    };
+    const prompt = composeImagePrompt(prefixed, "generic");
+    expect(prompt).toContain("an illustration of a glass jar");
+    expect(prompt).not.toMatch(/illustration of an illustration/i);
+  });
+
+  it("opens by naming the artifact and its point count", () => {
+    expect(composeImagePrompt(GENERIC_SHEET, "generic")).toMatch(
+      /3-panel .*infographic/i,
+    );
+  });
+
+  it("restates the points verbatim so the labels come back unparaphrased", () => {
+    const prompt = composeImagePrompt(GENERIC_SHEET, "generic");
+    const tail = prompt.slice(prompt.indexOf("For your reference"));
+    for (const point of everyPoint(GENERIC_SHEET)) {
+      expect(tail).toContain(point.detail);
+    }
+  });
+
+  it("switches to an icon grid past the panel limit", () => {
+    const many = {
+      ...GENERIC_SHEET,
+      sections: [
+        {
+          name: "All",
+          points: Array.from({ length: 12 }, (_unused, index) => ({
+            label: `Point ${index + 1}`,
+            detail: `Detail ${index + 1}.`,
+            visual: `an icon for point ${index + 1}`,
+          })),
+        },
+      ],
+    };
+    const prompt = composeImagePrompt(many, "generic");
+    expect(prompt).toMatch(/grid/i);
+    expect(prompt).toMatch(/12 points/i);
+  });
+
+  it("renders a document without throwing when no points were found", () => {
+    expect(() =>
+      renderSheetDocument({ title: "Nothing", summary: "", sections: [] }, "generic"),
+    ).not.toThrow();
+  });
+});
+
+describe("countItems", () => {
+  it("counts exercises across every section in exercise mode", () => {
+    expect(countItems(PANEL_SHEET, "exercise")).toBe(6);
+  });
+
+  it("counts points across every section in generic mode", () => {
+    expect(countItems(GENERIC_SHEET, "generic")).toBe(3);
+  });
+
+  it("counts zero for a sheet the model returned empty", () => {
+    expect(countItems(EMPTY_SHEET, "exercise")).toBe(0);
   });
 });

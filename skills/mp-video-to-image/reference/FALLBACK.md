@@ -2,11 +2,12 @@
 
 Run this path when `video-to-sheet.mjs` exits non-zero because Gemini refused the video —
 daily video quota reached, a rate limit that outlasts a retry, or a video Gemini cannot see
-(private, unlisted, members-only, region-locked). It reaches the same
-`<slug>-exercises.md` through the machine's own copy of the video, then hands back to the
-normal prompt-composition step.
+(private, unlisted, members-only, region-locked). It reaches the same run folder through the
+machine's own copy of the video, then hands back to the normal prompt-composition step.
 
-The deliverable is identical: an exercise table with the same columns, in performance order.
+The deliverable is identical: `$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`
+holding `<slug>.md` and `prompt.txt`, with the same columns the chosen mode produces, in the
+video's own order.
 
 ## Step 1: Subtitles first
 
@@ -62,28 +63,54 @@ ffmpeg -i "<video>" -vf "fps=1/15" -q:v 3 "<scratchpad>/frames/%03d.jpg"
 ## Step 3: Vision pass
 
 Read the frames directly with the `Read` tool — it renders images — alongside the subtitle
-text, and write the same structured object the Gemini path produces:
+text, and write the same structured object the Gemini path produces for the chosen mode:
 
 ```
-{ title, summary, sections: [ { name, exercises: [ { name, amount, formCue } ] } ] }
+exercise: { title, summary, performer, sections: [ { name, exercises: [ { name, amount, startPose, endPose, movementDirection, formCue } ] } ] }
+generic:  { title, summary, performer, sections: [ { name, points:    [ { label, detail, visual } ] } ] }
 ```
 
-Hold to the rules the Gemini prompt uses: every exercise demonstrated, in the order
-performed, `amount` as sets and reps when the presenter states them and a duration
-otherwise, and a form cue drawn from what the frames and captions actually show.
+`performer` is `{ build, hair, clothing, setting }`, describing only what the frames actually
+show and omitting any field they do not; leave it out entirely when nobody appears.
+
+Hold to the rules the Gemini prompt uses: every item in the video's own order, drawing fields
+describing visible geometry in the third person, `amount` as sets and reps when the presenter
+states them and a duration otherwise, and prose fields drawn from what the frames and
+captions actually show.
 
 ## Step 4: Rejoin the main path
 
 Write the object to `<scratchpad>/<slug>.json`, then render and deliver it through the same
-code the Gemini path uses, so both paths produce byte-identical formatting:
+code the Gemini path uses, so both paths produce byte-identical formatting.
+
+`<out>` is the run folder, named as on the Gemini path — `[<channel>] <video title>` under
+`$MPX_AI_GENERATED\_VIDEO_SHEETS\`. yt-dlp already holds both, and a video this path exists
+to handle is often one oEmbed cannot see:
+
+```bash
+yt-dlp --skip-download --print "%(channel)s" --print "%(title)s" "<youtube-url>"
+```
+
+Pass them through `composeFolderName` rather than joining them by hand, so the same
+characters get stripped and the same length cap applies:
+
+```bash
+node -e "import('${CLAUDE_SKILL_DIR}/scripts/lib/compose.mjs').then(m => \
+  console.log(m.composeFolderName({ channel: '<channel>', title: '<title>' }, '<slug>')))"
+```
+
+Create that folder, then render into it:
 
 ```bash
 node -e "import('${CLAUDE_SKILL_DIR}/scripts/lib/compose.mjs').then(async m => { \
-  const sheet = JSON.parse(require('fs').readFileSync('<scratchpad>/<slug>.json','utf8')); \
-  require('fs').writeFileSync('<out>/<slug>.md', m.renderSheetDocument(sheet)); })"
+  const fs = require('fs'); const mode = '<mode>'; \
+  const sheet = JSON.parse(fs.readFileSync('<scratchpad>/<slug>.json','utf8')); \
+  fs.writeFileSync('<out>/<slug>.md', m.renderSheetDocument(sheet, mode)); \
+  fs.writeFileSync('<out>/prompt.txt', m.composeImagePrompt(sheet, mode)); })"
 ```
 
-Then copy the prompt and open the browser exactly as Step 5 of SKILL.md describes.
+Then hand off exactly as Step 5 of SKILL.md describes — links in the report, no clipboard and
+no browser tab.
 
 ## Cost of this path
 

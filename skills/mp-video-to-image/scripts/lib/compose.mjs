@@ -1,6 +1,11 @@
 /**
  * Pure helpers for the video-to-sheet CLI: no filesystem, network, or process access,
  * so every branch below is directly unit-testable.
+ *
+ * Two sheet modes share one pipeline. `exercise` extracts a workout into drawable start and
+ * end poses; `generic` extracts any other video into points carrying a drawable `visual`.
+ * The difference lives entirely in the SHEET_MODES descriptors below — request, render and
+ * compose all read the descriptor rather than branching on the mode name.
  */
 
 const FALLBACK_SLUG = "video";
@@ -13,6 +18,39 @@ export function slugify(title) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return slug || FALLBACK_SLUG;
+}
+
+const WINDOWS_ILLEGAL_CHARACTERS = /[<>:"/\\|?*]/g;
+const WINDOWS_RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+// The run folder sits about 55 characters deep and holds files named after the slug, so a
+// long title still has to leave room under the 260-character path limit.
+const FOLDER_NAME_LIMIT = 120;
+
+function sanitizeFolderName(name) {
+  const cleaned = name
+    .replace(WINDOWS_ILLEGAL_CHARACTERS, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, FOLDER_NAME_LIMIT)
+    // Windows silently drops a trailing dot or space, leaving a folder whose name no longer
+    // matches the path anything else built.
+    .replace(/[. ]+$/, "");
+  return WINDOWS_RESERVED_NAMES.test(cleaned) ? `${cleaned}_` : cleaned;
+}
+
+/**
+ * The run folder's name, `[Channel] Video Title`.
+ *
+ * The sheet's own `title` is the short one Gemini writes for the header, so it cannot name
+ * the folder: a user looking for a run recognises the title YouTube showed them and the
+ * channel that published it. Metadata that could not be read falls back to the slug rather
+ * than losing a finished run to a failed lookup.
+ */
+export function composeFolderName(videoMetadata, slug) {
+  const title = String(videoMetadata?.title ?? "").trim();
+  if (!title) return slug;
+  const channel = String(videoMetadata?.channel ?? "").trim();
+  return sanitizeFolderName(channel ? `[${channel}] ${title}` : title) || slug;
 }
 
 export function assertApiKey(environment) {
@@ -44,58 +82,94 @@ export function describeApiError(status, body) {
   return `Gemini request failed with HTTP ${status}: ${apiMessage}`;
 }
 
-const EXERCISE_SHEET_SCHEMA = {
+// The person on screen, so the generated sheet is recognisable as belonging to this video.
+// Nothing here is required: Gemini omits what it cannot see rather than inventing it.
+const PERFORMER_SCHEMA = {
   type: "object",
-  propertyOrdering: ["title", "summary", "sections"],
-  required: ["title", "summary", "sections"],
+  propertyOrdering: ["build", "hair", "clothing", "setting"],
   properties: {
-    title: { type: "string" },
-    summary: { type: "string" },
-    sections: {
-      type: "array",
-      items: {
-        type: "object",
-        propertyOrdering: ["name", "exercises"],
-        required: ["name", "exercises"],
-        properties: {
-          name: { type: "string" },
-          exercises: {
-            type: "array",
-            items: {
-              type: "object",
-              propertyOrdering: [
-                "name",
-                "amount",
-                "startPose",
-                "endPose",
-                "movementDirection",
-                "formCue",
-              ],
-              required: [
-                "name",
-                "amount",
-                "startPose",
-                "endPose",
-                "movementDirection",
-                "formCue",
-              ],
-              properties: {
-                name: { type: "string" },
-                amount: { type: "string" },
-                startPose: { type: "string" },
-                endPose: { type: "string" },
-                movementDirection: { type: "string" },
-                formCue: { type: "string" },
-              },
-            },
-          },
-        },
-      },
-    },
+    build: { type: "string" },
+    hair: { type: "string" },
+    clothing: { type: "string" },
+    setting: { type: "string" },
   },
 };
 
-const EXTRACTION_INSTRUCTION = [
+const PERFORMER_INSTRUCTION = [
+  "Fill performer with the appearance of the person on screen, so an illustrator can draw the same person on every panel: apparent build, hair, the colours and type of clothing, and the setting (gym, studio, outdoors, home).",
+  "Describe only what is visible, in neutral, drawable terms — colours, shapes and garments rather than judgements about the person.",
+  "Omit any field you cannot see, and leave performer out entirely when no person appears on screen.",
+].join(" ");
+
+function sectionSchema(itemsKey, itemSchema) {
+  return {
+    type: "array",
+    items: {
+      type: "object",
+      propertyOrdering: ["name", itemsKey],
+      required: ["name", itemsKey],
+      properties: {
+        name: { type: "string" },
+        [itemsKey]: { type: "array", items: itemSchema },
+      },
+    },
+  };
+}
+
+function sheetSchema(itemsKey, itemSchema) {
+  return {
+    type: "object",
+    propertyOrdering: ["title", "summary", "performer", "sections"],
+    required: ["title", "summary", "sections"],
+    properties: {
+      title: { type: "string" },
+      summary: { type: "string" },
+      performer: PERFORMER_SCHEMA,
+      sections: sectionSchema(itemsKey, itemSchema),
+    },
+  };
+}
+
+const EXERCISE_ITEM_SCHEMA = {
+  type: "object",
+  propertyOrdering: [
+    "name",
+    "amount",
+    "startPose",
+    "endPose",
+    "movementDirection",
+    "formCue",
+  ],
+  required: [
+    "name",
+    "amount",
+    "startPose",
+    "endPose",
+    "movementDirection",
+    "formCue",
+  ],
+  properties: {
+    name: { type: "string" },
+    amount: { type: "string" },
+    startPose: { type: "string" },
+    endPose: { type: "string" },
+    movementDirection: { type: "string" },
+    formCue: { type: "string" },
+  },
+};
+
+const POINT_ITEM_SCHEMA = {
+  type: "object",
+  propertyOrdering: ["label", "detail", "visual"],
+  required: ["label", "detail", "visual"],
+  properties: {
+    label: { type: "string" },
+    detail: { type: "string" },
+    visual: { type: "string" },
+  },
+};
+
+const EXERCISE_INSTRUCTION = [
   "Watch this workout video and transcribe every exercise demonstrated, in the order performed.",
   "Give the video a short title and a one-sentence summary.",
   "Group the exercises into the sections the video itself uses (warm-up, circuits, cool-down); use a single section when the video has none.",
@@ -105,53 +179,30 @@ const EXTRACTION_INSTRUCTION = [
   "Write movementDirection as a short phrase completing the sentence 'an arrow ...', naming only the path the body travels between those two positions, for example 'sweeping down and out to the left hip' or 'pointing straight down through the hips'; leave the word arrow out of it.",
   "Write all three in the third person, describing the figure rather than addressing the viewer; they are drawing instructions, so keep coaching language out of them.",
   "Write formCue as one short coaching cue for performing the movement safely.",
+  PERFORMER_INSTRUCTION,
 ].join(" ");
 
-export function buildExtractionRequest(
-  youtubeUrl,
-  focus,
-  { mediaResolution } = {},
-) {
-  const focusText = String(focus ?? "").trim();
-  const instruction = focusText
-    ? `${EXTRACTION_INSTRUCTION} Cover only this part of the video: ${focusText}`
-    : EXTRACTION_INSTRUCTION;
+const GENERIC_INSTRUCTION = [
+  "Watch this video and distil it into a one-page overview sheet.",
+  "Give the video a short title and a one-sentence summary.",
+  "Group the material into the sections the video itself uses; use a single section when the video has none.",
+  "Within each section list the points worth remembering, in the order the video makes them.",
+  "Write label as a short noun phrase of two to six words naming the point.",
+  "Write detail as one sentence carrying the substance of the point, in prose a reader keeps.",
+  "Write visual as a clause completing the sentence 'an illustration of ...', naming only what an illustrator would draw for that point — concrete objects, a small scene, or a simple icon, for example 'a hand pouring water into a measuring jug' — and keep abstractions, lettering and numbers out of it.",
+  "Write visual in the third person; it is a drawing instruction, so keep explanatory language in detail instead.",
+  PERFORMER_INSTRUCTION,
+].join(" ");
 
-  const generationConfig = {
-    responseMimeType: "application/json",
-    responseSchema: EXERCISE_SHEET_SCHEMA,
-  };
-  // Low resolution cuts the video token count roughly fourfold; only opt in when asked,
-  // because on-screen rep counts get unreadable at that sampling rate.
-  if (mediaResolution === "low") {
-    generationConfig.mediaResolution = "MEDIA_RESOLUTION_LOW";
-  }
-
-  return {
-    contents: [
-      {
-        parts: [{ file_data: { file_uri: youtubeUrl } }, { text: instruction }],
-      },
-    ],
-    generationConfig,
-  };
-}
-
-// Past this many exercises a row of drawn panels stops being legible on one page, so the
-// prompt switches to the icon-grid form. Both shapes are documented in reference/PROMPT_STYLE.md.
-const PANEL_LAYOUT_LIMIT = 8;
-
-const PANEL_STYLE_BLOCK =
+const EXERCISE_STYLE_BLOCK =
   "The style should be clean, flat vector illustration, minimalistic, with a plain white background, serving as a step-by-step exercise guide.";
+const GENERIC_STYLE_BLOCK =
+  "The style should be clean, flat vector illustration, minimalistic, with a plain white background, serving as a single-page reference sheet.";
 const GRID_STYLE_BLOCK =
   "The overall style should be modern, visually pleasing, flat vector art with a cohesive color palette on a plain white background.";
 
 function escapeTableCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|");
-}
-
-function everyExercise(sheet) {
-  return (sheet?.sections ?? []).flatMap((section) => section.exercises ?? []);
 }
 
 function describeAmount(exercise) {
@@ -169,17 +220,207 @@ function describeArrow(exercise) {
   return direction ? `an arrow ${direction}` : "";
 }
 
-export function renderExerciseTable(sheet) {
-  const lines = [`# ${sheet?.title ?? "Exercise Sheet"}`, ""];
+function describeVisual(point) {
+  const visual = String(point.visual ?? "")
+    .trim()
+    .replace(/^an?\s+illustration\s+of\s+/i, "");
+  return visual || String(point.label ?? "").trim();
+}
+
+const SHEET_MODES = {
+  exercise: {
+    itemsKey: "exercises",
+    itemNoun: "exercises",
+    schema: sheetSchema("exercises", EXERCISE_ITEM_SCHEMA),
+    instruction: EXERCISE_INSTRUCTION,
+    styleBlock: EXERCISE_STYLE_BLOCK,
+    tableHeader: ["Exercise", "Amount", "Form cue"],
+    tableRow: (exercise) => [exercise.name, exercise.amount, exercise.formCue],
+    emptyPromptNote:
+      "No exercises were extracted from the video, so there is nothing to illustrate yet.",
+    openingSentence: (sheet, count) =>
+      `A clean, ${count}-panel fitness infographic titled "${sheet.title}". ` +
+      `Every panel shows the same exercise twice — its start position and its end position — with an arrow between them.`,
+    gridOpeningSentence: (sheet, count) =>
+      `A highly organized fitness infographic titled "${sheet.title}" displaying ${count} exercises in a grid. ` +
+      `Each tile features a minimalist, colorful icon of the movement with a small arrow showing which way the body travels, paired with a very short 2-5 word label underneath it.`,
+    panelEntry: (exercise, index) => {
+      // Two figures per panel rather than one: a single drawn position cannot distinguish
+      // movements that share a start, and the arrow between them carries the direction.
+      const arrow = describeArrow(exercise);
+      const arrowClause = arrow
+        ? `, with ${arrow} drawn between them to show the direction of the movement`
+        : "";
+      return (
+        `Panel ${index + 1} — ${exercise.name}${describeAmount(exercise)}: two figures side by side, ` +
+        `first a person ${exercise.startPose}, then a person ${exercise.endPose}${arrowClause}.`
+      );
+    },
+    // The grid has no room for a second figure, so the end position carries the tile and the
+    // arrow keeps the direction readable at tile size.
+    gridEntry: (exercise, index) => {
+      const arrow = describeArrow(exercise);
+      return `${index + 1}. ${exercise.name}${describeAmount(exercise)} — a figure ${exercise.endPose}${arrow ? `, with ${arrow}` : ""}.`;
+    },
+    performerLead:
+      "Draw the same person in every panel, matching the presenter in the video",
+    panelCaption:
+      "Number each panel and label it with the exercise name and its amount.",
+    referenceEntry: (exercise) =>
+      `${exercise.name}${describeAmount(exercise)}: ${exercise.formCue}`,
+  },
+  generic: {
+    itemsKey: "points",
+    itemNoun: "points",
+    schema: sheetSchema("points", POINT_ITEM_SCHEMA),
+    instruction: GENERIC_INSTRUCTION,
+    styleBlock: GENERIC_STYLE_BLOCK,
+    tableHeader: ["Point", "Detail"],
+    tableRow: (point) => [point.label, point.detail],
+    emptyPromptNote:
+      "No points were extracted from the video, so there is nothing to illustrate yet.",
+    openingSentence: (sheet, count) =>
+      `A clean, ${count}-panel infographic titled "${sheet.title}". ` +
+      `Every panel illustrates one point from the video and carries its label underneath.`,
+    gridOpeningSentence: (sheet, count) =>
+      `A highly organized infographic titled "${sheet.title}" displaying ${count} points in a grid. ` +
+      `Each tile features a minimalist, colorful icon of the point paired with a very short 2-5 word label underneath it.`,
+    panelEntry: (point, index) =>
+      `Panel ${index + 1} — ${point.label}: an illustration of ${describeVisual(point)}.`,
+    gridEntry: (point, index) =>
+      `${index + 1}. ${point.label} — an illustration of ${describeVisual(point)}.`,
+    performerLead:
+      "Wherever a panel shows a person, draw the same person throughout, matching the presenter in the video",
+    panelCaption: "Number each panel and label it with the point's name.",
+    referenceEntry: (point) => `${point.label}: ${point.detail}`,
+  },
+};
+
+// No default: which sheet a video should become is the user's call, and guessing it from a
+// title silently produces the wrong schema for the whole run.
+export function resolveMode(mode) {
+  const descriptor = SHEET_MODES[mode];
+  if (descriptor) return descriptor;
+  const modeList = Object.keys(SHEET_MODES).join(", ");
+  throw new Error(
+    mode
+      ? `Unknown --mode "${mode}". Use one of: ${modeList}.`
+      : `--mode is required. Use one of: ${modeList}.`,
+  );
+}
+
+export function buildExtractionRequest(
+  youtubeUrl,
+  focus,
+  { mediaResolution, mode } = {},
+) {
+  const descriptor = resolveMode(mode);
+  const focusText = String(focus ?? "").trim();
+  const instruction = focusText
+    ? `${descriptor.instruction} Cover only this part of the video: ${focusText}`
+    : descriptor.instruction;
+
+  const generationConfig = {
+    responseMimeType: "application/json",
+    responseSchema: descriptor.schema,
+  };
+  // Low resolution cuts the video token count roughly fourfold; only opt in when asked,
+  // because on-screen rep counts get unreadable at that sampling rate.
+  if (mediaResolution === "low") {
+    generationConfig.mediaResolution = "MEDIA_RESOLUTION_LOW";
+  }
+
+  return {
+    contents: [
+      {
+        parts: [{ file_data: { file_uri: youtubeUrl } }, { text: instruction }],
+      },
+    ],
+    generationConfig,
+  };
+}
+
+// Past this many items a row of drawn panels stops being legible on one page, so the prompt
+// switches to the icon-grid form. Both shapes are documented in reference/PROMPT_STYLE.md.
+const PANEL_LAYOUT_LIMIT = 8;
+
+function everyItem(sheet, descriptor) {
+  return (sheet?.sections ?? []).flatMap(
+    (section) => section[descriptor.itemsKey] ?? [],
+  );
+}
+
+export function countItems(sheet, mode) {
+  return everyItem(sheet, resolveMode(mode)).length;
+}
+
+function performerFields(sheet) {
+  const performer = sheet?.performer ?? {};
+  const read = (field) => String(performer[field] ?? "").trim();
+  return {
+    build: read("build"),
+    hair: read("hair"),
+    clothing: read("clothing"),
+    setting: read("setting"),
+  };
+}
+
+/**
+ * One sentence applied to every panel, so the drawn figure resembles the person in the source
+ * video and the sheet is recognisable as belonging to it. An empty performer yields "".
+ */
+export function composePerformerSentence(sheet, mode) {
+  const descriptor = resolveMode(mode);
+  const { build, hair, clothing, setting } = performerFields(sheet);
+  const figureParts = [build, hair, clothing].filter(Boolean);
+  const sentences = [];
+  if (figureParts.length > 0) {
+    sentences.push(`${descriptor.performerLead}: ${figureParts.join(", ")}.`);
+  }
+  if (setting) {
+    sentences.push(`Suggest the setting with a few minimal props: ${setting}.`);
+  }
+  return sentences.join(" ");
+}
+
+function renderPerformerBlock(sheet) {
+  const { build, hair, clothing, setting } = performerFields(sheet);
+  const rows = [
+    ["Build", build],
+    ["Hair", hair],
+    ["Clothing", clothing],
+    ["Setting", setting],
+  ].filter(([, value]) => value);
+  if (rows.length === 0) return [];
+
+  return [
+    "## On screen",
+    "",
+    "| Trait | Description |",
+    "| --- | --- |",
+    ...rows.map(
+      ([trait, value]) => `| ${trait} | ${escapeTableCell(value)} |`,
+    ),
+    "",
+  ];
+}
+
+export function renderSheetTable(sheet, mode) {
+  const descriptor = resolveMode(mode);
+  const lines = [`# ${sheet?.title ?? "Video Sheet"}`, ""];
   const summary = String(sheet?.summary ?? "").trim();
   if (summary) lines.push(summary, "");
+  lines.push(...renderPerformerBlock(sheet));
+
+  const headerRow = `| ${descriptor.tableHeader.join(" | ")} |`;
+  const dividerRow = `| ${descriptor.tableHeader.map(() => "---").join(" | ")} |`;
 
   for (const section of sheet?.sections ?? []) {
     lines.push(`## ${section.name}`, "");
-    lines.push("| Exercise | Amount | Form cue |", "| --- | --- | --- |");
-    for (const exercise of section.exercises ?? []) {
+    lines.push(headerRow, dividerRow);
+    for (const item of section[descriptor.itemsKey] ?? []) {
       lines.push(
-        `| ${escapeTableCell(exercise.name)} | ${escapeTableCell(exercise.amount)} | ${escapeTableCell(exercise.formCue)} |`,
+        `| ${descriptor.tableRow(item).map(escapeTableCell).join(" | ")} |`,
       );
     }
     lines.push("");
@@ -192,92 +433,82 @@ export function renderExerciseTable(sheet) {
  * The single deliverable: the table a human reads and the prompt they paste, in one file.
  * The prompt is fenced so a copy button yields the prompt alone, unmixed with the table.
  */
-export function renderSheetDocument(sheet) {
+export function renderSheetDocument(sheet, mode) {
   return [
-    renderExerciseTable(sheet).trim(),
+    renderSheetTable(sheet, mode).trim(),
     "",
     "## Image prompt",
     "",
     "Paste this into ChatGPT to generate the sheet image.",
     "",
     "```",
-    composeImagePrompt(sheet),
+    composeImagePrompt(sheet, mode),
     "```",
     "",
   ].join("\n");
 }
 
-function composePanelPrompt(sheet, exercises) {
-  // Two figures per panel rather than one: a single drawn position cannot distinguish
-  // movements that share a start, and the arrow between them carries the direction.
-  const panels = exercises.map((exercise, index) => {
-    const arrow = describeArrow(exercise);
-    const arrowClause = arrow
-      ? `, with ${arrow} drawn between them to show the direction of the movement`
-      : "";
-    return (
-      `Panel ${index + 1} — ${exercise.name}${describeAmount(exercise)}: two figures side by side, ` +
-      `first a person ${exercise.startPose}, then a person ${exercise.endPose}${arrowClause}.`
-    );
-  });
+function composePanelPrompt(sheet, descriptor, items, performerSentence) {
+  const panels = items.map((item, index) => descriptor.panelEntry(item, index));
 
   // Sections earn a grouping instruction only when one of them actually gathers several
-  // exercises. A video that titles every movement separately yields one section per
-  // exercise, where naming the rows just repeats the panel labels.
+  // items. A video that titles every item separately yields one section per item, where
+  // naming the rows just repeats the panel labels.
   const groupingSections = (sheet.sections ?? []).filter(
     (section) => section.name,
   );
-  const gathersExercises = groupingSections.some(
-    (section) => (section.exercises ?? []).length > 1,
+  const gathersItems = groupingSections.some(
+    (section) => (section[descriptor.itemsKey] ?? []).length > 1,
   );
   const grouping =
-    groupingSections.length > 1 && gathersExercises
+    groupingSections.length > 1 && gathersItems
       ? ` Group the panels into labelled rows: ${groupingSections.map((section) => section.name).join(", ")}.`
       : "";
 
   return [
-    `A clean, ${exercises.length}-panel fitness infographic titled "${sheet.title}".`,
-    `Every panel shows the same exercise twice — its start position and its end position — with an arrow between them.`,
+    descriptor.openingSentence(sheet, items.length),
     panels.join(" "),
-    `${PANEL_STYLE_BLOCK} Number each panel and label it with the exercise name and its amount.${grouping}`,
-  ].join(" ");
+    performerSentence,
+    `${descriptor.styleBlock} ${descriptor.panelCaption}${grouping}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
-function composeGridPrompt(sheet, exercises) {
-  // The grid has no room for a second figure, so the end position carries the tile and the
-  // arrow keeps the direction readable at tile size.
-  const tiles = exercises.map((exercise, index) => {
-    const arrow = describeArrow(exercise);
-    return `${index + 1}. ${exercise.name}${describeAmount(exercise)} — a figure ${exercise.endPose}${arrow ? `, with ${arrow}` : ""}.`;
-  });
+function composeGridPrompt(sheet, descriptor, items, performerSentence) {
+  const tiles = items.map((item, index) => descriptor.gridEntry(item, index));
 
   return [
-    `A highly organized fitness infographic titled "${sheet.title}" displaying ${exercises.length} exercises in a grid.`,
-    "Each tile features a minimalist, colorful icon of the movement with a small arrow showing which way the body travels, paired with a very short 2-5 word label underneath it.",
+    descriptor.gridOpeningSentence(sheet, items.length),
     tiles.join(" "),
+    performerSentence,
     GRID_STYLE_BLOCK,
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
-export function composeImagePrompt(sheet) {
-  const exercises = everyExercise(sheet);
-  if (exercises.length === 0) {
-    return `A clean fitness infographic titled "${sheet?.title ?? "Exercise Sheet"}". No exercises were extracted from the video, so there is nothing to illustrate yet. ${PANEL_STYLE_BLOCK}`;
+export function composeImagePrompt(sheet, mode) {
+  const descriptor = resolveMode(mode);
+  const items = everyItem(sheet, descriptor);
+  const performerSentence = composePerformerSentence(sheet, mode);
+
+  if (items.length === 0) {
+    return [
+      `A clean infographic titled "${sheet?.title ?? "Video Sheet"}".`,
+      descriptor.emptyPromptNote,
+      descriptor.styleBlock,
+    ].join(" ");
   }
 
   const body =
-    exercises.length <= PANEL_LAYOUT_LIMIT
-      ? composePanelPrompt(sheet, exercises)
-      : composeGridPrompt(sheet, exercises);
+    items.length <= PANEL_LAYOUT_LIMIT
+      ? composePanelPrompt(sheet, descriptor, items, performerSentence)
+      : composeGridPrompt(sheet, descriptor, items, performerSentence);
 
   // Restating the source verbatim is what stops the model paraphrasing the labels;
   // reference/PROMPT_STYLE.md records the two prompts this was taken from.
-  const reference = exercises
-    .map(
-      (exercise) =>
-        `${exercise.name}${describeAmount(exercise)}: ${exercise.formCue}`,
-    )
-    .join(" ");
+  const reference = items.map(descriptor.referenceEntry).join(" ");
 
-  return `${body}\n\nFor your reference, here are the ${exercises.length} exercises shown in the video: ${reference}`;
+  return `${body}\n\nFor your reference, here are the ${items.length} ${descriptor.itemNoun} shown in the video: ${reference}`;
 }

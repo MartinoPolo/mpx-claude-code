@@ -110,15 +110,27 @@ followed by "these are the exact points:" and all 35 sentences in full.
 Note the parenthesised icon suggestions. Naming six concrete icons taught the model the
 vocabulary for the other twenty-nine, which is cheaper than describing all of them.
 
+## The consistent-character sentence
+
+A fifth part joins the four above whenever the video has someone on screen: one sentence
+describing the person to draw in every panel — build, hair, clothing colours, and the setting
+suggested with a few props. It is what makes the sheet recognisable as belonging to *this*
+video rather than to any workout, and it comes from the `performer` object the extraction
+step fills. A video with nobody on screen returns an empty `performer` and the sentence is
+simply left out.
+
 ## Checking a generated prompt
 
-- Every exercise in the table appears by name
-- Every exercise carries a drawable start and end position, with no coaching verbs left in
-  either, and both written in the third person — a stray "your" means coaching voice leaked
-  into a drawing instruction
-- Each arrow clause reads as a sentence: "an arrow" followed by a path, never doubled
+- Every item in the table appears by name
+- Every item carries a drawable description, written in the third person and free of
+  explanatory or coaching verbs — a stray "your" means instructional voice leaked into a
+  drawing instruction
 - The item count appears in the opening sentence and matches the number of entries
-- Panels are grouped into rows only when a section actually holds several exercises;
-  a video that titles each movement separately needs no grouping line
+- The consistent-character sentence names only traits the video actually shows
+- Panels are grouped into rows only when a section actually holds several items; a video that
+  titles each item separately needs no grouping line
 - The style block survived any editing
 - The verbatim restatement is still at the end
+
+Exercise mode adds its own checks — the two positions and the arrow clause — in
+[`EXERCISE.md`](EXERCISE.md).

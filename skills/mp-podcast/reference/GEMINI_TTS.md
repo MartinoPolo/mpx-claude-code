@@ -36,10 +36,14 @@ here:
 
 ```bash
 pip install -U google-genai   # first run only
+mkdir -p "$MPX_AI_GENERATED/_PODCASTS/<slug>"
 python <skill-dir>/scripts/gemini-tts-podcast.py \
-  <slug>-script.txt "$MPX_ONEDRIVE/Podcasts/<slug>.mp3" \
+  <slug>-script.txt "$MPX_AI_GENERATED/_PODCASTS/<slug>/<slug>.mp3" \
   --speakers Alex,Sam --voices Kore,Puck
 ```
+
+Copy the dialogue script into the same folder as `script.txt`; the input `<slug>-script.txt`
+itself stays in the scratchpad.
 
 The script chunks the dialogue on turn boundaries, calls multi-speaker TTS per chunk, writes
 each result as a WAV, and stitches them with ffmpeg straight into 64 kbps mono MP3 — so the

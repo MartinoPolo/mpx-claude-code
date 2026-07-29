@@ -30,7 +30,7 @@ notebooklm generate audio --prompt-file <slug>-prompt.txt \
   --format deep-dive --length <short|default|long> \
   --notebook <nb> --retry 3 --json                # → .task_id
 
-# 6. Download once complete
+# 6. Download once complete — staging file stays in the session scratchpad
 notebooklm download audio ./<slug>-raw.mp3 -a <task_id> -n <nb>
 ```
 
@@ -76,8 +76,12 @@ concrete next command — including which backend to switch to.
 ## Post-processing
 
 ```bash
-ffmpeg -i <slug>-raw.mp3 -codec:a libmp3lame -b:a 64k -ac 1 "$MPX_ONEDRIVE/Podcasts/<slug>.mp3"
+mkdir -p "$MPX_AI_GENERATED/_PODCASTS/<slug>"
+ffmpeg -i <slug>-raw.mp3 -codec:a libmp3lame -b:a 64k -ac 1 "$MPX_AI_GENERATED/_PODCASTS/<slug>/<slug>.mp3"
 ```
+
+`<slug>-raw.mp3` is a scratchpad staging file; the per-slug folder receives only the re-encoded
+MP3 plus `script.txt` and `sources.md`.
 
 NotebookLM ships a high-bitrate stereo file; a 33-minute episode measured 62 MB and came out at
 about 15 MB after this re-encode. Two voices in a dialogue carry fine at 64 kbps mono.

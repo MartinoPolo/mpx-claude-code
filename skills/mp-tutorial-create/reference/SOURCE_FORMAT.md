@@ -9,6 +9,7 @@ Compact authoring syntax compiled by `scripts/compile.js` into a self-contained 
 title: Shadow DOM — Encapsulation for Web Components
 subtitle: What the shadow root is, why styles don't leak, and how to pierce it when testing.
 type: topic              # topic (ends with quiz) | code-showcase (no quiz)
+format: standard         # brief | standard (default) | deep — see table below
 category: webdev         # OneDrive folder name
 slug: shadow-dom         # stable; keys localStorage progress — never change after publish
 date: 2026-07-24
@@ -24,21 +25,54 @@ references:              # rendered as References card; url = 📄 external, fil
   - title: Using shadow DOM
     url: https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM
   - title: mr241-test-review.html
-    file: C:/Users/snapy/OneDrive/tutorials/yoursafe-components/mr241-test-review.html
+    file: $MPX_AI_GENERATED/_TUTORIALS/yoursafe-components/mr241-test-review.html
 ---
 ```
+
+## Format
+
+| | `brief` | `standard` | `deep` |
+| --- | --- | --- | --- |
+| Prose budget per section | 60 words | 200 words | unlimited |
+| Quiz | rejected | expected (`topic`) | expected (`topic`) |
+| `:::reveal` | warned | ≤1 per section | ≤1 per section |
+| Carries the content | annotated code + notes | prose + code | prose, walkthroughs, diagrams |
+
+`brief` is the default choice for introducing something to a team: readers skim the code and its
+notes, not paragraphs. Annotated code is preferred in every `brief` section, though a section that
+genuinely has no code (a rationale or a "what's missing" list) may skip it.
+
+The prose budget counts paragraphs, callout bodies, recap bullets and reveal bodies — **not**
+annotated-code note bodies, which are where `brief` content is supposed to live. Overruns print a
+compile warning and still build; treat the warning as a rewrite instruction, not noise.
+
+The practical consequence in `brief`: **anything that needs explaining goes in an annotated code
+block**, and a plain diff is for changes that speak for themselves. Reaching for a paragraph to
+explain a diff is the signal you should have annotated it instead.
 
 ## Sections
 
 `# <slug> | <Title>` starts a section. Slug is the stable progress key — reuse the exact slug when editing an existing tutorial.
 
 ```markdown
-# why-shadow-dom | What problem does Shadow DOM solve?
+# why-shadow-dom | Why encapsulate at all?
 ```
+
+**Titles must be ≤40 characters** — the contents rail is one column, and a longer title wraps to
+four or five lines there. Compile warns past 40. Write the title as a label, not a sentence:
+`Why a linter at all`, not `Why a linter when we already have tsc, svelte-check and Prettier`.
+
+### Contents rail (reader-side)
+
+Progress ring + contents are a 300px left rail, collapsible from the topbar button or `[`. Below
+1400px it starts collapsed, because there the rail costs the annotated-code region more width than
+it gives back; above, it starts open. An explicit toggle is remembered in `localStorage`
+(`tutorial-sidebar`) and then wins at every width. Titles still need to fit the rail — it is one
+button away at any size.
 
 ## Inline markup (in prose, callouts, recap, steps, quiz)
 
-- `**bold**`, `` `code` ``, `[text](https://url)` external link
+- `**bold**`, `*italic*`, `` `code` ``, `[text](https://url)` external link
 - `[name](file:///C:/path)` → clickable local file link, 📁 prefix added automatically
 - `((shadow root))` glossary term; `((Display text|shadow root))` when display differs from key
 
@@ -53,7 +87,14 @@ const shadow = this.attachShadow({ mode: "open" }); //@1
 @1: Open vs. closed mode | `mode: "open"` exposes `element.shadowRoot` — essential for tests.
 ````
 
-Desktop renders a side annotation rail; mobile renders tap-to-expand inline cards. Same source.
+Desktop pins each note card beside its marked line and draws a bezier connector between them;
+hovering either end highlights the line, the card and the wire. Mobile (≤1100px) renders
+tap-to-expand inline cards instead. Same source. Collapsing the contents rail re-measures and
+redraws every wire, so the code and cards get the reclaimed width.
+
+Because cards are pinned to their lines, **keep note bodies short** — a tall card pushes every
+following card down and its connector stretches into a long vertical sweep. 6-8 notes per block is
+the practical ceiling; split a longer listing into two annotated blocks.
 
 ## Plain code block
 
@@ -87,7 +128,11 @@ Body text.
 :::
 ```
 
-## Recap (Key takeaways) — one per section, at section end
+## Recap (Key takeaways) — at section end, max one per section
+
+Required in `standard` and `deep`. **Optional in `brief`**, where a three-line section followed by a
+recap of the same three lines is the padding the format exists to remove — keep it only when the
+takeaway is not already visible in the code.
 
 ```markdown
 :::recap
@@ -104,7 +149,7 @@ Answer body (hidden until clicked).
 :::
 ```
 
-## Quiz — `topic` tutorials only, once, at the very end (after last section)
+## Quiz — `topic` + `standard`/`deep` only, once, at the very end (after last section)
 
 ```markdown
 :::quiz
@@ -178,4 +223,4 @@ Compiled to inline SVG in two theme variants (light `neutral`, dark `dark`) — 
 node scripts/compile.js path/to/<slug>.source.md [--out <dir>]
 ```
 
-Writes `<slug>.html` beside the source (or to `--out`) and regenerates `C:/Users/snapy/OneDrive/tutorials/index.html`.
+Writes `<slug>.html` beside the source (or to `--out`) and regenerates `$MPX_AI_GENERATED/_TUTORIALS/index.html`.
