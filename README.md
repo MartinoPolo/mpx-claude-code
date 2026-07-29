@@ -42,6 +42,7 @@ the setup is optional and portable.
 | `MPX_CLONED`         | Cloned OSS repositories |
 | `MPX_APPS`           | Local apps              |
 | `MPX_ONEDRIVE`       | OneDrive root           |
+| `MPX_AI_GENERATED`   | Skill-generated assets  |
 | `MPX_OBSIDIAN_VAULT` | Obsidian vault          |
 
 Set them once (PowerShell, user scope — survives reboots):
@@ -311,7 +312,7 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Conventions s
 
 ### Deprecated Skills
 
-Retired skills and agents are archived (not deleted) under [`deprecated/`](deprecated/) — `deprecated/skills/` and `deprecated/agents/` — for history/reference. They are not installed and not runnable as-is. Highlights:
+Retired skills, agents, hooks and scripts are archived (not deleted) under [`deprecated/`](deprecated/) — `deprecated/skills/`, `deprecated/agents/`, `deprecated/hooks/` and `deprecated/scripts/` — for history/reference. They are not installed and not runnable as-is. Highlights:
 
 | Skill                          | Description                             |
 | ------------------------------ | --------------------------------------- |
@@ -326,6 +327,12 @@ Retired skills and agents are archived (not deleted) under [`deprecated/`](depre
 
 See `deprecated/skills/` for the full list of retired skills and `deprecated/agents/` for retired agents.
 
+`deprecated/scripts/` holds `status-line.sh` and `subagent-status-line.sh`, the bash renderers the
+`.mts` ports replaced. They were kept in place only as the byte-parity reference the port was
+validated against; once the renderers gained word-based states and declared-only effort checks, that
+diff stopped being meaningful and the originals were archived. `status-line-mr-refresh.sh` is **not**
+deprecated — it is still the detached child that refreshes MR/PR data.
+
 ### Setup Skills
 
 | Skill                    | Description                                                  |
@@ -339,9 +346,9 @@ See `deprecated/skills/` for the full list of retired skills and `deprecated/age
 | Skill                         | Description                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------- |
 | `/mp-handoff`                 | Create or update HANDOFF.md with session progress summary for continuity between sessions   |
-| `/mp-tutorial-create`         | Generate interactive self-contained HTML tutorials (topic or code-showcase) from compact markdown source — quizzes, walkthroughs, theme-aware Mermaid diagrams, and an interactive CSS playground with Froggy-style challenges — compiled to `OneDrive/tutorials/<category>/` with dashboard index |
-| `/mp-podcast`                 | Turn a topic into a two-host educational podcast MP3 in `OneDrive/Podcasts/` — parallel topic research and a personalization sweep over own projects, Obsidian notes and cloned repos (work repos opt-in), a fact-dense brief plus customize prompt, NotebookLM generation with a Gemini multi-speaker TTS fallback, ffmpeg re-encode to 64 kbps mono |
-| `/mp-video-to-image`          | Turn a YouTube exercise video into a printable cheat-sheet image — Gemini reads the video straight from its URL into a single `OneDrive/AI GENERATED/workout sheets/<slug>.md` holding the exercise table and the image prompt, copies that prompt to the clipboard and opens ChatGPT for a zero-cost manual generation; yt-dlp subtitle + ffmpeg keyframe fallback when Gemini cannot see the video |
+| `/mp-tutorial-create`         | Generate interactive self-contained HTML tutorials (topic or code-showcase) from compact markdown source — quizzes, walkthroughs, theme-aware Mermaid diagrams, and an interactive CSS playground with Froggy-style challenges — compiled to `MPX_AI_GENERATED/_TUTORIALS/<category>/` with dashboard index |
+| `/mp-podcast`                 | Turn a topic into a two-host educational podcast MP3 in its own `MPX_AI_GENERATED/_PODCASTS/<slug>/` folder alongside `script.txt` and `sources.md` — parallel topic research and a personalization sweep over own projects, Obsidian notes and cloned repos (work repos opt-in), a fact-dense brief plus customize prompt, NotebookLM generation with a Gemini multi-speaker TTS fallback, ffmpeg re-encode to 64 kbps mono |
+| `/mp-video-to-image`          | Turn any YouTube video into a printable one-page sheet image — Gemini reads the video straight from its URL into `MPX_AI_GENERATED/_VIDEO_SHEETS/<slug>/` holding `<slug>.md` and `prompt.txt`, copies that prompt to the clipboard and opens ChatGPT for a zero-cost manual generation; `--mode exercise` extracts a workout into drawable start and end positions, `--mode generic` extracts any other video into illustrated points, and a `performer` description keeps the drawn figure looking like the presenter; yt-dlp subtitle + ffmpeg keyframe fallback when Gemini cannot see the video |
 | `/mp-continue`                | Recover interrupted sub-agent / background work after a session-limit hit or crash, then continue |
 | `/mp-skill-create`            | Create new skills with structured conventions (SKILL.md <200 lines, runs `/mp-skill-audit`) |
 | `/mp-agent-create`            | Create new custom agents with structured conventions and review checklist                   |
@@ -402,7 +409,8 @@ but was 2.4× *more* expensive than sonnet on `mp-pr-manager`, which now runs so
 Model choice by task category is § 11, cross-checked against
 [DeepSWE v1.1](https://deepswe.datacurve.ai/) for implementation and
 [Design Arena](https://www.designarena.ai/leaderboard) for design. Only `opus`, `sonnet`, `haiku`
-are permitted — no `fable` — `high` is the effort ceiling, and `sonnet` never pairs with `high`.
+are permitted — no `fable` — and `high` is the effort ceiling. Haiku supports no effort at all, so its
+agents declare none.
 
 Three findings drive the table. **Pick on horizon, not difficulty**: on bounded tasks cost scales
 with tokens so the cheap model wins, but on long-horizon autonomous work it scales with wrong
@@ -512,42 +520,97 @@ Both include: Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules,
 
 Status bar showing:
 
-- **Line 1**: Session name + short session id
-- **Line 2**: Model + reasoning effort `<level>` + account (Personal/Work)
-- **Line 3**: Folder + git branch
-- **Line 4**: Context tokens `58k (6%)` — escalating color as context fills (yellow ≥100k, orange ≥140k, red ≥180k) — session cost (USD/CZK), lines edited (green `+` / red `-`)
-- **Line 5**: 5-hour & 7-day quota utilization with reset countdowns
+- **Row 1**: Session name + short session id
+- **Row 2**: Model · reasoning effort `<level>` · account (Personal/Work)
+- **Row 3**: `📁 directory · IDE · 🔀 branch · MR/PR reference and its review state · CI state` — the directory name opens Explorer there, `IDE` opens VS Code there, the reference opens the MR/PR, the CI state opens its runs
+- **Row 4**: Branch state — upstream relation · uncommitted counts · fetch age, e.g. `in sync · 2 staged · 28 modified · 9 untracked · 2h ago`
+- **Row 5**: Context tokens `🔥 58k (6%)` — escalating color as context fills (yellow ≥100k, orange ≥140k, red ≥180k) — session cost (USD/CZK)
+- **Row 6**: 5-hour & 7-day quota utilization with reset countdowns, e.g. `5h ████░░░░ 43% 1h 21m · 7d █████░░░ 61% 3d 0h`
 
-All values come straight from Claude Code's stdin JSON in a single `jq` pass — model, session name/id, effort, context (`context_window.used_percentage` + `total_input_tokens`), cost, line edits (`cost.total_lines_*`), and quota (`rate_limits`). Fields are packed with the ASCII Unit Separator (`0x1F`) rather than a tab so empty fields never collapse under `read`.
+A row with nothing to say is dropped rather than emitted blank — outside a repo the branch state has no content at all, so the rows below it move up.
 
-Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/status-line.sh`.
+**One separator, at every level.** `|` is gone: it drew a wall between fields that are merely adjacent, and once the git section spelled its states as words (`in sync 2 staged 28 modified`) something lighter was needed *inside* a section too. ` · ` (U+00B7, present in both Cascadia Mono and Consolas) now means "next field" everywhere, rather than two glyphs meaning two ranks of the same thing.
+
+Branch state has **its own row** because those counts grow without bound during a working session and used to push the MR reference off the right edge of the location row.
+
+**The directory name is the one white field.** It answers "where am I", the question asked most often and from the furthest away, so it gets the brightest foreground on the bar; every other field on that row stays grey. Emphasis by color alone means no glyph or box drawing has to carry it.
+
+**Dim grey is for context, not signal.** Fetch age, MR cache age, quota reset countdowns, the quota cache age note and the session cost all render dim. They answer "how much do I trust the number beside me" or "what is the running total", neither of which asks anything of you; coloring them coral trains the eye to ignore coral everywhere else. The one exception is a quota cache old enough that the percentages themselves are wrong.
+
+All values come straight from Claude Code's stdin JSON — model, session name/id, effort, context (`context_window.used_percentage` + `total_input_tokens`), cost, and quota (`rate_limits`). Lines added/removed (`cost.total_lines_*`) used to close the usage row as `+120 -34` and was dropped as noise — a session-wide edit total never changed a decision. `buildUsageLine` carries a comment saying how to restore it.
+
+Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive rate limit is never hit during normal use. Cached readings older than 15m show a muted age note; older than 30m are flagged coral. Configured via `scripts/status-line.mts`.
+
+### Clickable directory and IDE
+
+The directory name and the `IDE` token beside it are OSC-8 hyperlinks. Clicking the name opens Explorer in the working directory; clicking `IDE` opens VS Code there.
+
+Both are `file:` URLs, because Windows Terminal opens a hyperlink only when its scheme is `http`, `https` or `file` (`TerminalPage::_IsUriSupported`) — anything else raises an error dialog instead of reaching the registered handler, so `vscode://file/...` cannot be emitted directly. The workaround is a generated `$TMPDIR/claude-open-<key>.url` shortcut holding that `vscode:` URL: `.url` is bound to `InternetShortcut` on every Windows install, and opening one hands its URL back to the shell, which dispatches `vscode:` to `Code.exe --open-url`. The file is inert data — no script runs on click — and is rewritten every render, so a change of format cannot be shadowed by a stale file left in the temp directory.
+
+A `.code-workspace` shim was tried first and silently opened whatever folder VS Code had open last: its ProgID is registered but no extension is bound to it, so the click had no handler at all.
+
+The links terminate with `BEL` rather than the usual `ESC \`. Every line is emitted through `expandBackslashEscapes`, which would pair that trailing backslash with the first character of the label — a directory named `trace` would render as a tab followed by `race`, and one named `code` would truncate the whole line at `\c`.
+
+### Branch signs and MR/PR block
+
+```
+📁 mpx-claude-code · IDE · 🔀 main
+in sync · 2 staged · 28 modified · 9 untracked · 2h ago
+
+📁 yoursafe-components · IDE · 🔀 martas/agentic-setup · !252 draft · ci run · 💬 3
+↑3 · 2 staged · 16m ago
+```
+
+Upstream relation (one state, mutually exclusive): `local` no upstream · `in sync` · `↑3` ahead · `↓2` behind · `↑3↓2` diverged · `remote deleted` for an upstream that is configured but whose remote branch is gone. Then one segment per non-zero count — `n staged`, `n modified`, `n untracked`, `n conflicted` — and the age since the last fetch, hidden under 10m and always dim.
+
+**Untracked files are counted.** `git status` runs with `--untracked-files=normal` rather than the index-only `=no`, which walks the working tree: measured at 98ms against 92ms on this repo, for the one class of uncommitted change the line could not otherwise show. `normal` (not `all`) collapses an untracked directory to a single entry, so the count matches what `git status` shows a human and a large unignored tree cannot inflate it.
+
+MR/PR: `!N` (GitLab) or `#N` (GitHub), an OSC-8 hyperlink to the web URL, followed by one status token — `draft`, `conflicts`, `changes-req`, `approved`, `left/req approvals` outstanding, `mergeable`, or the raw merge status lowercased — then the pipeline state spelled out (`ci ok`, `ci fail`, `ci run`, `ci skip`) and colored, `💬 N` comments, and a dim `Nm ago` when the cached data is over 10m old.
+
+**The status token binds to the reference, everything after it takes a separator.** `!252 draft` names one thing the way `📁 repo` does, so a space holds it together; CI, comments and the age note are separate facts about the branch and are fenced off by `·` like any other field.
+
+**CI links to the provider's list of runs** — `<mr-url>/checks` on GitHub, `<mr-url>/pipelines` on GitLab. Both are paths under the MR/PR URL already in the cache, so the link costs no extra field and no extra API call. It targets the tab rather than the newest run: the tab is a valid destination while the run is still queued, and it shows the earlier attempts, which is what "why did this break" needs.
+
+The render path is network-free: it reads a `$TMPDIR` cache and, when that cache is stale, spawns `scripts/status-line-mr-refresh.sh` detached to make one `glab api graphql` (GitLab) or `gh pr list` (GitHub) call. TTL 90s with a 30s floor between attempts. Measured: cache read ~0.5ms, the single `git status --porcelain=v2 --branch --untracked-files=normal` call ~98ms, the background API call ~0.7s. Rate limits are a non-issue — GitLab.com allows 2000 req/min and GitHub 5000 req/hour, against ~40 calls/hour/repo.
+
+`in sync` is about *commits*, not files: it is porcelain-v2's `# branch.ab +0 -0`, meaning the branch's committed history matches its upstream tracking ref. Uncommitted work is reported separately by the counts beside it, so `in sync · 28 modified` is a normal, consistent reading.
+
+Caveat: ahead/behind is measured against the *local* copy of the remote ref, so `in sync` stays true-looking until something fetches — which is exactly why the fetch age sits beside it.
 
 ## Sub-Agent Status Line
 
-`scripts/subagent-status-line.sh` (settings key `subagentStatusLine`) renders one row per sub-agent in
+`scripts/subagent-status-line.mts` (settings key `subagentStatusLine`) renders one row per sub-agent in
 the tasks panel — toggled with **Ctrl+T** — plus a session-wide tally. It answers "who is running
 right now, on what model, at what effort, for how long", which the main status line cannot show.
 
 ```
-● sonnet  low        1m37s  12.4k (6%)      Review auth changes
-✓ haiku   ~medium      14s   3.2k (1%)      Find rate-limit code
-✗ opus    xhigh        47s  600.0k (60%)  ! Research OTEL attrs
+● haiku                 0s 812 (0%)      haiku, inherited
+● sonnet  ?high         0s 25.0k (12%)   sonnet, inherited
+✓ sonnet  medium        0s 104.0k (52%)  sonnet, declared clean
+● opus    !max          0s 152.0k (76%)  opus, declared max
     ^ effort above the high ceiling
-  Σ 5 agents this session · opus 2 sonnet 1 haiku 1 · low 2 medium 2 xhigh 1 · 941.3k tokens · 1 running
+● opus    120.0k        0s 40.0k (20%)   opus, numeric budget
+× !fable  !max          0s 3.0k (1%)     fable, declared max
+    ^ fable is never allowed;effort above the high ceiling
 ```
 
-Columns: **status** (`●` running cyan, `✓` completed green, `✗` failed/killed red) — **model** —
-**effort** — **elapsed** — **context** — drift marker — label.
+Columns: **status** (`●` running cyan, `✓` completed green, `×` failed/killed red) — **model** —
+**effort** — **elapsed** — **context** — label. There is no marker column: a marker prefixes and
+recolors the exact cell it accuses, which is why a `fable` row can carry two of them. Hanging a bare
+`?` or `!` off the end put every mark as far from its value as the layout allowed, and reading it as
+noise about the task label was the usual result; prefixing also hands those three columns back to
+the description.
 
 Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
 medium yellow, high orange, xhigh red, max purple, and cyan for a numeric token budget. **Context** —
 escalates yellow ≥50%, orange ≥70%, red ≥90%, using each row's own `contextWindowSize` (the main
 bar's absolute token cut-offs would mean different things on rows with different windows).
 
-**Effort is the agent's own** — read from its frontmatter or the per-invocation override, via the
-per-task `effort` field added in Claude Code **2.1.214**. A `~` prefix marks the one case where the
-value is not the agent's own: the field is absent when the agent inherits the session `effortLevel`,
-so `~medium` reads as "inherited". A numeric budget renders as `32.0k`.
+**Effort is the agent's own** — read from its frontmatter, via the per-task `effort` field added in
+Claude Code **2.1.214**. An amber `?` prefix marks the one case where the value is not the agent's
+own: the field is absent when the agent declared none and the session `effortLevel` was substituted,
+so `?high` reads as "inherited". A numeric budget renders as `120.0k`. A blank effort cell means
+haiku with no declared effort.
 
 The **label** is the agent's live progress summary when it has one, falling back to `description` —
 so the column tracks what the agent is doing now, not the static task title it was spawned with.
@@ -559,9 +622,10 @@ normalization destroys scale, so `+200` tokens and `+200k` draw identically. Its
 content is close to binary (moving vs. flat), which is not worth ten columns that the label uses
 better.
 
-Rows that violate a rule in `instructions/AGENTS.md` get a red `!` and a reason line beneath: a
-`fable` spawn, effort above the `high` ceiling, or `sonnet` paired with `high`. A numeric budget is
-exempt from the ceiling rules — it maps to no named level.
+Rows that violate a rule in `instructions/AGENTS.md` get a red `!` on the offending cell and a reason
+line beneath: `!fable` on the model, `!max` on the effort for a level above the `high` ceiling or for
+any effort declared on haiku. A numeric budget is exempt from both effort rules — it is a budget, not
+a level.
 
 **Finished agents.** Terminal rows stay in the payload for 30s (the bundle's eviction delay) and then
 vanish. To outlive that, every task seen is accumulated into
@@ -592,6 +656,119 @@ Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; id
 the built-in `name · description · tokens` row. For history that survives the session entirely, use
 `scripts/analyze-subagent-models.py`, which reads the same data from
 `~/.claude/projects/**/*.jsonl` after the fact.
+
+## Status Line Implementation
+
+Both renderers are zero-dependency ESM TypeScript (`.mts`), run by Node's native type stripping — no
+build step, no bundler, no `dist/`. `settings.json` invokes them as `node "$HOME/.claude/scripts/<name>.mts"`.
+Requires Node ≥ 22.18; type stripping means **erasable syntax only** (no `enum`, no `namespace`, no
+constructor parameter properties).
+
+That `node` resolves per-directory under a version manager, so a repo whose `.nvmrc` pins a pre-22.18
+version renders a blank status line: Node exits with `ERR_UNKNOWN_FILE_EXTENSION: Unknown file
+extension ".mts"` and Claude Code sees empty stdout. Raise the project's pin.
+
+They were bash until the process-spawn cost stopped being tolerable. Under Windows Git Bash every
+`jq`, `awk`, `date`, `stat`, `git` and subshell is a full fork emulation, and both scripts run on
+every render tick:
+
+| Renderer | bash | TypeScript |
+| --- | --- | --- |
+| `status-line` | ~697 ms/render | ~198 ms/render |
+| `subagent-status-line` | ~545 ms/render | ~144 ms/render |
+
+The port also deleted a layer of workarounds that only existed to survive bash: packing 15 fields
+through one `jq` call with an ASCII Unit Separator so `read` would not collapse empty ones, `awk` for
+float formatting, `stat -c %Y` for cache mtimes, and manual `curl -i` header/body splitting. The
+`0x1F` separator survives in the *on-disk cache formats* only, because existing caches use it.
+
+`scripts/lib/statusline-ansi.mts` holds the small shared surface: the 256-color escape helper, stdin
+reading, and the integer guard that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That predicate rejects
+negatives, decimals, empty strings and `"null"` — it stays because nearly every numeric field is
+gated on it, and a looser check would start rendering values the old line silently dropped.
+
+Two bash behaviors are reproduced deliberately, because the on-disk cache formats and the numbers
+users have grown used to both depend on them: `basename` under Git Bash treats a Windows `\` as a path
+separator, and `printf '%.0f'` rounds half **to even**, so `0.5`→`0` and `2.5`→`2` where `toFixed`
+would give `1` and `3`. (`printf '%b'` escape expansion is also reproduced, including `\c` truncating
+the rest of the output — it is reachable from any branch or session name containing a backslash.)
+
+### Glyph vocabulary
+
+States are spelled as **words**, not dingbats, and every emoji is followed by a space. Two distinct
+reasons, worth keeping apart:
+
+**Correctness.** A character the terminal font lacks falls back to Segoe UI Emoji, which draws
+double-width into the single cell the terminal reserved and smears over the text beside it. Measured
+against Cascadia Mono — Windows Terminal's default when no `"face"` is set — exactly five of the
+original glyphs were absent and had to go:
+
+| Glyph | Was used for |
+| --- | --- |
+| `✎` U+270E | unstaged file count, MR draft |
+| `⟳` U+27F3 | fetch age |
+| `⊘` U+2298 | upstream deleted |
+| `⇅` U+21C5 | branch diverged |
+| `✗` U+2717 | changes requested; sub-agent `failed`/`killed` |
+
+Real emoji (`📁 🔀 🔥 💬 ⚠`) come from the emoji font by design and are fine once spaced.
+
+**Legibility.** `≡ ● ◐ ⬤ ⌂ ✓` do render in Cascadia Mono but were replaced anyway — none of them says
+what it means, and the four CI states were the same `⬤` separated only by color, which a screenshot or
+a colorblind reader loses entirely. Consolas is additionally missing `◐ ⬤ ✓`, so dropping them buys
+portability against a face change. The sub-agent status column keeps `✓`/`×` because it is one cell
+wide and has no room for words.
+
+### Verifying a change
+
+```bash
+node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
+npx vitest run scripts/__tests__     # 153 unit tests over the pure helpers
+```
+
+The harness began as a byte-parity golden diff against the bash originals, which is how the port was
+validated. That contract ended deliberately once the renderers started spelling states as words and
+gating effort drift on declared values — the originals moved to `deprecated/scripts/` and the diff
+went with them. What remains is what unit tests structurally cannot reach: each fixture runs through
+the real executable in a throwaway sandbox (`TMPDIR` + `CLAUDE_CONFIG_DIR`), asserting a clean exit,
+valid JSONL with a row per task, no `undefined`/`NaN` leaking into a rendered line, and **no
+fallback-prone glyph** — that last guard caught `✗` still sitting in the sub-agent status column.
+
+It also smoke-tests the **installed** path, and that check earns its place: Claude Code invokes these
+through `~/.claude/scripts`, a symlink to this repo. Node resolves `import.meta.url` to the link
+target while leaving `process.argv[1]` as the link path, so an entry-point guard comparing the two
+without `realpath` renders **nothing at all** — no error, no output, just a blank status line. Running
+fixtures from the repo path cannot catch it.
+
+### Sub-agent effort
+
+The `effort` field in the `subagentStatusLine` payload is **present only when the agent's frontmatter
+declares one**. The Agent tool has no per-spawn `effort` parameter (unlike `model`), so frontmatter is
+the only source; an absent field means the agent inherits the session `effortLevel`, and the renderer
+substitutes it and marks the value `?`.
+
+Markers prefix and recolor the cell they accuse — there is no separate marker column, and a row can
+carry one on each cell independently (`!fable` plus `?high` on the same row, which the old
+single-slot design could not show because `!` outranked `?`).
+
+| Marker | Cell | Meaning |
+| --- | --- | --- |
+| `!` red (fg 196) | model | `fable`, which is never allowed. Carries a `^ reason` line. |
+| `!` red (fg 196) | effort | a *declared* value violates a rule — above the `high` ceiling, or declared on haiku. Carries a `^ reason` line. |
+| `?` amber (fg 214) | effort | the value was substituted from the session `effortLevel` because the agent declared none. No reason line: inheriting is routine for `general-purpose`, `claude`, `Plan` and `fork`, and one per row would bury the real `!` rows. |
+| unmarked | either | a declared value, no violation. |
+
+Haiku with no declared effort renders a **blank** effort cell:
+[the model-config table](https://code.claude.com/docs/en/model-config) lists effort levels per model
+and states that models not listed do not support effort — no Haiku appears, so substituting one would
+be fiction, and the blank is excluded from the session tally's effort grouping. Haiku that *declares*
+an effort renders it as `!low`: blanking would hide the very thing being flagged, and it counts toward
+the `Σ` tally like any other declared value.
+
+Effort drift checks only ever judge *declared* values. Flagging a substituted one blames an agent for
+a setting it never made, which is how every `general-purpose` row used to acquire a violation it had
+no way to cause. The `fable` check is independent of effort and needs no declared value, since the
+model is always reported.
 
 ## Settings
 

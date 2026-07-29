@@ -40,6 +40,12 @@ C_WORK=$'\033[38;5;173m'      # orange
 C_ADD=$'\033[38;5;71m'        # green: + lines added
 C_DEL=$'\033[38;5;167m'       # red: - lines removed
 
+# Git/MR colors: sand for "never left this machine" (local branch, draft MR),
+# blue for the MR/PR reference itself.
+C_LOCAL=$'\033[38;5;180m'
+C_DRAFT=$'\033[38;5;180m'
+C_MR=$'\033[38;5;74m'
+
 # Session name (line 1): lavender — distinct from the blue model line.
 C_SESSION=$'\033[38;5;141m'
 
@@ -93,10 +99,47 @@ case "$account_cfg_dir" in
     *)                            account_label="Personal"; account_color="$C_PERSONAL" ;;
 esac
 
-# Git branch (compact)
+# Git branch + sync signs. ONE git call (~52ms) carries branch name, upstream,
+# ahead/behind and dirty state; --untracked-files=no keeps it O(index) instead
+# of walking the tree.
 branch=""
+git_signs=""
+git_dirt=""
 if [[ -n "$cwd" && -d "$cwd" ]]; then
-    branch=$(git -C "$cwd" branch --show-current 2>/dev/null)
+    has_upstream=0; has_ab=0; ahead=0; behind=0; staged=0; unstaged=0; conflicts=0
+    while IFS= read -r git_line; do
+        case "$git_line" in
+            '# branch.head '*)     branch="${git_line#\# branch.head }" ;;
+            '# branch.upstream '*) has_upstream=1 ;;
+            '# branch.ab '*)
+                has_ab=1
+                read -r _ _ ahead_field behind_field <<< "$git_line"
+                ahead="${ahead_field#+}"; behind="${behind_field#-}"
+                ;;
+            '1 '*|'2 '*)
+                read -r _ xy _ <<< "$git_line"
+                [[ "${xy:0:1}" != "." ]] && ((staged++))
+                [[ "${xy:1:1}" != "." ]] && ((unstaged++))
+                ;;
+            'u '*) ((conflicts++)) ;;
+        esac
+    done < <(git -C "$cwd" status --porcelain=v2 --branch --untracked-files=no 2>/dev/null)
+    [[ "$branch" == "(detached)" ]] && branch="detached"
+
+    if [[ -n "$branch" ]]; then
+        if   [[ $has_upstream -eq 0 ]];         then git_signs="${C_LOCAL}⌂local${C_RESET}"
+        # An upstream with no branch.ab line is exactly how git reports a
+        # deleted remote branch.
+        elif [[ $has_ab -eq 0 ]];               then git_signs="${C_WARN}⊘gone${C_RESET}"
+        elif [[ $ahead -gt 0 && $behind -gt 0 ]]; then git_signs="${C_WARN}⇅${ahead}/${behind}${C_RESET}"
+        elif [[ $ahead -gt 0 ]];                then git_signs="${C_ADD}↑${ahead}${C_RESET}"
+        elif [[ $behind -gt 0 ]];               then git_signs="${C_DEL}↓${behind}${C_RESET}"
+        else                                         git_signs="${C_ADD}≡${C_RESET}"
+        fi
+        [[ $staged    -gt 0 ]] && git_dirt+=" ${C_ADD}●${staged}${C_RESET}"
+        [[ $unstaged  -gt 0 ]] && git_dirt+=" ${C_DEL}✎${unstaged}${C_RESET}"
+        [[ $conflicts -gt 0 ]] && git_dirt+=" ${C_WARN}⚠${conflicts}${C_RESET}"
+    fi
 fi
 
 # --- Helpers ---
@@ -380,6 +423,88 @@ fi
 tokens_k=""
 [[ "$session_tokens_in" =~ ^[0-9]+$ ]] && tokens_k=$(( (session_tokens_in + 500) / 1000 ))
 
+# --- MR/PR block + fetch age -------------------------------------------------
+# Pure cache read (~0.5ms) plus a possible detached spawn: the render itself
+# never touches the network, since Claude Code cancels a status line that blocks.
+MR_TTL=90            # refetch cached MR/PR data past this
+MR_ATTEMPT_MIN=30    # floor between refresh attempts (also covers failures / no-MR)
+MR_STALE_NOTE=600    # show an age note past this
+
+mr_block=""
+fetch_age=""
+if [[ -n "$branch" ]]; then
+    # sha1sum would cost a process; sanitizing the path is enough for a key.
+    # `${var: -N}` yields "" when N exceeds the length, hence the length guard.
+    mr_key="${cwd}|${branch}"
+    mr_key="${mr_key//[^a-zA-Z0-9]/_}"
+    (( ${#mr_key} > 100 )) && mr_key="${mr_key: -100}"
+    mr_cache="$CACHE_DIR/claude-mr-$mr_key.tsv"
+    mr_attempt="$CACHE_DIR/claude-mr-attempt-$mr_key"
+
+    mr_ts=""; mr_provider=""; mr_iid=""; mr_draft=""; mr_conflicts=""; mr_approved=""
+    mr_appr_req=""; mr_appr_left=""; mr_status=""; mr_notes=""; mr_pipeline=""
+    mr_url=""; mr_fetch_epoch=""
+    [[ -f "$mr_cache" ]] && IFS="$US" read -r mr_ts mr_provider mr_iid mr_draft mr_conflicts \
+        mr_approved mr_appr_req mr_appr_left mr_status mr_notes mr_pipeline mr_url \
+        mr_fetch_epoch < "$mr_cache"
+
+    mr_cache_age=999999
+    [[ "$mr_ts" =~ ^[0-9]+$ ]] && mr_cache_age=$(( EPOCHSECONDS - mr_ts ))
+
+    if [[ $mr_cache_age -ge $MR_TTL ]]; then
+        # The marker's own mtime would need `stat`, so it carries its timestamp
+        # as its contents instead.
+        mr_attempt_ts=""
+        [[ -f "$mr_attempt" ]] && read -r mr_attempt_ts < "$mr_attempt"
+        mr_attempt_age=999999
+        [[ "$mr_attempt_ts" =~ ^[0-9]+$ ]] && mr_attempt_age=$(( EPOCHSECONDS - mr_attempt_ts ))
+        if [[ $mr_attempt_age -ge $MR_ATTEMPT_MIN ]]; then
+            printf '%s' "$EPOCHSECONDS" > "$mr_attempt" 2>/dev/null
+            ( "${BASH_SOURCE[0]%/*}/status-line-mr-refresh.sh" "$cwd" "$branch" "$mr_cache" >/dev/null 2>&1 & ) 2>/dev/null
+        fi
+    fi
+
+    # Ahead/behind compares against the local copy of the remote ref, so `≡`
+    # silently lies until a fetch happens; the age says how far to trust it.
+    if [[ "$mr_fetch_epoch" =~ ^[0-9]+$ ]]; then
+        fetch_secs=$(( EPOCHSECONDS - mr_fetch_epoch ))
+        if   [[ $fetch_secs -ge 86400 ]]; then fetch_age=" ${C_WARN}⟳$((fetch_secs / 86400))d${C_RESET}"
+        elif [[ $fetch_secs -ge 3600 ]];  then fetch_age=" ${C_GRAY}⟳$((fetch_secs / 3600))h${C_RESET}"
+        elif [[ $fetch_secs -ge 600 ]];   then fetch_age=" ${C_GRAY}⟳$((fetch_secs / 60))m${C_RESET}"
+        fi
+    fi
+
+    if [[ -n "$mr_iid" ]]; then
+        [[ "$mr_provider" == "github" ]] && mr_ref="#${mr_iid}" || mr_ref="!${mr_iid}"
+        # OSC-8 hyperlink: Windows Terminal makes the reference clickable.
+        if [[ -n "$mr_url" ]]; then
+            mr_block="${C_MR}"$'\033]8;;'"${mr_url}"$'\033\\'"${mr_ref}"$'\033]8;;'$'\033\\'"${C_RESET}"
+        else
+            mr_block="${C_MR}${mr_ref}${C_RESET}"
+        fi
+
+        if   [[ "$mr_draft" == "true" ]];              then mr_block+=" ${C_DRAFT}✎draft${C_RESET}"
+        elif [[ "$mr_conflicts" == "true" ]];          then mr_block+=" ${C_WARN}⚠conflicts${C_RESET}"
+        elif [[ "$mr_status" == "CHANGES_REQUESTED" ]]; then mr_block+=" ${C_WARN}✗changes${C_RESET}"
+        elif [[ "$mr_approved" == "true" ]];           then mr_block+=" ${C_ADD}✓approved${C_RESET}"
+        elif [[ "$mr_appr_left" =~ ^[0-9]+$ && $mr_appr_left -gt 0 ]]; then
+                                                            mr_block+=" ${C_GRAY}◐${mr_appr_left}/${mr_appr_req}${C_RESET}"
+        elif [[ "$mr_status" == "MERGEABLE" ]];        then mr_block+=" ${C_ADD}✓mergeable${C_RESET}"
+        elif [[ -n "$mr_status" ]];                    then mr_block+=" ${C_GRAY}${mr_status,,}${C_RESET}"
+        fi
+
+        case "$mr_pipeline" in
+            SUCCESS)          mr_block+=" ${C_ADD}⬤ci${C_RESET}" ;;
+            FAILED)           mr_block+=" ${C_WARN}⬤ci${C_RESET}" ;;
+            RUNNING)          mr_block+=" ${C_CTX_YELLOW}⬤ci${C_RESET}" ;;
+            CANCELED|SKIPPED) mr_block+=" ${C_GRAY}⬤ci${C_RESET}" ;;
+        esac
+
+        [[ "$mr_notes" =~ ^[0-9]+$ && $mr_notes -gt 0 ]] && mr_block+=" ${C_GRAY}💬${mr_notes}${C_RESET}"
+        [[ $mr_cache_age -ge $MR_STALE_NOTE ]] && mr_block+=" ${C_GRAY}·$((mr_cache_age / 60))m${C_RESET}"
+    fi
+fi
+
 # --- Build status output -----------------------------------------------------
 # Line 1: session name + short session id
 line1=""
@@ -396,7 +521,12 @@ line2+=" ${C_GRAY}·${C_RESET} ${account_color}${account_label}${C_RESET}"
 
 # Line 3: worktree dir + branch
 line3="${C_GRAY}📁${dir}"
-[[ -n "$branch" ]] && line3+=" | 🔀${branch}"
+if [[ -n "$branch" ]]; then
+    line3+=" | 🔀${branch}"
+    [[ -n "$git_signs" ]] && line3+=" ${git_signs}${C_GRAY}"
+    line3+="${git_dirt}${fetch_age}${C_GRAY}"
+fi
+[[ -n "$mr_block" ]] && line3+=" | ${mr_block}${C_GRAY}"
 line3+="${C_RESET}"
 
 # Line 4: context tokens (%), session cost, line edits (green +/red -)

@@ -287,7 +287,7 @@ done <<< "$tasks_raw"
 #
 # The state path travels through the environment rather than `-v`: awk runs
 # backslash escape processing over -v values, and CLAUDE_CONFIG_DIR is a native
-# Windows path here, so `C:\Users\snapy` arrives as `C:Userssnapy`.
+# Windows path here, so `C:\Users\name` arrives as `C:Usersname`.
 summary=$(printf '%s' "$current_records" | state_file="$state_file" awk -F'\t' '
     function is_terminal(s) { return s == "completed" || s == "failed" || s == "killed" }
     BEGIN {
