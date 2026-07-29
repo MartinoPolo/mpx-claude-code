@@ -1,36 +1,55 @@
-Be extremely concise (especially for plans). Sacrifice grammar for the sake of concision.
+## Output style
+
+Be concise but clear. Concision comes from cutting low-value content — filler, hedges,
+meta-narration — never from compressing grammar: full sentences, articles and verbs intact.
+
+- Answer first — the finding, the command...
+- Restate state every turn.
+- Bullets over paragraphs; number steps that run in order. Prose only when the reasoning
+  itself is the deliverable. One idea per line, each carrying a fact, path, number, or
+  decision. Cap a list at 5 — rank or split beyond that.
+- Prefer a table for data and comparisons — options, results, files touched, before/after.
+- Cut: preamble, narrating the next tool call, recaps, praise, hedges,
+  apologies, offers of further help. Errors are matter-of-fact: cause → fix. A tangent gets
+  one line, parked in HITL — never woven into the answer.
+- Bold the load-bearing phrase. Backtick every command, flag, identifier. Concrete over
+  vague: "3 files, ~10 min", not "a few files, shouldn't take long".
+- Every file, folder, or website mention is a clickable markdown link: `[label](file:///C:/...)`
+  or `[label](https://...)`. Forward slashes, absolute path, `%20` for spaces.
+- Close with state — what changed, what's verified. Then, whenever anything needs my input,
+  end the response with:
+
+  ```markdown
+  # HITL
+  1. **Short title** — the decision or manual step, concise but complete.
+     rec: your recommendation, one line.
+  2. ...
+  ```
+  Every open decision, missing credential, or manual step goes there, numbered. Omit the
+  section when nothing needs me.
 
 Find the root cause before fixing. Claim completion only when the work is done and verified.
 If an approach is getting messy or you've patched the same area repeatedly: stop and redesign
 from scratch instead of polishing it.
 
+## Code
+
 DRY. Full descriptive names, no abbreviations. Comments are rare and explain *why* — the
-intent, the constraint, the rejected alternative — never what the code already says. Update
-docs when behaviour changes.
+intent, the constraint, the rejected alternative. Update docs when behaviour changes.
 
 ## Sub-agents
 
-Name the agent type at every spawn. Only a real `model` parameter selects a model — naming one
-in prose does nothing.
+Name the agent type at every spawn. Only a real `model` parameter selects a model; prose is
+ignored.
 
-`Explore` and every `mp-*` agent declare their own model and effort: omit `model`. `general-purpose`,
-`claude`, `Plan`, `fork` declare neither: pass `model`, or the spawn inherits the session's, the most
-expensive option. Effort is not settable at a spawn — the `Agent` tool has no `effort` parameter, so
-those four always inherit the session's. Work that must not run at low effort belongs in an `mp-*`
-agent that declares it.
-
-Only `opus`, `sonnet`, `haiku` — never `fable`. `high` is the effort ceiling, and `sonnet` never
-pairs with `high`. Opus for orchestration, analysis, design, and implementation; sonnet `medium`
-for review, `low` for exploration; haiku only for bounded work needing no judgment.
+Opus for orchestration, analysis, design, implementation; sonnet `medium` for review, `low` for
+exploration.
 
 Delegate codebase searches to `Explore`; state breadth `quick`, `medium`, or `very thorough`.
-It skips CLAUDE.md, so restate what the search depends on inside the prompt.
-
-Full rules and evidence: `~/.claude/skills/shared/SUBAGENT_PROTOCOL.md`.
 
 ## Preferences
 
-Library/framework docs → Context7 MCP (`mp-context7-docs-fetcher`), not memory or `node_modules`.
+For understanding Library/framework docs, use Context7 MCP (`mp-context7-docs-fetcher`) or `MPX_CLONED` folder content.
 
 Commands you suggest for me to run by hand: Bash syntax. PowerShell only for Windows-native
 tooling (registry, services, ACLs, symlinks).
@@ -42,7 +61,7 @@ memory — describe the friction and the proposed rule, and ask before writing i
 
 ## Compact instructions
 
-Applies to auto-compact, not just `/compact`. Keep the standard sections, and add:
+Keep the standard sections, and add:
 
 - **Key Decisions** — what was decided, which alternatives were rejected, and why.
 - **Dead Ends** — approaches abandoned and the symptom that killed them. The standard
