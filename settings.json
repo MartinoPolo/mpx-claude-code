@@ -12,7 +12,7 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "sonnet",
+  "model": "opus[1m]",
   "disableClaudeAiConnectors": true,
   "hooks": {
     "PostToolUse": [
@@ -113,8 +113,8 @@
     "github@claude-plugins-official": false,
     "typescript-lsp@claude-plugins-official": true
   },
-  "effortLevel": "low",
-  "autoCompactWindow": 213000,
+  "effortLevel": "high",
+  "autoCompactWindow": 233000,
   "autoUpdatesChannel": "stable",
   "minimumVersion": "2.1.220",
   "voice": {
