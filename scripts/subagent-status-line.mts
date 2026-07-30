@@ -23,8 +23,9 @@
 //   status  one of running / completed / failed / killed. The three terminal
 //           values are what the bundle's isTerminal check accepts.
 //   label   the live progress summary when the agent has one, else description.
-//   effort  present only when the agent declared one in its frontmatter or the
-//           spawn overrode it, so a present value is authoritative — it is what
+//   effort  drawn as the main bar's five-slot gauge (`high` -> `◆◆◆◇◇`), present
+//           only when the agent declared one in its frontmatter or the spawn
+//           overrode it, so a present value is authoritative — it is what
 //           the agent was actually configured with. Absent means nothing was
 //           declared and the session `effortLevel` applies, so the substituted
 //           value is shown `?`-marked and can never be read as a config choice.
@@ -46,13 +47,18 @@
 // marker instead of the `!` reserved for a real violation.
 //
 // Both markers prefix the cell they accuse and recolor the whole of it — `!fable`
-// in red on the model, `?high` in amber or `!max` in red on the effort. They had
+// in red on the model, `?◆◆◆◇◇` in amber or `!◆◆◆◆◆` in red on the effort. They had
 // a column of their own between the tokens and the description, which put every
 // mark as far from its value as the layout allowed: a bare `?` beside a task
 // label reads as noise about the task. Prefixing also hands those three columns
 // back to the description, and coloring the whole cell rather than the glyph
 // keeps one color run per padded cell. `?` replaces the `~` that used to mark a
 // substituted level, since one glyph already says "this was not declared".
+//
+// Both marked cells reserve the slot on every row, blank where there is no
+// marker, so a mark never shifts the value it is about — the gauges have to
+// start at the same column or their filled slots cannot be compared down the
+// column.
 //
 // Terminal tasks stay in the payload for 30s (the bundle's eviction delay) and
 // then vanish, so the session tally is accumulated in a state file keyed by
@@ -81,6 +87,7 @@ import {
     GRAY,
     RESET,
     cacheKey,
+    effortGauge,
     fg,
     isNonNegativeInt,
     readStdin,
@@ -143,6 +150,12 @@ const DRIFT_REASON = fg(203); // coral: the explanation beneath it
 const INHERITED_EFFORT = fg(214); // amber: the cell a ? marker qualifies
 const DRIFT_MARKER = "!";
 const INHERITED_EFFORT_MARKER = "?";
+// Every marked cell reserves the slot whether or not it has a marker to put in
+// it, so the value behind it starts at the same column on every row. Without
+// this the gauges shift a character the moment a row is marked, and comparing
+// filled slots down the column — the whole point of drawing a gauge — stops
+// working.
+const MARKER_SLOT = " ";
 
 /**
  * Identical ranking to the main bar's, and deliberately the same object shape:
@@ -166,8 +179,12 @@ const CONFIG_DIR =
 const SETTINGS_FILE = `${CONFIG_DIR}/settings.json`;
 const STATE_DIR = `${CONFIG_DIR}/subagent-statusline-state`;
 
+// Both widths count the reserved marker slot: `!sonnet`, `?◆◆◆◇◇`, ` 120.0k`.
+// An unrecognized level renders as `<level>` and may overrun rather than be
+// clipped — it is an anomaly worth reading in full, and the main bar spells it
+// out the same way.
 const COLUMN_WIDTH_MODEL = 7;
-const COLUMN_WIDTH_EFFORT = 8;
+const COLUMN_WIDTH_EFFORT = 7;
 const COLUMN_WIDTH_DURATION = 7;
 const COLUMN_WIDTH_TOKENS = 13;
 const USED_WIDTH =
@@ -321,8 +338,7 @@ export function renderTaskRow(
     const tier = modelTier(task.model);
     const tierReasons = tierDriftReasons(tier);
     const modelText = tier || task.model || "?";
-    const modelDisplay =
-        tierReasons.length > 0 ? `${DRIFT_MARKER}${modelText}` : modelText;
+    const modelDisplay = `${tierReasons.length > 0 ? DRIFT_MARKER : MARKER_SLOT}${modelText}`;
     const modelColor = tierReasons.length > 0 ? DRIFT : (TIER_COLORS[tier] ?? GRAY);
 
     // An absent effort means the agent declared none and the session's level was
@@ -347,16 +363,24 @@ export function renderTaskRow(
     else if (effortIsNumericBudget) effortText = formatTokens(effort);
     else effortText = effort;
 
-    let effortDisplay = effortText;
+    // A named level draws as the main bar's gauge — down a column of rows the
+    // filled slots compare at a glance, where the words had to be read one by
+    // one. The record keeps the word: the session tally groups by level, and a
+    // count needs a name (`high 2`, not `◆◆◆◇◇ 2`). A token budget has no rank
+    // to draw, so it stays the number it is.
+    const effortCell = effortIsNumericBudget ? effortText : effortGauge(effortText);
+
+    // An empty cell keeps no slot: there is no value behind it to align.
+    let effortDisplay = effortCell === "" ? "" : `${MARKER_SLOT}${effortCell}`;
     let effortColor = effortIsNumericBudget
         ? EFFORT_BUDGET
         : (EFFORT_COLORS[effort] ?? GRAY);
-    if (effortText !== "") {
+    if (effortCell !== "") {
         if (effortReasons.length > 0) {
-            effortDisplay = `${DRIFT_MARKER}${effortText}`;
+            effortDisplay = `${DRIFT_MARKER}${effortCell}`;
             effortColor = DRIFT;
         } else if (!effortIsDeclared) {
-            effortDisplay = `${INHERITED_EFFORT_MARKER}${effortText}`;
+            effortDisplay = `${INHERITED_EFFORT_MARKER}${effortCell}`;
             effortColor = INHERITED_EFFORT;
         }
     }

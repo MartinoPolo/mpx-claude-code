@@ -20,6 +20,7 @@ import {
     GRAY,
     RESET,
     cacheKey,
+    effortGauge,
     fg,
     isNonNegativeInt,
     readFileOrEmpty,
@@ -148,21 +149,6 @@ const PENCIL_ICON = "󰏫";
  * first character the ordinary spaces behind it are interior and safe.
  */
 export const INDENT_GUARD = "⠀";
-
-// Effort levels, weakest to strongest — a filled/empty gauge reads instantly
-// where the old `<high>` word had to be parsed. Five slots because Claude Code
-// has five levels; daily driving tops out at high (three filled).
-const EFFORT_RANK: Record<string, number> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
-const EFFORT_SLOTS = 5;
-
-/** `high` -> `◆◆◆◇◇`; an unrecognized level keeps the old `<level>` spelling. */
-export function effortGauge(level: string): string {
-    const rank = EFFORT_RANK[level];
-    if (rank === undefined) {
-        return level === "" ? "" : `<${level}>`;
-    }
-    return "◆".repeat(rank) + "◇".repeat(EFFORT_SLOTS - rank);
-}
 
 /**
  * "Opus 5 (1M context)" -> "Opus 5 (1M)". The payload's display_name spells the

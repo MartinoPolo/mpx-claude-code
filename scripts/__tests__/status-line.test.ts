@@ -17,7 +17,6 @@ import {
     buildQuotaLine,
     buildSessionLine,
     buildUsageLine,
-    effortGauge,
     expandBackslashEscapes,
     extractPayloadFields,
     formatPct,
@@ -36,6 +35,8 @@ import {
     timeUntil,
     trimModelName
 } from "../status-line.mts";
+// Lives in the shared lib because both renderers draw the same gauge.
+import { effortGauge } from "../lib/statusline-ansi.mts";
 
 // Written out literally rather than imported, so a change to the shared ANSI
 // helper cannot silently move the colors this line is specified to emit.

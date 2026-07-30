@@ -230,7 +230,7 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 - Compaction history, one indented row per event: `└─ auto · 205k → 15k · 06:50`. `auto` is amber, `manual` grey, the clock dim; the last 3 are spelled out and older ones collapse into a `N earlier` count. Absent entirely until a session compacts
 - 5-hour & 7-day quota bars with reset countdowns — from stdin `rate_limits`, no network call; the `5h`/`7d` labels link to the claude.ai usage dashboard
 
-**Sub-agent panel** (`scripts/subagent-status-line.mts`, Ctrl+T): one row per sub-agent — status · model · effort · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line.
+**Sub-agent panel** (`scripts/subagent-status-line.mts`, Ctrl+T): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 

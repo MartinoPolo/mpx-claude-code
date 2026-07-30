@@ -17,6 +17,12 @@ The README carries only the feature overview; every design decision and mechanic
   worktree half of `project/worktree`, because that is the actual location.
 - **The first line is account · title · id** — whose session, what it is about, how to refer to
   it — so switching between a Personal and a Work terminal is answered before anything else.
+- **The account is a color, not a background.** Tinting the whole bar per account was built and
+  then removed: the script supplies text to Claude Code, which owns the frame around it, so the
+  fill can never reach the window edges. It stops at the last character of each row, leaves
+  Claude Code's own left indent uncovered, and shares line one with the right-aligned queued-command
+  hint. A ragged block behind ragged rows reads worse than no block, and per-account terminal
+  backgrounds belong to the terminal profile instead.
 - **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance where `<high>` had to be
   parsed; five slots for the five levels `low medium high xhigh max`, and anything unrecognized
   falls back to the old `<level>` spelling.
@@ -263,13 +269,13 @@ sub-agent in the tasks panel — toggled with **Ctrl+T** — plus a session-wide
 line cannot show.
 
 ```
-● haiku                 0s 812 (0%)      haiku, inherited
-● sonnet  ?high         0s 25.0k (12%)   sonnet, inherited
-✓ sonnet  medium        0s 104.0k (52%)  sonnet, declared clean
-● opus    !max          0s 152.0k (76%)  opus, declared max
+●  haiku               0s 812 (0%)      haiku, inherited
+●  sonnet ?◆◆◆◇◇       0s 25.0k (12%)   sonnet, inherited
+✓  sonnet  ◆◆◇◇◇       0s 104.0k (52%)  sonnet, declared clean
+●  opus   !◆◆◆◆◆       0s 152.0k (76%)  opus, declared max
     ^ effort above the high ceiling
-● opus    120.0k        0s 40.0k (20%)   opus, numeric budget
-× !fable  !max          0s 3.0k (1%)     fable, declared max
+●  opus    120.0k      0s 40.0k (20%)   opus, numeric budget
+× !fable  !◆◆◆◆◆       0s 3.0k (1%)     fable, declared max
     ^ fable is never allowed;effort above the high ceiling
 ```
 
@@ -279,6 +285,12 @@ recolors the exact cell it accuses, which is why a `fable` row can carry two of 
 bare `?` or `!` off the end put every mark as far from its value as the layout allowed, and
 reading it as noise about the task label was the usual result; prefixing also hands those three
 columns back to the description.
+
+The **effort** cell draws the main bar's five-slot gauge (`high` → `◆◆◆◇◇`), not the level's
+name. Down a column of rows the filled slots compare at a glance, where the words had to be read
+one at a time; the six-column cell fits the gauge plus a marker. The state file still records the
+**word**, because the `Σ` tally groups by level and a count needs a name (`high 2`, not
+`◆◆◆◇◇ 2`). A numeric token budget maps to no rank, so it stays the number it is.
 
 Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
 medium yellow, high orange, xhigh red, max purple, and cyan for a numeric token budget.
@@ -343,11 +355,17 @@ The `effort` field in the `subagentStatusLine` payload is **present only when th
 frontmatter declares one** — via the per-task `effort` field added in Claude Code **2.1.214**.
 The Agent tool has no per-spawn `effort` parameter (unlike `model`), so frontmatter is the only
 source; an absent field means the agent inherits the session `effortLevel`, and the renderer
-substitutes it and marks the value `?`. A numeric budget renders as `120.0k`.
+substitutes it and marks the value `?`. A numeric budget renders as `120.0k`, having no rank a
+gauge could draw.
 
 Markers prefix and recolor the cell they accuse — there is no separate marker column, and a row
-can carry one on each cell independently (`!fable` plus `?high` on the same row, which the old
-single-slot design could not show because `!` outranked `?`).
+can carry one on each cell independently (`!fable` plus `?◆◆◆◇◇` on the same row, which the
+old single-slot design could not show because `!` outranked `?`).
+
+Both marked cells **reserve the marker slot on every row**, blank where there is no marker, so a
+mark never shifts the value it is about. Without it the gauges start a character further right
+the moment a row is marked, and comparing filled slots down the column — the reason for drawing
+a gauge at all — stops working.
 
 | Marker | Cell | Meaning |
 | --- | --- | --- |
@@ -360,7 +378,7 @@ Haiku with no declared effort renders a **blank** effort cell:
 [the model-config table](https://code.claude.com/docs/en/model-config) lists effort levels per
 model and states that models not listed do not support effort — no Haiku appears, so
 substituting one would be fiction, and the blank is excluded from the session tally's effort
-grouping. Haiku that *declares* an effort renders it as `!low`: blanking would hide the very
+grouping. Haiku that *declares* an effort renders it as `!◆◇◇◇◇`: blanking would hide the very
 thing being flagged, and it counts toward the `Σ` tally like any other declared value.
 
 Effort drift checks only ever judge *declared* values. Flagging a substituted one blames an
@@ -394,8 +412,18 @@ ones, `awk` for float formatting, `stat -c %Y` for cache mtimes, and manual `cur
 header/body splitting. The `0x1F` separator survives in the *on-disk cache formats* only,
 because existing caches use it.
 
+**Background fills do not work here — don't try again.** Two separate walls. First, `RESET` clears
+background as well as foreground, and every field on these rows closes itself with one, so a
+background armed at the start of a row dies at the first colored field; rewriting each `RESET` as
+`RESET + background` fixes that much. Second, and fatal: reaching the right margin needs
+`\x1b[K`, the payload carries no terminal width to pad against instead, and Claude Code strips the
+erase before the row reaches the terminal — colors survive that pass, other CSI sequences do not.
+Even a working fill would be inset, because Claude Code indents the bar and right-aligns its own
+hints on line one. Foreground color is the only lever this script has.
+
 `scripts/lib/statusline-ansi.mts` holds the small shared surface: the 256-color escape helper,
-`BOLD`, stdin reading, best-effort cache reads, the cache-key sanitizer, and the integer guard
+`BOLD`, the five-slot effort gauge both renderers draw, stdin reading, best-effort cache reads,
+the cache-key sanitizer, and the integer guard
 that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That predicate rejects negatives, decimals, empty
 strings and `"null"` — it stays because nearly every numeric field is gated on it, and a looser
 check would start rendering values the old line silently dropped.
@@ -470,7 +498,7 @@ The sub-agent status column keeps `✓`/`×` because it is one cell wide and has
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 257 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # 258 unit tests over the pure helpers
 ```
 
 The harness began as a byte-parity golden diff against the bash originals, which is how the port
@@ -481,6 +509,15 @@ fixture runs through the real executable in a throwaway sandbox (`TMPDIR` +
 `CLAUDE_CONFIG_DIR`), asserting a clean exit, valid JSONL with a row per task, no
 `undefined`/`NaN` leaking into a rendered line, and **no fallback-prone glyph** — that last
 guard caught `✗` still sitting in the sub-agent status column.
+
+**Previewing colors is its own trap on Windows.** Running a renderer straight into a Git Bash
+terminal shows the wrong colors: `node` writing to a Windows TTY sends its escapes through
+libuv's ANSI translation, which approximates everything to the 16-color palette — `#005f5f` comes
+out bright blue, `#875f00` comes out red, and only the 232-255 grayscale ramp survives intact.
+Piping to `cat` should bypass it but Git Bash wraps `node` in `winpty`, which refuses a piped
+stdout (`stdout is not a tty`). Redirect to a file and `cat` that file instead: the redirect keeps
+libuv out, and `cat` hands raw bytes to Windows Terminal, which parses them itself. Claude Code
+renders through Ink on the untranslated path, so the file is the honest preview.
 
 It also smoke-tests the **installed** path, and that check earns its place: Claude Code invokes
 these through `~/.claude/scripts`, a symlink to this repo. Node resolves `import.meta.url` to

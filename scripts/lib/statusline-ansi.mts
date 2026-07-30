@@ -39,6 +39,27 @@ export const DIM = fg(240);
  */
 export const AMBER = fg(214);
 
+// Effort levels, weakest to strongest — a filled/empty gauge reads instantly
+// where the old `<high>` word had to be parsed. Five slots because Claude Code
+// has five levels; daily driving tops out at high (three filled).
+const EFFORT_RANK: Readonly<Record<string, number>> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
+const EFFORT_SLOTS = 5;
+
+/**
+ * `high` -> `◆◆◆◇◇`; an unrecognized level keeps the old `<level>` spelling.
+ *
+ * Shared by both renderers: the main bar states the session's level once, the
+ * tasks panel repeats it down a column, and a level has to mean the same shape
+ * in both or the eye has to learn two scales.
+ */
+export function effortGauge(level: string): string {
+    const rank = EFFORT_RANK[level];
+    if (rank === undefined) {
+        return level === "" ? "" : `<${level}>`;
+    }
+    return "◆".repeat(rank) + "◇".repeat(EFFORT_SLOTS - rank);
+}
+
 /** Sanitizing the path is enough for a cache key; hashing would cost a process. */
 export function cacheKey(value: string): string {
     const key = value.replace(/[^a-zA-Z0-9]/g, "_");

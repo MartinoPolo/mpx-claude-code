@@ -186,29 +186,34 @@ describe("renderTaskRow", () => {
     it("lays the row out cell by cell, with nothing between tokens and text", () => {
         expect(render().content).toBe(
             `${fg(80)}●${RESET}` +
-                ` ${fg(74)}opus   ${RESET}` +
-                ` ${fg(208)}high    ${RESET}` +
+                ` ${fg(74)} opus  ${RESET}` +
+                ` ${fg(208)} ◆◆◆◇◇ ${RESET}` +
                 ` ${fg(240)}     0s${RESET}` +
                 ` ${GRAY}1.0k (0%)    ${RESET} ` +
                 `${GRAY}agent a${RESET}`,
         );
     });
 
+    it("draws a named level as the main bar's gauge while recording the word", () => {
+        expect(render({ effort: "low" }).content).toContain(`${fg(71)} ◆◇◇◇◇ ${RESET}`);
+        expect(render({ effort: "high" }).record.effort).toBe("high");
+    });
+
     it("question-marks an inherited effort and records it without the marker", () => {
         const row = render({ effort: "" });
-        expect(row.content).toContain(`${fg(214)}?medium ${RESET}`);
+        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
         expect(row.record.effort).toBe("medium");
     });
 
     it("colors the whole inherited effort cell amber and adds no reason", () => {
         const row = render({ model: "sonnet", effort: "" });
-        expect(row.content).toContain(`${fg(214)}?medium ${RESET}`);
+        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
         expect(row.content).not.toContain("^ ");
     });
 
     it("leaves a declared effort unmarked in its own level color", () => {
         const row = render({ model: "sonnet", effort: "high" });
-        expect(row.content).toContain(`${fg(208)}high    ${RESET}`);
+        expect(row.content).toContain(`${fg(208)} ◆◆◆◇◇ ${RESET}`);
         expect(row.content).not.toContain("^ ");
     });
 
@@ -218,30 +223,30 @@ describe("renderTaskRow", () => {
         // effort cell keeps the amber `?` it earns for being substituted.
         const row = render({ model: "fable", effort: "" });
         expect(row.content).toContain(`${fg(196)}!fable ${RESET}`);
-        expect(row.content).toContain(`${fg(214)}?medium ${RESET}`);
+        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
         expect(row.content).toContain(`\n${fg(203)}    ^ fable is never allowed${RESET}`);
     });
 
     it("marks the effort for an effort violation and leaves the model alone", () => {
         const row = render({ model: "opus", effort: "max" });
-        expect(row.content).toContain(`${fg(196)}!max    ${RESET}`);
-        expect(row.content).toContain(`${fg(74)}opus   ${RESET}`);
+        expect(row.content).toContain(`${fg(196)}!◆◆◆◆◆ ${RESET}`);
+        expect(row.content).toContain(`${fg(74)} opus  ${RESET}`);
     });
 
     describe("haiku", () => {
         it("blanks the effort column and adds no marker when inherited", () => {
             const row = render({ model: "haiku", effort: "" });
-            // Two pad spaces after the model, then the eight the empty effort
+            // Two pad spaces after the model, then the six the empty effort
             // column still occupies, then the right-aligned duration.
-            expect(visibleFirstLine(row.content)).toMatch(/^● haiku {17}0s/);
-            expect(row.content).not.toContain("medium");
+            expect(visibleFirstLine(row.content)).toMatch(/^● {2}haiku {15}0s/);
+            expect(row.content).not.toContain("◆");
             expect(row.content).toContain(`${RESET} ${GRAY}agent a`);
             expect(row.record.effort).toBe("");
         });
 
         it("shows a declared effort marked, since blanking would hide the violation", () => {
             const row = render({ model: "haiku", effort: "medium" });
-            expect(row.content).toContain(`${fg(196)}!medium ${RESET}`);
+            expect(row.content).toContain(`${fg(196)}!◆◆◇◇◇ ${RESET}`);
             expect(row.record.effort).toBe("medium");
             expect(row.content).toContain(
                 `\n${fg(203)}    ^ haiku has no effort setting${RESET}`,
@@ -266,9 +271,9 @@ describe("renderTaskRow", () => {
         expect(widths[0]).toBeGreaterThan(0);
     });
 
-    it("renders a numeric budget in cyan through formatTokens", () => {
+    it("renders a numeric budget in cyan through formatTokens, with no gauge to draw", () => {
         const row = render({ effort: "32000" });
-        expect(row.content).toContain(`${fg(80)}32.0k   ${RESET}`);
+        expect(row.content).toContain(`${fg(80)} 32.0k ${RESET}`);
         expect(row.record.effort).toBe("32.0k");
     });
 
@@ -288,7 +293,7 @@ describe("renderTaskRow", () => {
         );
         // One violation per cell, each marking the value it is about.
         expect(row.content).toContain(`${fg(196)}!fable ${RESET}`);
-        expect(row.content).toContain(`${fg(196)}!max    ${RESET}`);
+        expect(row.content).toContain(`${fg(196)}!◆◆◆◆◆ ${RESET}`);
     });
 
     it("separates the tokens column from the description with a single space", () => {
@@ -296,8 +301,8 @@ describe("renderTaskRow", () => {
     });
 
     it("falls back to the raw model, then to a question mark", () => {
-        expect(render({ model: "gpt-9" }).content).toContain(`${GRAY}gpt-9  ${RESET}`);
-        expect(render({ model: "" }).content).toContain(`${GRAY}?      ${RESET}`);
+        expect(render({ model: "gpt-9" }).content).toContain(`${GRAY} gpt-9 ${RESET}`);
+        expect(render({ model: "" }).content).toContain(`${GRAY} ?     ${RESET}`);
         expect(render({ model: "gpt-9" }).record.tier).toBe("unknown");
     });
 
@@ -334,9 +339,9 @@ describe("renderTaskRow", () => {
         const description = "0123456789abcdefghijklmnopqrstuvwxyz";
 
         it("gives the description whatever the fixed columns leave over", () => {
-            // 41 columns of fixed layout, so 64 leaves exactly 23.
+            // 40 columns of fixed layout, so 64 leaves exactly 24.
             expect(render({ description }, 64).content).toContain(
-                `${GRAY}0123456789abcdefghijklm${RESET}`,
+                `${GRAY}0123456789abcdefghijklmn${RESET}`,
             );
         });
 
