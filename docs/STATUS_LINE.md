@@ -122,6 +122,7 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 | project / worktree name | Explorer in that folder |
 | VS Code glyph (U+F0A1E) beside a name | VS Code in that folder |
 | branch name | the branch on its remote host (`.../tree/<branch>`, GitLab `/-/tree/`) |
+| `↑3` / `↑3↓2` unpushed count | the compare view of the default branch against this one |
 | `:8100` port | `localhost:8100` in the browser, over the scheme the probe saw it speak |
 | pencil glyph (U+F03EB) after the ports | `statusline-projects.json`, where the ports live |
 | `#01b054bb` session id | the session's transcript `.jsonl` |
@@ -132,6 +133,14 @@ normalised from any of the three remote spellings — scp-like `git@host:owner/r
 `ssh://`, plain `https://` — with `.git` stripped and the tree-path style picked by host:
 GitLab nests it under `/-/`, GitHub and everything else serve `/tree/<branch>` directly. No
 parseable remote, no link — the branch renders as plain text.
+
+**The unpushed count links to the compare view** — `.../compare/<default>...<branch>`, GitLab
+`/-/compare/` — the page that lists what the branch carries on top of the default branch and
+offers to open a PR/MR from it. The base comes from `git for-each-ref` over
+`refs/remotes/origin/{HEAD,main,master}`, reading refs only: resolving the default branch over
+the network is exactly the kind of wait a status line cannot afford. `origin/HEAD` wins when the
+clone recorded one, the usual names are the fallback. The extra ref read happens only when
+something is actually ahead, so the in-sync case costs nothing.
 
 **Worktrees are split into two click targets.** `git rev-parse --path-format=absolute
 --git-common-dir --show-toplevel` (one extra ~10ms call, made only when the cwd is already known
@@ -461,7 +470,7 @@ The sub-agent status column keeps `✓`/`×` because it is one cell wide and has
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 249 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # 257 unit tests over the pure helpers
 ```
 
 The harness began as a byte-parity golden diff against the bash originals, which is how the port

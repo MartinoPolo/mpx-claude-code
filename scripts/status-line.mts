@@ -698,8 +698,12 @@ export function parsePorcelainV2(output: string): GitStatus {
  * — `≡` in sync, `+n` staged, `!n` modified, `?n` untracked. Color survives
  * only where git is telling you something you might not know: a diverged or
  * deleted upstream, a conflict, an unpushed/unpulled count.
+ *
+ * An unpushed count links to `compareUrl` when the caller has one: commits
+ * ahead of the default branch are the ones a PR would carry, so the count is
+ * the natural place to click through to the compare view.
  */
-export function buildGitSigns(status: GitStatus): string {
+export function buildGitSigns(status: GitStatus, compareUrl = ""): string {
     if (status.branch === "") {
         return "";
     }
@@ -711,11 +715,13 @@ export function buildGitSigns(status: GitStatus): string {
     if (!status.hasAheadBehind) {
         return `${WARN}remote deleted${RESET}`;
     }
+    const unpushed = (color: string, label: string): string =>
+        `${color}${compareUrl === "" ? label : hyperlink(compareUrl, label)}${RESET}`;
     if (status.ahead > 0 && status.behind > 0) {
-        return `${WARN}↑${status.ahead}↓${status.behind}${RESET}`;
+        return unpushed(WARN, `↑${status.ahead}↓${status.behind}`);
     }
     if (status.ahead > 0) {
-        return `${ADD}↑${status.ahead}${RESET}`;
+        return unpushed(ADD, `↑${status.ahead}`);
     }
     if (status.behind > 0) {
         return `${DEL}↓${status.behind}${RESET}`;
@@ -854,15 +860,14 @@ function readWorktreePaths(cwd: string): WorktreePaths | undefined {
 // --- Remote branch -------------------------------------------------------------
 
 /**
- * Web URL of `branch` on the remote the `origin` URL points at, or "" when the
- * remote is missing or unparseable. Handles the three spellings git remotes
- * come in — scp-like `git@host:owner/repo.git`, `ssh://git@host/owner/repo`,
- * and plain `http(s)://` — and picks the tree-path style by host: GitLab nests
- * it under `/-/`, GitHub and everything else serve `/tree/<branch>` directly.
+ * The remote's web root — `https://host/owner/repo`, no trailing slash — or ""
+ * when the remote is missing or unparseable. Handles the three spellings git
+ * remotes come in: scp-like `git@host:owner/repo.git`, `ssh://git@host/owner/repo`,
+ * and plain `http(s)://`.
  */
-export function buildBranchUrl(remote: string, branch: string): string {
+function remoteWebRoot(remote: string): string {
     let url = remote.trim();
-    if (url === "" || branch === "") {
+    if (url === "") {
         return "";
     }
     const scpLike = url.match(/^[\w.+-]+@([^:/]+):(.+)$/);
@@ -874,28 +879,106 @@ export function buildBranchUrl(remote: string, branch: string): string {
         .replace(/^https:\/\/([^/:]+):\d+\//, "https://$1/") // ssh port, meaningless over https
         .replace(/\.git$/, "")
         .replace(/\/+$/, "");
-    if (!/^https?:\/\/[^/]+\/./.test(url)) {
-        return "";
-    }
-    const treePath = /^https?:\/\/[^/]*gitlab/i.test(url) ? "/-/tree/" : "/tree/";
-    // Encode per segment: slashes in a branch name stay path separators.
-    return url + treePath + branch.split("/").map(encodeURIComponent).join("/");
+    return /^https?:\/\/[^/]+\/./.test(url) ? url : "";
 }
 
-/** The `origin` remote's branch URL for a live checkout — one more fast git call. */
-function remoteBranchUrl(cwd: string, branch: string): string {
-    if (cwd === "" || branch === "") {
+/**
+ * Views live at different depths per host: GitLab nests them under `/-/`,
+ * GitHub and everything else serve `/tree/…` and `/compare/…` directly.
+ */
+function webViewPath(webRoot: string, view: "tree" | "compare"): string {
+    return /^https?:\/\/[^/]*gitlab/i.test(webRoot) ? `/-/${view}/` : `/${view}/`;
+}
+
+/** Encoded per segment: slashes in a branch name stay path separators. */
+function encodeBranchPath(branch: string): string {
+    return branch.split("/").map(encodeURIComponent).join("/");
+}
+
+/** Web URL of `branch` on the remote the `origin` URL points at, or "". */
+export function buildBranchUrl(remote: string, branch: string): string {
+    const webRoot = remoteWebRoot(remote);
+    if (webRoot === "" || branch === "") {
         return "";
     }
+    return webRoot + webViewPath(webRoot, "tree") + encodeBranchPath(branch);
+}
+
+/**
+ * Web URL of the `base...head` compare view — the page that lists the commits
+ * `head` carries on top of `base` and offers to open a PR/MR from them. "" when
+ * the remote is unparseable or the two branches are the same, which compares to
+ * nothing.
+ */
+export function buildCompareUrl(remote: string, base: string, head: string): string {
+    const webRoot = remoteWebRoot(remote);
+    if (webRoot === "" || base === "" || head === "" || base === head) {
+        return "";
+    }
+    return `${webRoot}${webViewPath(webRoot, "compare")}${encodeBranchPath(base)}...${encodeBranchPath(head)}`;
+}
+
+/**
+ * The remote's default branch from `git for-each-ref` output over
+ * `refs/remotes/origin/{HEAD,main,master}`, formatted `%(refname:short)\t%(symref:short)`.
+ * `origin/HEAD` sorts first and wins when the clone recorded one; the usual
+ * names are the fallback for clones that did not.
+ */
+export function parseDefaultBranch(output: string): string {
+    for (const line of output.split("\n")) {
+        const [name = "", symref = ""] = line.split("\t");
+        const target = symref === "" ? name : symref; // only origin/HEAD is symbolic
+        if (target.startsWith("origin/") && target !== "origin/HEAD") {
+            return target.slice("origin/".length);
+        }
+    }
+    return "";
+}
+
+/** Refs only, never the network — a status line may not wait on a remote. */
+function defaultBranch(cwd: string): string {
     try {
-        const remote = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"]
-        });
-        return buildBranchUrl(remote.trim(), branch);
+        const output = execFileSync(
+            "git",
+            [
+                "-C",
+                cwd,
+                "for-each-ref",
+                "--format=%(refname:short)\t%(symref:short)",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+                "refs/remotes/origin/master"
+            ],
+            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+        );
+        return parseDefaultBranch(output);
     } catch {
         return "";
     }
+}
+
+/**
+ * The `origin` URLs for a live checkout, from a single `remote get-url` call.
+ * The compare view costs one further ref read, so it is resolved only when the
+ * caller has something to compare — an unpushed commit.
+ */
+function remoteUrls(cwd: string, branch: string, wantCompare: boolean): { branchUrl: string; compareUrl: string } {
+    if (cwd === "" || branch === "") {
+        return { branchUrl: "", compareUrl: "" };
+    }
+    let remote = "";
+    try {
+        remote = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"]
+        }).trim();
+    } catch {
+        return { branchUrl: "", compareUrl: "" };
+    }
+    return {
+        branchUrl: buildBranchUrl(remote, branch),
+        compareUrl: wantCompare ? buildCompareUrl(remote, defaultBranch(cwd), branch) : ""
+    };
 }
 
 // --- Dev servers ---------------------------------------------------------------
@@ -1648,7 +1731,8 @@ function render(): string {
 
     const git = readGitStatus(fields.cwd);
     const branch = git?.branch ?? "";
-    const gitSigns = git ? buildGitSigns(git) : "";
+    const remote = remoteUrls(fields.cwd, branch, (git?.ahead ?? 0) > 0);
+    const gitSigns = git ? buildGitSigns(git, remote.compareUrl) : "";
     const gitDirt = git ? buildGitDirt(git) : [];
 
     const location = resolveProjectLocation(fields.cwd, branch === "" ? undefined : readWorktreePaths(fields.cwd));
@@ -1812,7 +1896,7 @@ function render(): string {
             projectEditorUrl,
             worktreeEditorUrl,
             branch,
-            branchUrl: remoteBranchUrl(fields.cwd, branch),
+            branchUrl: remote.branchUrl,
             devServers,
             mrBlock
         }),

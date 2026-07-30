@@ -6,6 +6,7 @@ import {
     basename,
     buildBranchStateLine,
     buildBranchUrl,
+    buildCompareUrl,
     buildDevServerSegments,
     buildFetchAge,
     buildGitDirt,
@@ -24,6 +25,7 @@ import {
     cacheKey,
     hyperlink,
     toFileUrl,
+    parseDefaultBranch,
     parseMrCacheLine,
     parsePorcelainV2,
     parsePortSchemes,
@@ -276,6 +278,22 @@ describe("buildGitSigns", () => {
 
     it("spells a diverged branch with both arrows so neither count loses its direction", () => {
         expect(buildGitSigns({ ...base, ahead: 3, behind: 2 })).toContain("↑3↓2");
+    });
+
+    it("links an unpushed count to the compare view, ahead and diverged alike", () => {
+        const compareUrl = "https://github.com/me/repo/compare/main...dev";
+        expect(buildGitSigns({ ...base, ahead: 2 }, compareUrl)).toBe(
+            `${ADD}${hyperlink(compareUrl, "↑2")}${RESET}`
+        );
+        expect(buildGitSigns({ ...base, ahead: 3, behind: 2 }, compareUrl)).toBe(
+            `${WARN}${hyperlink(compareUrl, "↑3↓2")}${RESET}`
+        );
+    });
+
+    it("leaves states with nothing to compare unlinked", () => {
+        const compareUrl = "https://github.com/me/repo/compare/main...dev";
+        expect(buildGitSigns({ ...base, behind: 3 }, compareUrl)).toBe(`${DEL}↓3${RESET}`);
+        expect(buildGitSigns(base, compareUrl)).toBe(`${DIM}≡${RESET}`);
     });
 
     it("keeps routine dirt DIM and reserves color for states git decides, not you", () => {
@@ -603,6 +621,47 @@ describe("buildBranchUrl", () => {
         expect(buildBranchUrl("", "main")).toBe("");
         expect(buildBranchUrl("git@github.com:me/repo.git", "")).toBe("");
         expect(buildBranchUrl("/local/bare/repo.git", "main")).toBe("");
+    });
+});
+
+describe("buildCompareUrl", () => {
+    it("spells base...head against the host's compare path", () => {
+        expect(buildCompareUrl("git@github.com:me/repo.git", "main", "dev")).toBe(
+            "https://github.com/me/repo/compare/main...dev"
+        );
+        expect(buildCompareUrl("git@gitlab.com:group/repo.git", "main", "dev")).toBe(
+            "https://gitlab.com/group/repo/-/compare/main...dev"
+        );
+    });
+
+    it("keeps slashes in branch names while encoding what needs it", () => {
+        expect(buildCompareUrl("git@github.com:me/repo.git", "main", "feat/#12 fix")).toBe(
+            "https://github.com/me/repo/compare/main...feat/%2312%20fix"
+        );
+    });
+
+    it("returns nothing when either side is missing or the two are the same", () => {
+        expect(buildCompareUrl("git@github.com:me/repo.git", "", "dev")).toBe("");
+        expect(buildCompareUrl("git@github.com:me/repo.git", "main", "")).toBe("");
+        expect(buildCompareUrl("git@github.com:me/repo.git", "main", "main")).toBe("");
+        expect(buildCompareUrl("/local/bare/repo.git", "main", "dev")).toBe("");
+    });
+});
+
+describe("parseDefaultBranch", () => {
+    it("prefers the branch origin/HEAD points at", () => {
+        const refs = "origin/HEAD\torigin/dev\norigin/main\t\norigin/master\t\n";
+        expect(parseDefaultBranch(refs)).toBe("dev");
+    });
+
+    it("falls back to main, then master, for a clone with no origin/HEAD", () => {
+        expect(parseDefaultBranch("origin/main\t\norigin/master\t\n")).toBe("main");
+        expect(parseDefaultBranch("origin/master\t\n")).toBe("master");
+    });
+
+    it("returns nothing when no candidate ref exists", () => {
+        expect(parseDefaultBranch("")).toBe("");
+        expect(parseDefaultBranch("upstream/main\t\n")).toBe("");
     });
 });
 
