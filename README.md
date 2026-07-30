@@ -222,13 +222,15 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 **Main bar** (`scripts/status-line.mts`):
 
-- Session name/id · model · reasoning effort · account
-- `📁 directory · IDE · 🔀 branch · MR/PR + review state · CI state` — directory opens Explorer, `IDE` opens VS Code, MR/PR and CI are clickable links
-- Branch state: upstream relation · staged/modified/untracked counts · fetch age
-- Context tokens with escalating color · session cost (USD/CZK)
-- 5-hour & 7-day quota bars with reset countdowns — from stdin `rate_limits`, no network call
+- Account · session name (bold magenta) · session id, linked to the session's transcript `.jsonl`
+- Model (`Opus 5 (1M)`) · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
+- `project 󰨞/worktree 󰨞 · branch · :8100 󰏫 · MR/PR + review state · CI state` — branch and editor carry Nerd Font glyphs (`Cascadia Mono, Symbols Nerd Font` fallback pair in Windows Terminal), project and worktree names open their own folders in Explorer, the VS Code glyph beside each name opens the editor there, the branch name opens `…/tree/<branch>` on its remote host, dev-server ports (declared per project in `statusline-projects.json`) link to `localhost` over whichever scheme the server actually speaks (http or https) and turn green while it answers, and a dim pencil (or a `󰏫 ports` hint when nothing is configured) opens that config
+- Branch state, indented and dim: `≡` in sync (or `↑n`/`↓n`), `+n` staged, `!n` modified, `?n` untracked, `~n` conflicted · fetch age — color only for states git decides (diverged, conflicts, deleted remote)
+- Context tokens with escalating color · bar filling toward the auto-compaction limit · session cost (USD/CZK)
+- Compaction history, one indented row per event: `└─ auto · 205k → 15k · 06:50`. `auto` is amber, `manual` grey, the clock dim; the last 3 are spelled out and older ones collapse into a `N earlier` count. Absent entirely until a session compacts
+- 5-hour & 7-day quota bars with reset countdowns — from stdin `rate_limits`, no network call; the `5h`/`7d` labels link to the claude.ai usage dashboard
 
-**Sub-agent panel** (`scripts/subagent-status-line.mts`, Ctrl+T): one row per sub-agent — status · model · effort · elapsed · context · live progress label — plus a session-wide `Σ` tally. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line.
+**Sub-agent panel** (`scripts/subagent-status-line.mts`, Ctrl+T): one row per sub-agent — status · model · effort · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 

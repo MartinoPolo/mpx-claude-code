@@ -76,14 +76,22 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+    AMBER,
     DIM,
     GRAY,
     RESET,
+    cacheKey,
     fg,
     isNonNegativeInt,
     readStdin,
     toNonNegativeInt,
 } from "./lib/statusline-ansi.mts";
+import {
+    type CompactionStyle,
+    buildCompactionLines,
+    readCompactionHistory,
+    subagentTranscriptPath,
+} from "./lib/compaction.mts";
 
 // Model tier colors. Shared with the effort scale where the hue means the same
 // thing, so the two columns read as one palette rather than two. Declaration
@@ -135,6 +143,23 @@ const DRIFT_REASON = fg(203); // coral: the explanation beneath it
 const INHERITED_EFFORT = fg(214); // amber: the cell a ? marker qualifies
 const DRIFT_MARKER = "!";
 const INHERITED_EFFORT_MARKER = "?";
+
+/**
+ * Identical ranking to the main bar's, and deliberately the same object shape:
+ * a compaction row means the same thing wherever it appears, so the two
+ * renderers must not drift into two dialects of it.
+ */
+const COMPACTION_STYLE: CompactionStyle = {
+    tree: DIM,
+    auto: AMBER,
+    manual: GRAY,
+    tokens: GRAY,
+    time: DIM,
+    reset: RESET,
+};
+
+/** Matches status-line.mts: the compaction scan caches its byte offset here. */
+const CACHE_DIR = process.env.TMPDIR || "/tmp";
 
 const CONFIG_DIR =
     process.env.CLAUDE_CONFIG_DIR || `${process.env.HOME || homedir()}/.claude`;
@@ -623,9 +648,13 @@ function main(): void {
     const tasks = extractTasks(payload);
     if (tasks.length === 0) return;
 
-    const header = (payload as { columns?: unknown; session_id?: unknown }) ?? {};
+    const header = (payload as { columns?: unknown; session_id?: unknown; transcript_path?: unknown }) ?? {};
     const columns = toNonNegativeInt(orDefault(header.columns, "100"), 100);
     const sessionId = orDefault(header.session_id, "nosession") || "nosession";
+    // The payload carries the *session* transcript; a sub-agent's own transcript
+    // sits beside it under `<session>/subagents/agent-<task.id>.jsonl`, and
+    // `task.id` is the agent id that names that file.
+    const sessionTranscript = orDefault(header.transcript_path, "");
 
     const sessionEffort = readSessionEffort();
     // Second granularity, matching the reference clock: elapsed time is rendered
@@ -647,7 +676,21 @@ function main(): void {
     const rows: RenderedRow[] = [];
     for (const task of tasks) {
         if (task.id === "") continue;
-        rows.push(renderTaskRow(task, { columns, sessionEffort, nowMs }));
+        const row = renderTaskRow(task, { columns, sessionEffort, nowMs });
+        // Hangs off the agent's own row rather than the tally, because which
+        // agent lost its history is the whole point of showing it here.
+        const transcript = subagentTranscriptPath(sessionTranscript, task.id);
+        const compactions =
+            transcript === ""
+                ? []
+                : readCompactionHistory(
+                      transcript,
+                      `${CACHE_DIR}/claude-compact-${cacheKey(transcript)}.tsv`,
+                  );
+        for (const line of buildCompactionLines(compactions, "    ", COMPACTION_STYLE)) {
+            row.content += `\n${line}`;
+        }
+        rows.push(row);
     }
     if (rows.length === 0) return;
 

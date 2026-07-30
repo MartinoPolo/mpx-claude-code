@@ -13,12 +13,22 @@ The README carries only the feature overview; every design decision and mechanic
   session and used to push the MR reference off the right edge of the location row.
 - **The directory name is the one white field.** It answers "where am I", the question asked most
   often and from the furthest away; every other field on that row stays grey. Emphasis by color
-  alone means no glyph or box drawing has to carry it.
+  alone means no glyph or box drawing has to carry it. In a worktree the white moves to the
+  worktree half of `project/worktree`, because that is the actual location.
+- **The first line is account · title · id** — whose session, what it is about, how to refer to
+  it — so switching between a Personal and a Work terminal is answered before anything else.
+- **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance where `<high>` had to be
+  parsed; five slots for the five levels `low medium high xhigh max`, and anything unrecognized
+  falls back to the old `<level>` spelling.
 - **Dim grey is for context, not signal.** Fetch age, MR cache age, quota reset countdowns, the
-  quota cache age note and the session cost all render dim. They answer "how much do I trust the
-  number beside me" or "what is the running total"; coloring them coral trains the eye to ignore
-  coral everywhere else. The one exception is a quota cache old enough that the percentages
-  themselves are wrong.
+  quota cache age note, the session cost and a compaction's wall clock all render dim. They answer
+  "how much do I trust the number beside me" or "what is the running total"; coloring them coral
+  trains the eye to ignore coral everywhere else. The one exception is a quota cache old enough
+  that the percentages themselves are wrong.
+- **The session name is the only field with weight.** Bold magenta `fg(213)`, where every other
+  rank on the bar is hue alone. It is the title of the thing you are looking at, so it is found
+  before anything else is read. It was lavender `fg(141)`, which sat close enough to the panel's
+  `max` effort purple that neither read as a heading.
 - A row with nothing to say is dropped rather than emitted blank — outside a repo the branch
   state has no content at all, so the rows below it move up.
 
@@ -30,15 +40,134 @@ Lines added/removed (`cost.total_lines_*`) used to close the usage row as `+120 
 dropped as noise — a session-wide edit total never changed a decision. `buildUsageLine` carries a
 comment saying how to restore it.
 
+Compaction history is the one value not in the payload — it is read from the transcript at
+`transcript_path`, which the payload does carry. See [Compaction history](#compaction-history).
+
 Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a
 background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive
 rate limit is never hit during normal use. Cached readings older than 15m show a muted age note;
 older than 30m are flagged coral.
 
-## Clickable directory and IDE
+## Compaction history
 
-The directory name and the `IDE` token beside it are OSC-8 hyperlinks. Clicking the name opens
-Explorer in the working directory; clicking `IDE` opens VS Code there.
+Claude Code writes one line into a session's transcript every time that session compacts:
+
+```json
+{ "type": "system", "subtype": "compact_boundary", "timestamp": "2026-07-16T06:26:17.738Z",
+  "compactMetadata": { "trigger": "auto", "preTokens": 227148, "postTokens": 11300,
+                       "cumulativeDroppedTokens": 215848, "durationMs": 87407 } }
+```
+
+Only `trigger` and `preTokens` are documented; the rest are real but undocumented, and
+`docs/sessions` warns the transcript format changes between versions. `parseCompactionEvent`
+therefore defaults every field it cannot read rather than dropping the event.
+
+**Sub-agents compact independently** and each writes its own transcript at
+`<session>/subagents/agent-<id>.jsonl`, where `<id>` is the panel payload's `task.id`. That
+identity is what lets a row show its own history. Confirmed against a captured payload —
+`task.id` `a77f7ecdb4b8f2a5c` names `agent-a77f7ecdb4b8f2a5c.jsonl`.
+
+**The read is incremental.** A transcript reaches tens of megabytes and both renderers run on
+every tick, so `$TMPDIR/claude-compact-<key>.tsv` holds the byte offset already scanned plus the
+events found so far; each tick parses only the bytes appended since. A cold start on a 16 MB
+transcript is one pass (~36 ms measured); every tick after it is the few hundred bytes a turn
+adds. Three details carry that:
+
+- The offset is **bytes**, not characters — one emoji in a tool result would otherwise drift it
+  permanently.
+- A tick can land midway through a line Claude Code is still writing, so the trailing partial is
+  left unconsumed and re-read next time instead of being parsed and lost.
+- A cache offset *ahead* of the file means the transcript was replaced or truncated (a resumed
+  session forks a new file), which restarts the scan from zero.
+
+Unlike the MR block this spawns nothing and touches no network — the file is already on disk.
+
+**Layout.** One indented row per event, oldest first, directly under the context line that owns
+them; the tasks panel indents two spaces deeper so its rows nest under an agent rather than the
+tally. Only the last `COMPACTION_ROWS` (3) are spelled out and the rest collapse into
+`N earlier` — the recent ones are what tell you whether the session you came back to is still the
+session you left. `auto` is the only field with a color of its own (amber, the same hue the panel
+uses to qualify an inherited effort level) because it is the only thing on the row you did not
+decide; `manual`, the token change and the tree glyphs stay at reading weight, and the clock is
+dim.
+
+## The context bar and `autoCompactWindow`
+
+The bar fills toward the **auto-compaction limit**, not the model window. A bar creeping toward
+1M said nothing, because nothing happens at 1M — which is why the bar was dropped from this row
+in the first place. A full bar now means compaction is about to fire, the only threshold on the
+line anyone acts on.
+
+The limit is `min(context_window_size, autoCompactWindow) - 33000`. That reserve is
+`min(maxOutputTokens, 20000) + 13000`, read off the 2.1.220 bundle and confirmed against a real
+boundary: a 213,000 window tripped at `preTokens: 181,106`. **It is an offset, not a fraction** —
+moving the trigger by 20k means moving `autoCompactWindow` by 20k, not scaling it. `settings.json`
+carries `autoCompactWindow: 233000`, which puts the trigger at 200,000.
+
+Context escalation is now a fraction of that limit (50% / 70% / 90%) rather than the old absolute
+100k/140k/180k. At a 200,000 limit the cut-offs land on exactly those numbers, so nothing moved on
+screen — but they follow `autoCompactWindow` instead of silently meaning less every time it is
+raised. The bar takes the same escalating color, so bar and token count can never disagree.
+
+The percentage in `118k (11%)` still reads against the **model window**, deliberately: the bar
+answers "how close am I to losing history", the percentage answers "how much of the window am I
+using". Two questions, two denominators.
+
+## Click targets
+
+Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
+
+| Click | Opens |
+| --- | --- |
+| project / worktree name | Explorer in that folder |
+| VS Code glyph (U+F0A1E) beside a name | VS Code in that folder |
+| branch name | the branch on its remote host (`.../tree/<branch>`, GitLab `/-/tree/`) |
+| `:8100` port | `localhost:8100` in the browser, over the scheme the probe saw it speak |
+| pencil glyph (U+F03EB) after the ports | `statusline-projects.json`, where the ports live |
+| `#01b054bb` session id | the session's transcript `.jsonl` |
+| `5h` / `7d` quota labels | <https://claude.ai/settings/usage> |
+
+The branch URL comes from `git remote get-url origin` (one more fast git call per render),
+normalised from any of the three remote spellings — scp-like `git@host:owner/repo.git`,
+`ssh://`, plain `https://` — with `.git` stripped and the tree-path style picked by host:
+GitLab nests it under `/-/`, GitHub and everything else serve `/tree/<branch>` directly. No
+parseable remote, no link — the branch renders as plain text.
+
+**Worktrees are split into two click targets.** `git rev-parse --path-format=absolute
+--git-common-dir --show-toplevel` (one extra ~10ms call, made only when the cwd is already known
+to be a repo) reveals a linked worktree: the shared `.git` lives under the *main* checkout, so
+when `dirname(--git-common-dir)` differs from `--show-toplevel` the line renders
+`project/worktree` — project gray linking the original folder, worktree white linking the
+worktree, because the worktree is what answers "where am I". Each half carries its own VS Code
+glyph — the project's opens the original checkout, the worktree's opens the worktree — so both
+editors are one click away. In the main checkout the line is just the cwd name with a single
+glyph, as before.
+
+**Dev-server ports** follow the branch segment: `statusline-projects.json` at the repo root maps a
+main project folder name to its localhost ports (worktrees inherit their project's entry, since
+the config is keyed by the resolved main project). Each port renders as `:8100` hyperlinked into
+the browser — Windows Terminal opens http and https links in the default browser — green while
+something is listening, DIM while nothing is. Liveness comes from a cache written by a detached
+`--warm-ports` child (same pattern as the quota/FX warmers) that probes each port with a
+400ms timeout, at most every 15s; the render itself never opens a socket. Which process belongs
+to which project is *not* auto-detected — a dev server is usually a `node` grandchild whose
+working directory Windows will not cheaply reveal — hence the one-time config.
+
+The probe decides the **scheme** as well as the state, and both halves are load-bearing:
+
+- It dials `localhost`, not `127.0.0.1`, so Node's happy-eyeballs (`autoSelectFamily`, on by
+  default since Node 20) tries both address families. A dev server bound to `::1` only — which
+  Vite does routinely — otherwise probes as down while serving perfectly well.
+- Once connected it attempts a TLS handshake over the same socket: completed means the port is
+  recorded `https`, rejected or ignored means `http`. The link then carries the scheme the server
+  actually speaks. Getting this wrong is not a graceful failure — an `http://` request to a TLS
+  listener is answered with zero bytes, and the browser reports `ERR_EMPTY_RESPONSE`, which looks
+  like a broken dev server rather than a wrong URL. A port that is down has no known scheme and
+  falls back to `http`.
+
+A dim pencil (U+F03EB) linking to that config closes the port list, so a wrong or new port is
+one click from its declaration; a project with no entry at all renders a dim `pencil ports`
+hint in the same place instead, which is also how a fresh project discovers the feature.
 
 Both are `file:` URLs, because Windows Terminal opens a hyperlink only when its scheme is `http`,
 `https` or `file` (`TerminalPage::_IsUriSupported`) — anything else raises an error dialog
@@ -61,17 +190,25 @@ the label — a directory named `trace` would render as a tab followed by `race`
 ## Branch signs and MR/PR block
 
 ```
-📁 mpx-claude-code · IDE · 🔀 main
-in sync · 2 staged · 28 modified · 9 untracked · 2h ago
+mpx-claude-code <VS Code glyph> ·  main
+    ≡ · +2 · !28 · ?9 · 2h ago
 
-📁 yoursafe-components · IDE · 🔀 martas/agentic-setup · !252 draft · ci run · 💬 3
-↑3 · 2 staged · 16m ago
+yoursafe-components <VS Code glyph> ·  martas/agentic-setup · :8100 · :8101 · !252 draft · ci run · 💬 3
+    ↑3 · +2 · 16m ago
 ```
 
-Upstream relation (one state, mutually exclusive): `local` no upstream · `in sync` · `↑3` ahead ·
-`↓2` behind · `↑3↓2` diverged · `remote deleted` for an upstream that is configured but whose
-remote branch is gone. Then one segment per non-zero count — `n staged`, `n modified`,
-`n untracked`, `n conflicted` — and the age since the last fetch, hidden under 10m and always dim.
+Upstream relation (one state, mutually exclusive): `local` no upstream · `≡` in sync · `↑3`
+ahead · `↓2` behind · `↑3↓2` diverged · `remote deleted` for an upstream that is configured but
+whose remote branch is gone. Then one compact segment per non-zero count — `+n` staged, `!n`
+modified, `?n` untracked, `~n` conflicted — and the age since the last fetch, hidden under 10m.
+
+**The whole row is quiet by design**: indented four columns under the location line (a detail *of*
+it, the way compaction rows nest under the usage line) and DIM throughout, because it restates
+work you already know about — you made those edits. Color survives only where git is telling you
+something you might not: WARN for diverged/conflicts/deleted remote, green/red for an
+unpushed/unpulled count, sand for a branch that never left the machine. The symbols follow the
+powerlevel10k vocabulary (`+` staged, `!` modified, `?` untracked, `~` conflicted), so they read
+as git shorthand rather than a private code.
 
 **Untracked files are counted.** `git status` runs with `--untracked-files=normal` rather than
 the index-only `=no`, which walks the working tree: measured at 98ms against 92ms on this repo,
@@ -159,7 +296,15 @@ still running. A task's tokens and elapsed time freeze the first tick it is seen
 finished agent stops accruing time. State files are pruned after 7 days, on the first tick of a
 new session. Because the panel only renders rows for ids present in the current payload, the `Σ`
 line has nowhere of its own to live and hangs off the last row — so it disappears with the last
-row, 30s after the final agent.
+row, 30s after the final agent. A row's `content` may hold newlines, which is what makes that
+trick work and what the per-agent compaction rows reuse; they are appended to the agent's own row
+so that *which* agent lost its history is what the panel says, and the `Σ` line stays last.
+
+**Compaction rows are usually absent, correctly so.** Across 806 sub-agent transcripts on this
+machine, zero contained a `compact_boundary` — no sub-agent had ever hit the limit. The largest
+observed peaked at 320,628 tokens on 16 July, eleven days before `autoCompactWindow` was set at
+all. The display is therefore correct by construction but unexercised by real data; the synthetic
+fixture in `scripts/__tests__/compaction.test.ts` is what covers it.
 
 **No per-agent identity — a hard limit of the data, not a bug.** `.type` is always the literal
 string `"local_agent"`, and `.name` is always `null` for Task-tool sub-agents (it is the
@@ -241,10 +386,15 @@ header/body splitting. The `0x1F` separator survives in the *on-disk cache forma
 because existing caches use it.
 
 `scripts/lib/statusline-ansi.mts` holds the small shared surface: the 256-color escape helper,
-stdin reading, and the integer guard that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That
-predicate rejects negatives, decimals, empty strings and `"null"` — it stays because nearly
-every numeric field is gated on it, and a looser check would start rendering values the old line
-silently dropped.
+`BOLD`, stdin reading, best-effort cache reads, the cache-key sanitizer, and the integer guard
+that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That predicate rejects negatives, decimals, empty
+strings and `"null"` — it stays because nearly every numeric field is gated on it, and a looser
+check would start rendering values the old line silently dropped.
+
+`scripts/lib/compaction.mts` holds everything about compaction: the transcript reader with its
+incremental byte-offset cache, the limit math, and the row renderer. Both renderers pass their own
+`CompactionStyle` into one `buildCompactionLines`, so a compaction row means the same thing
+wherever it appears rather than drifting into two dialects.
 
 Two bash behaviors are reproduced deliberately, because the on-disk cache formats and the
 numbers users have grown used to both depend on them: `basename` under Git Bash treats a Windows
@@ -260,35 +410,58 @@ detached child that refreshes MR/PR data.
 
 ## Glyph vocabulary
 
-States are spelled as **words**, not dingbats, and every emoji is followed by a space. Two
-distinct reasons, worth keeping apart:
+The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (set via
+`profiles.defaults.font.face` in Windows Terminal's settings.json; WT walks the comma list
+per glyph). Text comes from the bundled Cascadia Mono; every Private Use Area glyph falls
+through to Symbols Nerd Font (the symbols-only nerd-fonts build, installed per-user
+2026-07-30), which licenses the two pictograms on the location line: the git-branch glyph
+U+E725 (devicons), the VS Code logo U+F0A1E and the pencil U+F03EB (both Material Design set).
 
-**Correctness.** A character the terminal font lacks falls back to Segoe UI Emoji, which draws
-double-width into the single cell the terminal reserved and smears over the text beside it.
-Measured against Cascadia Mono — Windows Terminal's default when no `"face"` is set — exactly
-five of the original glyphs were absent and had to go:
+That pair is the third iteration, each driven by a live look. Cascadia Mono NF (Microsoft's
+official NF build, still installed) came first, but it scales every symbol down into a single
+cell — the VS Code devicon U+E70C read as a speck, and the powerline branch U+E0A0 as a
+full-height hairline. Swapping codepoints (U+E725, U+F0A1E) helped but stayed capped at one
+cell. The non-"Mono" Symbols Nerd Font keeps the icons' native double-cell proportions, which
+is the only way a terminal ever renders a glyph bigger — the renderer cannot scale one glyph,
+only the font can draw it into more of the cell. The double-width overflow paints into the
+cell to the icon's right, so the layout guarantees a plain space there.
 
-| Glyph | Was used for |
+Everything else stays within the set verified against **plain** Cascadia Mono's cmap (parsed
+directly from the TTF), so a fallback to the non-NF font degrades exactly two icons and nothing
+else: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░ ↑ ↓ ±` are present; `✗ ✔ ✖ ⚙ ⚡ ⏺ ✦` are **absent** and must not
+be used. A character the font lacks falls back to Segoe UI Emoji, which draws double-width into
+the single cell the terminal reserved and smears over the text beside it — that fallback is why
+`✎ ⟳ ⊘ ⇅ ✗` were purged from the original design, and why any new glyph gets checked against the
+cmap before use. Real emoji (`💬 ⚠`) come from the emoji font by design and are fine once
+spaced; the once-load-bearing `📁 🔀 🔥` were dropped in the 2026-07 redesign as the loudest
+things on their rows.
+
+Current symbol assignments:
+
+| Glyph | Means |
 | --- | --- |
-| `✎` U+270E | unstaged file count, MR draft |
-| `⟳` U+27F3 | fetch age |
-| `⊘` U+2298 | upstream deleted |
-| `⇅` U+21C5 | branch diverged |
-| `✗` U+2717 | changes requested; sub-agent `failed`/`killed` |
+| `◆◇` (five slots) | effort gauge: low `◆◇◇◇◇` → max `◆◆◆◆◆` |
+| U+E725 branch | precedes the branch name |
+| U+F0A1E VS Code | after each folder name; opens the editor there (was the word `IDE`) |
+| U+F03EB pencil | after the dev-server ports; opens `statusline-projects.json` |
+| U+2800 braille blank | first character of every indented row (branch state, compaction) |
+| `≡` | branch in sync with upstream |
+| `+n !n ?n ~n` | staged / modified / untracked / conflicted (powerlevel10k vocabulary) |
+| `█ ░` | every bar: quota and context |
 
-Real emoji (`📁 🔀 🔥 💬 ⚠`) come from the emoji font by design and are fine once spaced.
+**The indent guard.** Claude Code trims whitespace off each status-line row before rendering
+it, so an indent made of plain spaces silently disappears. Every nested row therefore leads
+with U+2800 — a braille pattern with no dots raised, which draws as an empty cell but is not
+whitespace to any trim — and hides its ordinary spaces behind it. It lives in base Cascadia
+Mono, so no fallback is involved.
 
-**Legibility.** `≡ ● ◐ ⬤ ⌂ ✓` do render in Cascadia Mono but were replaced anyway — none of them
-says what it means, and the four CI states were the same `⬤` separated only by color, which a
-screenshot or a colorblind reader loses entirely. Consolas is additionally missing `◐ ⬤ ✓`, so
-dropping them buys portability against a face change. The sub-agent status column keeps `✓`/`×`
-because it is one cell wide and has no room for words.
+The sub-agent status column keeps `✓`/`×` because it is one cell wide and has no room for words.
 
 ## Verifying a change
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 153 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # 249 unit tests over the pure helpers
 ```
 
 The harness began as a byte-parity golden diff against the bash originals, which is how the port

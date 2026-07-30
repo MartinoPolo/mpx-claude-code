@@ -8,10 +8,32 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { connect } from "node:net";
+import { connect as connectTls } from "node:tls";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DIM, GRAY, RESET, fg, isNonNegativeInt, readStdin, toNonNegativeInt } from "./lib/statusline-ansi.mts";
+import {
+    AMBER,
+    BOLD,
+    DIM,
+    GRAY,
+    RESET,
+    cacheKey,
+    fg,
+    isNonNegativeInt,
+    readFileOrEmpty,
+    readStdin,
+    toNonNegativeInt
+} from "./lib/statusline-ansi.mts";
+import {
+    type CompactionStyle,
+    autoCompactLimit,
+    buildCompactionLines,
+    readCompactionHistory
+} from "./lib/compaction.mts";
+
+export { cacheKey };
 
 // --- Theme -------------------------------------------------------------------
 
@@ -56,6 +78,22 @@ const CONTEXT_YELLOW = fg(220); // >=100k tokens
 const CONTEXT_ORANGE = fg(208); // >=140k tokens
 const CONTEXT_RED = fg(196); // >=180k tokens
 
+/**
+ * Compaction history ranks its own fields: `auto` is the only thing on the row
+ * you did not decide, so it is the only thing that gets a color of its own.
+ * `manual`, the token change and the tree glyphs stay at reading weight, and the
+ * clock drops to DIM — knowing a compaction happened at 11:48 rather than 11:12
+ * never changes what you do next.
+ */
+const COMPACTION_STYLE: CompactionStyle = {
+    tree: DIM,
+    auto: AMBER,
+    manual: GRAY,
+    tokens: GRAY,
+    time: DIM,
+    reset: RESET
+};
+
 // Account colors — distinct from ACCENT and from each other, so
 // model/account/work-vs-personal all read as separate signals at a glance.
 const PERSONAL = fg(71); // green
@@ -71,27 +109,68 @@ const LOCAL = fg(180);
 const DRAFT = fg(180);
 const MR = fg(74);
 
-/** Session name (line 1): lavender — distinct from the blue model line. */
-const SESSION = fg(141);
+/**
+ * Session name (line 1): bold magenta. It is the title of the thing you are
+ * looking at, so it is the one field allowed weight as well as hue — every
+ * other rank on this bar is carried by color alone. Lavender fg(141) sat too
+ * close to the panel's `max` effort purple to read as a heading of its own.
+ */
+const SESSION = `${BOLD}${fg(213)}`;
 
 // --- Glyph vocabulary --------------------------------------------------------
 
-// States are spelled as words, not dingbats, and every glyph is followed by a
-// space. Two separate reasons, worth keeping apart:
+// The terminal font is Cascadia Mono NF (installed 2026-07-30, set in Windows
+// Terminal settings.json), which carries the full Nerd Font symbol set in the
+// Private Use Area on top of glyphs identical to plain Cascadia Mono. That is
+// what licenses the two pictograms below; every other glyph on the bar
+// (≡ ◆ ◇ █ ░ ↑ ↓ ·) was verified against plain Cascadia Mono's cmap, so a
+// fallback to the non-NF font degrades only the two icons, not the layout.
 //
-// Correctness. A glyph the terminal font lacks font-falls-back to Segoe UI
-// Emoji, which draws double-width into the one cell the terminal reserved and
-// smears over the neighbouring text. Measured against Cascadia Mono (Windows
-// Terminal's default when no "face" is set), exactly five of the old glyphs
-// were absent: ✎ U+270E, ⟳ U+27F3, ⊘ U+2298, ⇅ U+21C5, ✗ U+2717. Those had to
-// go. Real emoji (📁 🔀 🔥 💬 ⚠) come from the emoji font by design and are
-// fine once spaced.
-//
-// Legibility. ≡ ● ◐ ⬤ ⌂ ✓ do render in Cascadia Mono, but they were replaced
-// anyway: none of them says what it means, and the four CI states were the same
-// ⬤ separated only by color, which a screenshot or a colorblind reader loses
-// entirely. Dropping them also buys portability — Consolas is missing ◐ ⬤ ✓ as
-// well, so a font change would have reintroduced the overlap.
+// Anything outside that verified set font-falls-back to Segoe UI Emoji, which
+// draws double-width into the one cell the terminal reserved and smears over
+// the neighbouring text — the reason ✎ ⟳ ⊘ ⇅ ✗ ✔ were purged, and the reason
+// new glyphs get added to the cmap probe in the docs before they get used here.
+
+/** Git branch glyph (U+E725, Nerd Font devicons) — compact and centred, unlike the full-height powerline U+E0A0 it replaced. */
+const BRANCH_ICON = "";
+
+/** VS Code logo (U+F0A1E, Nerd Font Material Design set) — drawn larger than the devicon U+E70C it replaced. */
+const VSCODE_ICON = "󰨞";
+
+/** Pencil (U+F03EB, Nerd Font Material Design set) — the edit-this-config click target beside the dev-server ports. */
+const PENCIL_ICON = "󰏫";
+
+/**
+ * Braille pattern blank (U+2800): the first character of any indented row.
+ * Claude Code trims whitespace off each status-line row before rendering it, so
+ * an indent made of plain spaces never reaches the screen. U+2800 draws as an
+ * empty cell but is not whitespace to any trim, and once it survives as the
+ * first character the ordinary spaces behind it are interior and safe.
+ */
+export const INDENT_GUARD = "⠀";
+
+// Effort levels, weakest to strongest — a filled/empty gauge reads instantly
+// where the old `<high>` word had to be parsed. Five slots because Claude Code
+// has five levels; daily driving tops out at high (three filled).
+const EFFORT_RANK: Record<string, number> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
+const EFFORT_SLOTS = 5;
+
+/** `high` -> `◆◆◆◇◇`; an unrecognized level keeps the old `<level>` spelling. */
+export function effortGauge(level: string): string {
+    const rank = EFFORT_RANK[level];
+    if (rank === undefined) {
+        return level === "" ? "" : `<${level}>`;
+    }
+    return "◆".repeat(rank) + "◇".repeat(EFFORT_SLOTS - rank);
+}
+
+/**
+ * "Opus 5 (1M context)" -> "Opus 5 (1M)". The payload's display_name spells the
+ * enlarged window out in words; the number alone says the same thing.
+ */
+export function trimModelName(model: string): string {
+    return model.replace(/\((\d+[KMG]?) context\)/i, "($1)");
+}
 
 /**
  * The one field separator, on every line. `|` drew a wall between fields that
@@ -183,6 +262,22 @@ function resolveConfigDir(): string {
     return process.env.CLAUDE_CONFIG_DIR || `${HOME_DIR}/.claude`;
 }
 
+/**
+ * `autoCompactWindow` from settings.json — the window auto-compaction measures
+ * against, which for a 1M model is the only number that governs anything. Absent
+ * or malformed falls back to 0, which leaves the model's own window in charge.
+ */
+function readAutoCompactWindow(configDir: string): number {
+    try {
+        const settings = JSON.parse(readFileOrEmpty(path.join(configDir, "settings.json"))) as {
+            autoCompactWindow?: unknown;
+        };
+        return toNonNegativeInt(settings.autoCompactWindow, 0);
+    } catch {
+        return 0;
+    }
+}
+
 export type AccountLabel = "Work" | "Personal";
 
 export function resolveAccountLabel(configDir: string): AccountLabel {
@@ -214,14 +309,6 @@ function mtimeSeconds(file: string): number | undefined {
         return Math.floor(statSync(file).mtimeMs / 1000);
     } catch {
         return undefined;
-    }
-}
-
-function readFileOrEmpty(file: string): string {
-    try {
-        return readFileSync(file, "utf8");
-    } catch {
-        return "";
     }
 }
 
@@ -405,11 +492,16 @@ export function expandBackslashEscapes(input: string): { text: string; truncated
 
 // --- Display helpers ---------------------------------------------------------
 
-export function progressBar(pct: number, width = 10): string {
+/**
+ * `color` defaults to ACCENT for the quota bars, whose hue means nothing beyond
+ * "this is a bar". The context bar passes its own escalating color instead, so
+ * the bar and the token count beside it always agree.
+ */
+export function progressBar(pct: number, width = 10, color: string = ACCENT): string {
     const filled = Math.trunc((pct * width) / 100);
     let out = "";
     for (let i = 0; i < width; i++) {
-        out += i < filled ? `${ACCENT}█${RESET}` : `${BAR_EMPTY}░${RESET}`;
+        out += i < filled ? `${color}█${RESET}` : `${BAR_EMPTY}░${RESET}`;
     }
     return out;
 }
@@ -474,6 +566,7 @@ export interface PayloadFields {
     sessionId: string;
     model: string;
     cwd: string;
+    transcriptPath: string;
     maxContext: string;
     sessionTokensIn: string;
     contextUsedPct: string;
@@ -528,6 +621,7 @@ export function extractPayloadFields(input: string): PayloadFields {
         sessionId: field(root, ["session_id"]),
         model: toDisplayString(model).replace(/[\n\r]/g, " ") || "?",
         cwd: field(root, ["cwd"]),
+        transcriptPath: field(root, ["transcript_path"]),
         maxContext: field(root, ["context_window", "context_window_size"], 200000),
         sessionTokensIn: field(root, ["context_window", "total_input_tokens"]),
         contextUsedPct: field(root, ["context_window", "used_percentage"]),
@@ -598,6 +692,13 @@ export function parsePorcelainV2(output: string): GitStatus {
     return status;
 }
 
+/**
+ * The branch-state line is deliberately quiet: it restates work you already
+ * know about (you made those edits), so everything routine is DIM and symbolic
+ * — `≡` in sync, `+n` staged, `!n` modified, `?n` untracked. Color survives
+ * only where git is telling you something you might not know: a diverged or
+ * deleted upstream, a conflict, an unpushed/unpulled count.
+ */
 export function buildGitSigns(status: GitStatus): string {
     if (status.branch === "") {
         return "";
@@ -619,7 +720,7 @@ export function buildGitSigns(status: GitStatus): string {
     if (status.behind > 0) {
         return `${DEL}↓${status.behind}${RESET}`;
     }
-    return `${ADD}in sync${RESET}`;
+    return `${DIM}≡${RESET}`;
 }
 
 /** One segment per non-zero count; the caller joins them. */
@@ -629,16 +730,16 @@ export function buildGitDirt(status: GitStatus): string[] {
     }
     const segments: string[] = [];
     if (status.staged > 0) {
-        segments.push(`${ADD}${status.staged} staged${RESET}`);
+        segments.push(`${DIM}+${status.staged}${RESET}`);
     }
     if (status.unstaged > 0) {
-        segments.push(`${DEL}${status.unstaged} modified${RESET}`);
+        segments.push(`${DIM}!${status.unstaged}${RESET}`);
     }
     if (status.untracked > 0) {
-        segments.push(`${LOCAL}${status.untracked} untracked${RESET}`);
+        segments.push(`${DIM}?${status.untracked}${RESET}`);
     }
     if (status.conflicts > 0) {
-        segments.push(`${WARN}${status.conflicts} conflicted${RESET}`);
+        segments.push(`${WARN}~${status.conflicts}${RESET}`);
     }
     return segments;
 }
@@ -674,6 +775,262 @@ function readGitStatus(cwd: string): GitStatus | undefined {
         output = "";
     }
     return parsePorcelainV2(output);
+}
+
+// --- Worktree awareness --------------------------------------------------------
+
+export interface WorktreePaths {
+    commonDir: string;
+    toplevel: string;
+}
+
+/** The two lines `git rev-parse --git-common-dir --show-toplevel` prints, in order. */
+export function parseWorktreePaths(output: string): WorktreePaths | undefined {
+    const [commonDir = "", toplevel = ""] = output.split("\n").map((line) => line.trim());
+    return commonDir === "" || toplevel === "" ? undefined : { commonDir, toplevel };
+}
+
+/** Case- and separator-insensitive path equality, because git mixes `/` into Windows paths. */
+function samePath(a: string, b: string): boolean {
+    const normalize = (value: string) => path.resolve(value).replace(/\\/g, "/").toLowerCase();
+    return normalize(a) === normalize(b);
+}
+
+export interface ProjectLocation {
+    projectName: string;
+    projectUrl: string;
+    /** Both empty when the cwd is the main checkout rather than a linked worktree. */
+    worktreeName: string;
+    worktreeUrl: string;
+    /** Main project folder — the stable identity used to key dev-server config. */
+    projectDir: string;
+}
+
+/**
+ * In a linked worktree the shared `.git` lives under the *main* checkout, so
+ * `dirname(--git-common-dir)` is the original project folder while
+ * `--show-toplevel` is the worktree — when the two differ, both get named and
+ * both get a link. In the main checkout (or outside git) the location is just
+ * the cwd, exactly as before.
+ */
+export function resolveProjectLocation(cwd: string, worktree: WorktreePaths | undefined): ProjectLocation {
+    const plain: ProjectLocation = {
+        projectName: basename(cwd),
+        projectUrl: cwd === "" ? "" : `${toFileUrl(cwd)}/`,
+        worktreeName: "",
+        worktreeUrl: "",
+        projectDir: cwd
+    };
+    if (worktree === undefined) {
+        return plain;
+    }
+    const mainProjectDir = path.dirname(worktree.commonDir);
+    if (samePath(mainProjectDir, worktree.toplevel)) {
+        return plain;
+    }
+    return {
+        projectName: basename(mainProjectDir),
+        projectUrl: `${toFileUrl(mainProjectDir)}/`,
+        worktreeName: basename(worktree.toplevel),
+        worktreeUrl: `${toFileUrl(worktree.toplevel)}/`,
+        projectDir: mainProjectDir
+    };
+}
+
+/** One extra fast git call (~10ms), only made when the cwd is already known to be a repo. */
+function readWorktreePaths(cwd: string): WorktreePaths | undefined {
+    try {
+        const output = execFileSync(
+            "git",
+            ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-toplevel"],
+            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+        );
+        return parseWorktreePaths(output);
+    } catch {
+        return undefined;
+    }
+}
+
+// --- Remote branch -------------------------------------------------------------
+
+/**
+ * Web URL of `branch` on the remote the `origin` URL points at, or "" when the
+ * remote is missing or unparseable. Handles the three spellings git remotes
+ * come in — scp-like `git@host:owner/repo.git`, `ssh://git@host/owner/repo`,
+ * and plain `http(s)://` — and picks the tree-path style by host: GitLab nests
+ * it under `/-/`, GitHub and everything else serve `/tree/<branch>` directly.
+ */
+export function buildBranchUrl(remote: string, branch: string): string {
+    let url = remote.trim();
+    if (url === "" || branch === "") {
+        return "";
+    }
+    const scpLike = url.match(/^[\w.+-]+@([^:/]+):(.+)$/);
+    if (scpLike) {
+        url = `https://${scpLike[1]}/${scpLike[2]}`;
+    }
+    url = url
+        .replace(/^(?:ssh|git):\/\/(?:[\w.+-]+@)?/, "https://")
+        .replace(/^https:\/\/([^/:]+):\d+\//, "https://$1/") // ssh port, meaningless over https
+        .replace(/\.git$/, "")
+        .replace(/\/+$/, "");
+    if (!/^https?:\/\/[^/]+\/./.test(url)) {
+        return "";
+    }
+    const treePath = /^https?:\/\/[^/]*gitlab/i.test(url) ? "/-/tree/" : "/tree/";
+    // Encode per segment: slashes in a branch name stay path separators.
+    return url + treePath + branch.split("/").map(encodeURIComponent).join("/");
+}
+
+/** The `origin` remote's branch URL for a live checkout — one more fast git call. */
+function remoteBranchUrl(cwd: string, branch: string): string {
+    if (cwd === "" || branch === "") {
+        return "";
+    }
+    try {
+        const remote = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"]
+        });
+        return buildBranchUrl(remote.trim(), branch);
+    } catch {
+        return "";
+    }
+}
+
+// --- Dev servers ---------------------------------------------------------------
+
+// Which ports belong to which project cannot be detected — a dev server is
+// usually a `node` grandchild whose working directory Windows will not cheaply
+// reveal — so it is declared once in statusline-projects.json at the repo root,
+// keyed by main project folder name (worktrees inherit their project's ports).
+
+const PORT_PROBE_TTL = 15; // seconds between background port probes
+const PORT_PROBE_TIMEOUT_MS = 400;
+
+/** Computed lazily because SELF_PATH is declared further down the file. */
+function portsConfigPath(): string {
+    return path.resolve(path.dirname(SELF_PATH), "..", "statusline-projects.json");
+}
+
+function devServerPortsFor(projectName: string): number[] {
+    if (projectName === "") {
+        return [];
+    }
+    try {
+        const config = JSON.parse(readFileOrEmpty(portsConfigPath())) as unknown;
+        const ports = lookup(config, ["devServers", projectName]);
+        return Array.isArray(ports) ? ports.filter((port) => isNonNegativeInt(port)).map(Number) : [];
+    } catch {
+        return [];
+    }
+}
+
+/** The protocol a listening dev server turned out to speak. */
+export type PortScheme = "http" | "https";
+
+/**
+ * Scheme per port from the last background probe. A port that was down — or has
+ * never been probed, the cache being absent — is simply missing from the map.
+ */
+export function parsePortSchemes(cacheContents: string): Map<number, PortScheme> {
+    const schemes = new Map<number, PortScheme>();
+    for (const line of cacheContents.split("\n")) {
+        const [port, state] = line.split(UNIT_SEPARATOR);
+        if (isNonNegativeInt(port) && (state === "http" || state === "https")) {
+            schemes.set(Number(port), state);
+        }
+    }
+    return schemes;
+}
+
+/**
+ * `:8100`-style segments: green while the server answers, DIM while it does
+ * not, and a browser link either way — Windows Terminal opens http links in
+ * the default browser, and clicking a dead one just shows the browser's
+ * connection error, which is a fine way to learn the server is down.
+ *
+ * The link carries the scheme the probe saw the server speak. It matters: an
+ * `http://` request to a TLS listener is answered with zero bytes, which the
+ * browser reports as ERR_EMPTY_RESPONSE rather than as the wrong scheme. A port
+ * that is down has no known scheme and falls back to `http`.
+ *
+ * `configUrl` links to statusline-projects.json, where the ports live: a bare
+ * pencil closes a configured list, and a project with no ports at all gets a
+ * dim `pencil ports` hint instead, so the config is one click away either way.
+ * The pencil glyph is double-width (Symbols Nerd Font), so a plain space always
+ * follows it — provided by the label here, by the separator or line end after
+ * a trailing segment.
+ */
+export function buildDevServerSegments(
+    ports: readonly number[],
+    portSchemes: ReadonlyMap<number, PortScheme>,
+    configUrl: string
+): string[] {
+    const segments = ports.map((port) => {
+        const scheme = portSchemes.get(port);
+        const color = scheme === undefined ? DIM : ADD;
+        return `${color}${hyperlink(`${scheme ?? "http"}://localhost:${port}`, `:${port}`)}${RESET}`;
+    });
+    if (configUrl === "") {
+        return segments;
+    }
+    const pencilLabel = ports.length === 0 ? `${PENCIL_ICON} ports` : PENCIL_ICON;
+    return [...segments, `${DIM}${hyperlink(configUrl, pencilLabel)}${RESET}`];
+}
+
+/**
+ * TCP probe against localhost, resolving to the scheme the listener speaks, or
+ * "" when nothing is there — refused and ignored alike, within the timeout.
+ *
+ * The host is `localhost` rather than 127.0.0.1 because a dev server may bind
+ * ::1 only; Node's happy-eyeballs (autoSelectFamily, on by default since 20)
+ * then tries both address families instead of reporting an IPv6-only server as
+ * down. Once connected, a TLS handshake over the same connection decides the
+ * scheme: a handshake the listener completes means https, one it rejects or
+ * ignores means a plain http server received a ClientHello it could not parse.
+ */
+function probePort(port: number): Promise<PortScheme | ""> {
+    return new Promise((resolve) => {
+        const socket = connect({ port, host: "localhost" });
+        let connected = false;
+        let settled = false;
+        const finish = (scheme: PortScheme | "") => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            socket.destroy();
+            resolve(scheme);
+        };
+        socket.setTimeout(PORT_PROBE_TIMEOUT_MS);
+        socket.once("timeout", () => finish(""));
+        socket.once("error", () => finish(connected ? "http" : ""));
+        socket.once("connect", () => {
+            connected = true;
+            socket.setTimeout(0); // the TLS socket owns the deadline from here
+            const secure = connectTls({ socket, servername: "localhost", rejectUnauthorized: false });
+            secure.setTimeout(PORT_PROBE_TIMEOUT_MS);
+            secure.once("secureConnect", () => finish("https"));
+            secure.once("timeout", () => finish("http"));
+            secure.once("error", () => finish("http"));
+        });
+    });
+}
+
+/** Runs only as a detached child (`--warm-ports <cacheFile> <csv>`), like the other warmers. */
+async function warmPortsCache(cacheFile: string, portsCsv: string): Promise<void> {
+    const ports = portsCsv.split(",").filter((port) => isNonNegativeInt(port)).map(Number);
+    if (ports.length === 0) {
+        return;
+    }
+    const results = await Promise.all(ports.map(probePort));
+    const lines = ports.map((port, index) => `${port}${UNIT_SEPARATOR}${results[index] || "down"}`);
+    try {
+        writeFileSync(cacheFile, lines.join("\n") + "\n");
+    } catch {
+        // A failed write only means the ports stay at their last known state.
+    }
 }
 
 // --- MR/PR block -------------------------------------------------------------
@@ -829,15 +1186,10 @@ export function buildMrBlock(mr: MrFields, cacheAge: number): string {
     ]);
 }
 
-/** Sanitizing the path is enough for a cache key; hashing would cost a process. */
-export function cacheKey(value: string): string {
-    const key = value.replace(/[^a-zA-Z0-9]/g, "_");
-    return key.length > 100 ? key.slice(key.length - 100) : key;
-}
-
 /**
- * Path to a generated `.url` shortcut that opens `cwd` in VS Code, or "" when it
- * cannot be written.
+ * Path to a generated `.url` shortcut that opens `folder` in VS Code, or "" when
+ * it cannot be written. Called once per rendered VS Code icon — the cwd always,
+ * plus the main checkout when the cwd is a linked worktree.
  *
  * `vscode://file/...` is the direct way to open a folder in VS Code, and it is
  * unreachable from a hyperlink here — Windows Terminal refuses every scheme
@@ -850,9 +1202,9 @@ export function cacheKey(value: string): string {
  * render rather than guarded by `existsSync`, so a change of format can never be
  * shadowed by a stale file left in the temp directory.
  */
-function vscodeShortcutFile(cwd: string): string {
-    const file = path.join(CACHE_DIR, `claude-open-${cacheKey(cwd)}.url`);
-    const url = toFileUrl(cwd).replace("file:///", "vscode://file/");
+function vscodeShortcutFile(folder: string): string {
+    const file = path.join(CACHE_DIR, `claude-open-${cacheKey(folder)}.url`);
+    const url = toFileUrl(folder).replace("file:///", "vscode://file/");
     try {
         writeFileSync(file, `[InternetShortcut]\nURL=${url}\n`);
         return file;
@@ -866,46 +1218,78 @@ function vscodeShortcutFile(cwd: string): string {
 // Builders are named for what they say, not for the row they land on: the branch
 // state moved onto its own row and renumbered everything below it once already.
 
-export function buildSessionLine(sessionName: string, shortId: string): string {
-    let line = sessionName !== "" ? `${SESSION}${sessionName}${RESET}` : "";
-    if (shortId !== "") {
-        if (line !== "") {
-            line += " ";
-        }
-        line += `${GRAY}#${shortId}${RESET}`;
-    }
-    return line;
+/**
+ * Account · title · id: whose session, what it is about, how to refer to it.
+ * The id links to the transcript `.jsonl` when its path is known, so the raw
+ * session log is one click away from the very identifier that names it.
+ */
+export function buildSessionLine(
+    accountLabel: string,
+    accountColor: string,
+    sessionName: string,
+    shortId: string,
+    transcriptUrl: string
+): string {
+    return joinSegments([
+        `${accountColor}${accountLabel}${RESET}`,
+        sessionName === "" ? "" : `${SESSION}${sessionName}${RESET}`,
+        shortId === "" ? "" : `${GRAY}${maybeLink(transcriptUrl, `#${shortId}`)}${RESET}`
+    ]);
 }
 
-export function buildModelLine(model: string, effortLevel: string, accountLabel: string, accountColor: string): string {
+export function buildModelLine(model: string, effortLevel: string): string {
     return joinSegments([
-        `${ACCENT}${model}${RESET}`,
-        effortLevel === "" ? "" : `${GRAY}<${effortLevel}>${RESET}`,
-        `${accountColor}${accountLabel}${RESET}`
+        `${ACCENT}${trimModelName(model)}${RESET}`,
+        effortLevel === "" ? "" : `${GRAY}${effortGauge(effortLevel)}${RESET}`
     ]);
 }
 
 export interface LocationLineInput {
-    dir: string;
-    /** `file:` URL of the working directory; clicking it opens Explorer there. */
-    folderUrl: string;
-    /** `file:` URL of the generated shortcut; clicking it opens VS Code there. */
-    editorUrl: string;
+    /** Main project folder name; in a worktree this is the *original* project. */
+    projectName: string;
+    /** `file:` URL of the main project folder; clicking it opens Explorer there. */
+    projectUrl: string;
+    /** Worktree folder name, or "" when the cwd is the main checkout. */
+    worktreeName: string;
+    /** `file:` URL of the worktree folder. */
+    worktreeUrl: string;
+    /** `file:` URL of a shortcut opening VS Code at the main project folder. */
+    projectEditorUrl: string;
+    /** `file:` URL of a shortcut opening VS Code at the cwd; "" outside a worktree. */
+    worktreeEditorUrl: string;
     branch: string;
+    /** Web URL of the branch on its remote host; "" leaves the branch unlinked. */
+    branchUrl: string;
+    /** Pre-colored, pre-linked `:port` segments for this project's dev servers. */
+    devServers: string[];
     mrBlock: string;
 }
 
-/** Where you are and what you are working on: directory, branch, MR/PR and its CI. */
+/**
+ * Where you are and what you are working on: project (slash worktree), branch,
+ * dev servers, MR/PR and its CI. In a worktree the two path halves are separate
+ * click targets — the project name opens the original folder, the worktree name
+ * opens the worktree — and the worktree half takes WHITE because it, not the
+ * project, answers "where am I". Each half carries its own VS Code icon, so
+ * both the original checkout and the worktree are one click away in the editor.
+ */
 export function buildLocationLine(input: LocationLineInput): string {
-    const name = `📁 ${input.dir}`;
-    // Two destinations for one directory: the name opens the folder, `IDE` opens
-    // the editor. Both are fields in their own right, so both take the separator.
-    const folder = maybeLink(input.folderUrl, name);
-    const editor = input.editorUrl === "" ? "" : `${GRAY}${hyperlink(input.editorUrl, "IDE")}${RESET}`;
+    // The icon always keeps a plain space on each side: the VS Code glyph comes
+    // from the double-width Symbols Nerd Font fallback and paints into the cell
+    // after its own, so any visible character glued to it would get smeared.
+    const editorIcon = (url: string) =>
+        url === "" ? "" : ` ${GRAY}${hyperlink(url, VSCODE_ICON)}${RESET} `;
+    const project = maybeLink(input.projectUrl, input.projectName);
+    const name = (
+        input.worktreeName === ""
+            ? `${WHITE}${project}${RESET}${editorIcon(input.projectEditorUrl)}`
+            : `${GRAY}${project}${RESET}${editorIcon(input.projectEditorUrl)}${GRAY}/${RESET}` +
+              `${WHITE}${maybeLink(input.worktreeUrl, input.worktreeName)}${RESET}${editorIcon(input.worktreeEditorUrl)}`
+    ).trimEnd();
     return joinSegments([
-        `${WHITE}${folder}${RESET}`,
-        editor,
-        input.branch === "" ? "" : `${GRAY}🔀 ${input.branch}${RESET}`,
+        name,
+        input.branch === "" ? "" : `${GRAY}${BRANCH_ICON} ${maybeLink(input.branchUrl, input.branch)}${RESET}`,
+        ...input.devServers,
         input.mrBlock
     ]);
 }
@@ -920,9 +1304,12 @@ export interface BranchStateInput {
  * How the branch stands: upstream relation, uncommitted work, fetch age. Split
  * off the location line because those three counts grow without bound during a
  * working session and used to push the MR reference off the right edge.
+ * Indented under the location line the way compaction rows nest under the
+ * usage line: visually a detail *of* the row above, not a peer.
  */
 export function buildBranchStateLine(input: BranchStateInput): string {
-    return joinSegments([input.gitSigns, ...input.gitDirt, input.fetchAge]);
+    const line = joinSegments([input.gitSigns, ...input.gitDirt, input.fetchAge]);
+    return line === "" ? "" : `${INDENT_GUARD}   ${line}`;
 }
 
 export interface UsageLineInput {
@@ -931,35 +1318,62 @@ export interface UsageLineInput {
     ctxPct: string;
     usdDisplay: string;
     czkDisplay: string;
+    /** Tokens at which auto-compaction fires; 0 renders no bar. */
+    compactLimit?: number;
 }
 
+/**
+ * Context escalation, as a fraction of the auto-compaction limit rather than the
+ * old absolute 100k/140k/180k. At the default 200,000 limit the cut-offs land on
+ * exactly those numbers, so nothing moves on screen — but they now follow
+ * `autoCompactWindow` instead of silently meaning less every time it is raised.
+ */
+const CONTEXT_YELLOW_FRACTION = 0.5;
+const CONTEXT_ORANGE_FRACTION = 0.7;
+const CONTEXT_RED_FRACTION = 0.9;
+
 export function buildUsageLine(input: UsageLineInput): string {
+    const compactLimit = input.compactLimit ?? 0;
+    const tokens = isNonNegativeInt(input.sessionTokensIn) ? Number(input.sessionTokensIn) : undefined;
+    const scale = compactLimit > 0 ? compactLimit : 200000;
+
     let contextColor = GRAY;
-    if (isNonNegativeInt(input.sessionTokensIn)) {
-        const tokens = Number(input.sessionTokensIn);
-        if (tokens >= 180000) {
+    if (tokens !== undefined) {
+        if (tokens >= scale * CONTEXT_RED_FRACTION) {
             contextColor = CONTEXT_RED;
-        } else if (tokens >= 140000) {
+        } else if (tokens >= scale * CONTEXT_ORANGE_FRACTION) {
             contextColor = CONTEXT_ORANGE;
-        } else if (tokens >= 100000) {
+        } else if (tokens >= scale * CONTEXT_YELLOW_FRACTION) {
             contextColor = CONTEXT_YELLOW;
         }
     }
-    let context = `${contextColor}🔥 `;
+    // No flame: the escalating color plus the bar carry the "how hot" signal,
+    // and the emoji was the loudest thing on a line that is mostly bookkeeping.
+    let contextText = "";
     if (input.tokensK !== "") {
-        context += `${input.tokensK}k`;
+        contextText = `${input.tokensK}k`;
         if (isNonNegativeInt(input.ctxPct)) {
-            context += ` (${input.ctxPct}%)`;
+            contextText += ` (${input.ctxPct}%)`;
         }
     } else if (isNonNegativeInt(input.ctxPct)) {
-        context += `${input.ctxPct}%`;
+        contextText = `${input.ctxPct}%`;
     }
-    context += RESET;
+    const context = contextText === "" ? "" : `${contextColor}${contextText}${RESET}`;
+
+    // The bar measures against the auto-compaction limit, not the model window:
+    // a bar creeping toward 1M said nothing, because nothing happens at 1M. Full
+    // bar now means compaction is about to fire, which is the only threshold on
+    // this line anyone acts on. The percentage beside it still reads against the
+    // model window, so the two answer different questions on purpose.
+    let bar = "";
+    if (compactLimit > 0 && tokens !== undefined) {
+        bar = progressBar(Math.min(100, Math.trunc((tokens * 100) / compactLimit)), 10, contextColor);
+    }
 
     // Cost is DIM: it is a running total you check occasionally, not a state to
     // act on, and it sat at the same weight as the context gauge beside it.
     return joinSegments([
-        context,
+        [context, bar].filter((part) => part !== "").join(" "),
         input.usdDisplay === "" ? "" : `${DIM}$${input.usdDisplay}${RESET}`,
         input.usdDisplay === "" || input.czkDisplay === "" ? "" : `${DIM}${input.czkDisplay}${RESET}`
     ]);
@@ -980,6 +1394,9 @@ export interface QuotaInput {
     now?: number;
 }
 
+/** Where the `5h`/`7d` labels lead: the account's usage page on claude.ai. */
+const USAGE_DASHBOARD_URL = "https://claude.ai/settings/usage";
+
 export function buildQuotaLine(input: QuotaInput): string {
     const now = input.now ?? nowSeconds();
     const isCache = input.usageSource === "cache" && isNonNegativeInt(input.usageAgeSeconds);
@@ -998,8 +1415,10 @@ export function buildQuotaLine(input: QuotaInput): string {
     // A reset countdown is a time value like any other, so it is DIM even while
     // the rest of the line is coral: knowing the window reopens in 1h 21m never
     // asks anything of you, and at WARN weight it competed with the percentage.
+    // Each window label links to the usage dashboard, where these two numbers
+    // live with their full history.
     const window = (name: string, pct: number, resets: string): string => {
-        let segment = `${label}${name} ${progressBar(pct, 8)}${text} ${pct}%`;
+        let segment = `${label}${hyperlink(USAGE_DASHBOARD_URL, name)} ${progressBar(pct, 8)}${text} ${pct}%`;
         const countdown = timeUntil(resets, now);
         return countdown === "" ? segment : `${segment} ${DIM}${countdown}${RESET}`;
     };
@@ -1010,7 +1429,10 @@ export function buildQuotaLine(input: QuotaInput): string {
     let line = isOld ? `${WARN}⚠ ` : "";
     line += window("5h", five, input.fiveResets);
     line += SEPARATOR;
-    line += seven === undefined ? `${label}7d n/a` : window("7d", seven, input.sevenResets);
+    line +=
+        seven === undefined
+            ? `${label}${hyperlink(USAGE_DASHBOARD_URL, "7d")} n/a`
+            : window("7d", seven, input.sevenResets);
 
     if (isOld) {
         line += `${SEPARATOR}${WARN}${humanAge(input.usageAgeSeconds)} old ⚠${RESET}`;
@@ -1035,8 +1457,8 @@ function spawnDetached(command: string, args: string[]): void {
     }
 }
 
-function spawnSelf(flag: string): void {
-    spawnDetached(process.execPath, [SELF_PATH, flag]);
+function spawnSelf(...args: string[]): void {
+    spawnDetached(process.execPath, [SELF_PATH, ...args]);
 }
 
 function getOauthToken(): string {
@@ -1218,10 +1640,8 @@ function render(): string {
     const fields = extractPayloadFields(readStdin());
     const maxContext = toNonNegativeInt(fields.maxContext, 200000);
     const shortId = fields.sessionId.slice(0, 8);
-    const dir = basename(fields.cwd);
-    const folderUrl = fields.cwd === "" ? "" : `${toFileUrl(fields.cwd)}/`;
-    const shortcutFile = fields.cwd === "" ? "" : vscodeShortcutFile(fields.cwd);
-    const editorUrl = shortcutFile === "" ? "" : toFileUrl(shortcutFile);
+    const cwdShortcut = fields.cwd === "" ? "" : vscodeShortcutFile(fields.cwd);
+    const cwdEditorUrl = cwdShortcut === "" ? "" : toFileUrl(cwdShortcut);
 
     const accountLabel = resolveAccountLabel(resolveConfigDir());
     const accountColor = accountLabel === "Work" ? WORK : PERSONAL;
@@ -1230,6 +1650,36 @@ function render(): string {
     const branch = git?.branch ?? "";
     const gitSigns = git ? buildGitSigns(git) : "";
     const gitDirt = git ? buildGitDirt(git) : [];
+
+    const location = resolveProjectLocation(fields.cwd, branch === "" ? undefined : readWorktreePaths(fields.cwd));
+
+    // In a worktree the cwd shortcut belongs to the worktree half; the project
+    // half gets its own shortcut into the original checkout.
+    const inWorktree = location.worktreeName !== "";
+    const projectShortcut = inWorktree ? vscodeShortcutFile(location.projectDir) : "";
+    const projectEditorUrl = inWorktree
+        ? projectShortcut === ""
+            ? ""
+            : toFileUrl(projectShortcut)
+        : cwdEditorUrl;
+    const worktreeEditorUrl = inWorktree ? cwdEditorUrl : "";
+
+    // --- Dev servers: cached probe results, refreshed by a detached child ---
+    const devServerPorts = devServerPortsFor(location.projectName);
+    let devServers: string[] = [];
+    if (location.projectName !== "") {
+        const portsConfigUrl = existsSync(portsConfigPath()) ? toFileUrl(portsConfigPath()) : "";
+        let portSchemes: ReadonlyMap<number, PortScheme> = new Map();
+        if (devServerPorts.length > 0) {
+            const portsCache = path.join(CACHE_DIR, `claude-ports-${cacheKey(location.projectDir)}.tsv`);
+            const probedAt = mtimeSeconds(portsCache);
+            if (probedAt === undefined || nowSeconds() - probedAt >= PORT_PROBE_TTL) {
+                spawnSelf("--warm-ports", portsCache, devServerPorts.join(","));
+            }
+            portSchemes = parsePortSchemes(readFileOrEmpty(portsCache));
+        }
+        devServers = buildDevServerSegments(devServerPorts, portSchemes, portsConfigUrl);
+    }
 
     // --- Session cost (USD + CZK) ---
     let usdDisplay = "";
@@ -1338,12 +1788,37 @@ function render(): string {
         mrBlock = buildMrBlock(mr, cacheAge);
     }
 
+    // --- Compaction history ---
+    // Pure incremental file read: the transcript is already on disk, so unlike
+    // the MR block this needs no child process and no network.
+    const compactLimit = autoCompactLimit(maxContext, readAutoCompactWindow(resolveConfigDir()));
+    const compactions =
+        fields.transcriptPath === ""
+            ? []
+            : readCompactionHistory(
+                  fields.transcriptPath,
+                  path.join(CACHE_DIR, `claude-compact-${cacheKey(fields.transcriptPath)}.tsv`)
+              );
+
+    const transcriptUrl = fields.transcriptPath === "" ? "" : toFileUrl(fields.transcriptPath);
     const lines = [
-        buildSessionLine(fields.sessionName, shortId),
-        buildModelLine(fields.model, fields.effortLevel, accountLabel, accountColor),
-        buildLocationLine({ dir, folderUrl, editorUrl, branch, mrBlock }),
+        buildSessionLine(accountLabel, accountColor, fields.sessionName, shortId, transcriptUrl),
+        buildModelLine(fields.model, fields.effortLevel),
+        buildLocationLine({
+            projectName: location.projectName,
+            projectUrl: location.projectUrl,
+            worktreeName: location.worktreeName,
+            worktreeUrl: location.worktreeUrl,
+            projectEditorUrl,
+            worktreeEditorUrl,
+            branch,
+            branchUrl: remoteBranchUrl(fields.cwd, branch),
+            devServers,
+            mrBlock
+        }),
         buildBranchStateLine({ gitSigns, gitDirt, fetchAge }),
-        buildUsageLine({ sessionTokensIn: fields.sessionTokensIn, tokensK, ctxPct, usdDisplay, czkDisplay }),
+        buildUsageLine({ sessionTokensIn: fields.sessionTokensIn, tokensK, ctxPct, usdDisplay, czkDisplay, compactLimit }),
+        ...buildCompactionLines(compactions, `${INDENT_GUARD} `, COMPACTION_STYLE),
         quotaLine
     ];
     // A row with nothing to say is dropped rather than emitted blank — outside a
@@ -1380,6 +1855,8 @@ if (isEntryPoint()) {
         await warmUsageCache();
     } else if (flag === "--warm-czk") {
         await warmCzkCache();
+    } else if (flag === "--warm-ports") {
+        await warmPortsCache(process.argv[3] ?? "", process.argv[4] ?? "");
     } else {
         process.stdout.write(render());
     }

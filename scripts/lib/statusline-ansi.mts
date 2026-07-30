@@ -1,7 +1,8 @@
 // Shared primitives for the two status-line renderers (status-line.mts and
 // subagent-status-line.mts). Deliberately tiny: the two renderers have almost
-// no overlap beyond ANSI emission, stdin handling, and the integer guard that
-// stands in for the bash `[[ $x =~ ^[0-9]+$ ]]` test they both leaned on.
+// no overlap beyond ANSI emission, stdin handling, cache-file reads, and the
+// integer guard that stands in for the bash `[[ $x =~ ^[0-9]+$ ]]` test they
+// both leaned on.
 
 import { readFileSync } from "node:fs";
 
@@ -11,6 +12,13 @@ export const RESET = "\x1b[0m";
 export function fg(code: number): string {
     return `\x1b[38;5;${code}m`;
 }
+
+/**
+ * Weight, not hue — the one emphasis that survives a recolor. Reserved for a
+ * field that has to be found before the eye has read anything else; every other
+ * rank on both renderers is carried by color alone.
+ */
+export const BOLD = "\x1b[1m";
 
 /** Gray used for default text in both renderers. */
 export const GRAY = fg(245);
@@ -22,6 +30,29 @@ export const GRAY = fg(245);
  * eye skip it, so both renderers have to use the same one.
  */
 export const DIM = fg(240);
+
+/**
+ * Amber: a fact you did not choose and would want to catch. Already the hue the
+ * tasks panel uses to qualify an inherited effort level; the compaction history
+ * reuses it for `auto`, which is the same kind of statement — this happened
+ * without you.
+ */
+export const AMBER = fg(214);
+
+/** Sanitizing the path is enough for a cache key; hashing would cost a process. */
+export function cacheKey(value: string): string {
+    const key = value.replace(/[^a-zA-Z0-9]/g, "_");
+    return key.length > 100 ? key.slice(key.length - 100) : key;
+}
+
+/** Cache reads are best-effort everywhere: an absent cache is a cold start, not an error. */
+export function readFileOrEmpty(file: string): string {
+    try {
+        return readFileSync(file, "utf8");
+    } catch {
+        return "";
+    }
+}
 
 /**
  * Reads the whole of stdin. Claude Code always delivers one JSON object and

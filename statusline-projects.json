@@ -1,0 +1,6 @@
+{
+    "$comment": "Per-project status-line configuration. devServers maps a main project folder name (worktrees inherit their project's entry) to the localhost ports its dev servers use; the status line renders each as a clickable :port that turns green while something is listening.",
+    "devServers": {
+        "yoursafe-components": [8100, 8101]
+    }
+}

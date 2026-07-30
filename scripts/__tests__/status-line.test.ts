@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    INDENT_GUARD,
     SEPARATOR,
     basename,
     buildBranchStateLine,
+    buildBranchUrl,
+    buildDevServerSegments,
     buildFetchAge,
     buildGitDirt,
     buildGitSigns,
@@ -13,6 +16,7 @@ import {
     buildQuotaLine,
     buildSessionLine,
     buildUsageLine,
+    effortGauge,
     expandBackslashEscapes,
     extractPayloadFields,
     formatPct,
@@ -22,9 +26,13 @@ import {
     toFileUrl,
     parseMrCacheLine,
     parsePorcelainV2,
+    parsePortSchemes,
+    parseWorktreePaths,
     progressBar,
+    resolveProjectLocation,
     roundN,
-    timeUntil
+    timeUntil,
+    trimModelName
 } from "../status-line.mts";
 
 // Written out literally rather than imported, so a change to the shared ANSI
@@ -43,7 +51,7 @@ const ADD = "\x1b[38;5;71m";
 const DEL = "\x1b[38;5;167m";
 const LOCAL = "\x1b[38;5;180m";
 const DRAFT = "\x1b[38;5;180m";
-const SESSION = "\x1b[38;5;141m";
+const SESSION = "\x1b[1m\x1b[38;5;213m";
 const MR = "\x1b[38;5;74m";
 
 const UNIT_SEPARATOR = "\x1f";
@@ -263,32 +271,30 @@ describe("buildGitSigns", () => {
         expect(buildGitSigns({ ...base, ahead: 3, behind: 2 })).toBe(`${WARN}↑3↓2${RESET}`);
         expect(buildGitSigns({ ...base, ahead: 2 })).toBe(`${ADD}↑2${RESET}`);
         expect(buildGitSigns({ ...base, behind: 3 })).toBe(`${DEL}↓3${RESET}`);
-        expect(buildGitSigns(base)).toBe(`${ADD}in sync${RESET}`);
+        expect(buildGitSigns(base)).toBe(`${DIM}≡${RESET}`);
     });
 
     it("spells a diverged branch with both arrows so neither count loses its direction", () => {
         expect(buildGitSigns({ ...base, ahead: 3, behind: 2 })).toContain("↑3↓2");
     });
 
-    it("renders only ASCII, arrows and real emoji, never a fallback-prone dingbat", () => {
-        const rendered = [
-            buildGitSigns({ ...base, hasUpstream: false, hasAheadBehind: false }),
-            buildGitSigns({ ...base, hasAheadBehind: false }),
-            buildGitSigns({ ...base, ahead: 3, behind: 2 }),
-            buildGitSigns(base),
-            ...buildGitDirt({ ...base, staged: 1, unstaged: 2, untracked: 4, conflicts: 3 })
-        ].join("");
-        expect(rendered).not.toMatch(/[✎⟳◐⬤⊘⇅⌂≡✓✗●]/u);
+    it("keeps routine dirt DIM and reserves color for states git decides, not you", () => {
+        const dirt = buildGitDirt({ ...base, staged: 1, unstaged: 2, untracked: 4 });
+        for (const segment of dirt) {
+            expect(segment.startsWith(DIM)).toBe(true);
+        }
+        expect(buildGitSigns(base).startsWith(DIM)).toBe(true);
+        expect(buildGitSigns({ ...base, ahead: 3, behind: 2 }).startsWith(WARN)).toBe(true);
     });
 
-    it("emits one self-colored segment per non-zero count, naming the state it counts", () => {
+    it("emits one compact symbol segment per non-zero count", () => {
         expect(buildGitDirt(base)).toEqual([]);
         expect(buildGitDirt({ ...base, branch: "", staged: 1 })).toEqual([]);
         expect(buildGitDirt({ ...base, staged: 1, unstaged: 2, untracked: 4, conflicts: 3 })).toEqual([
-            `${ADD}1 staged${RESET}`,
-            `${DEL}2 modified${RESET}`,
-            `${LOCAL}4 untracked${RESET}`,
-            `${WARN}3 conflicted${RESET}`
+            `${DIM}+1${RESET}`,
+            `${DIM}!2${RESET}`,
+            `${DIM}?4${RESET}`,
+            `${WARN}~3${RESET}`
         ]);
     });
 
@@ -306,82 +312,297 @@ describe("SEPARATOR", () => {
 });
 
 describe("buildSessionLine", () => {
-    it("shows only the short id when the session is unnamed", () => {
-        expect(buildSessionLine("", "0123abcd")).toBe(`${GRAY}#0123abcd${RESET}`);
+    it("leads with the account, then the title, then the short id", () => {
+        expect(buildSessionLine("Personal", ADD, "my-session", "0123abcd", "")).toBe(
+            `${ADD}Personal${RESET}${SEPARATOR}${SESSION}my-session${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
+        );
     });
 
-    it("shows only the name when there is no session id", () => {
-        expect(buildSessionLine("my-session", "")).toBe(`${SESSION}my-session${RESET}`);
+    it("links the short id to the transcript file when its URL is known", () => {
+        expect(buildSessionLine("Personal", ADD, "", "0123abcd", "file:///c/t.jsonl")).toBe(
+            `${ADD}Personal${RESET}${SEPARATOR}${GRAY}${hyperlink("file:///c/t.jsonl", "#0123abcd")}${RESET}`
+        );
     });
 
-    it("joins name and id with a single space", () => {
-        expect(buildSessionLine("my-session", "0123abcd")).toBe(`${SESSION}my-session${RESET} ${GRAY}#0123abcd${RESET}`);
+    it("drops the title field when the session is unnamed", () => {
+        expect(buildSessionLine("Work", LOCAL, "", "0123abcd", "")).toBe(
+            `${LOCAL}Work${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
+        );
     });
 
-    it("is empty when both are absent", () => {
-        expect(buildSessionLine("", "")).toBe("");
+    it("drops the id field when there is no session id", () => {
+        expect(buildSessionLine("Personal", ADD, "my-session", "", "file:///c/t.jsonl")).toBe(
+            `${ADD}Personal${RESET}${SEPARATOR}${SESSION}my-session${RESET}`
+        );
+    });
+});
+
+describe("trimModelName", () => {
+    it("shortens the spelled-out context note to the bare size", () => {
+        expect(trimModelName("Opus 5 (1M context)")).toBe("Opus 5 (1M)");
+        expect(trimModelName("Sonnet 5 (200K context)")).toBe("Sonnet 5 (200K)");
+    });
+
+    it("leaves a name without the note untouched", () => {
+        expect(trimModelName("Opus 5")).toBe("Opus 5");
+    });
+});
+
+describe("effortGauge", () => {
+    it("fills one diamond per level, five slots in total", () => {
+        expect(effortGauge("low")).toBe("◆◇◇◇◇");
+        expect(effortGauge("medium")).toBe("◆◆◇◇◇");
+        expect(effortGauge("high")).toBe("◆◆◆◇◇");
+        expect(effortGauge("xhigh")).toBe("◆◆◆◆◇");
+        expect(effortGauge("max")).toBe("◆◆◆◆◆");
+    });
+
+    it("keeps the old angle-bracket spelling for a level it does not know", () => {
+        expect(effortGauge("turbo")).toBe("<turbo>");
+        expect(effortGauge("")).toBe("");
     });
 });
 
 describe("buildModelLine", () => {
-    it("omits the effort marker when no effort is reported", () => {
-        expect(buildModelLine("Opus 5", "", "Personal", ADD)).toBe(
-            `${ACCENT}Opus 5${RESET}${SEPARATOR}${ADD}Personal${RESET}`
-        );
+    it("omits the gauge when no effort is reported", () => {
+        expect(buildModelLine("Opus 5", "")).toBe(`${ACCENT}Opus 5${RESET}`);
     });
 
-    it("includes the effort marker between model and account", () => {
-        expect(buildModelLine("Opus 5", "high", "Work", LOCAL)).toBe(
-            `${ACCENT}Opus 5${RESET}${SEPARATOR}${GRAY}<high>${RESET}${SEPARATOR}${LOCAL}Work${RESET}`
+    it("renders the model with its effort gauge", () => {
+        expect(buildModelLine("Opus 5 (1M context)", "high")).toBe(
+            `${ACCENT}Opus 5 (1M)${RESET}${SEPARATOR}${GRAY}◆◆◆◇◇${RESET}`
         );
     });
 });
 
 describe("buildLocationLine", () => {
-    const empty = { dir: "repo", folderUrl: "", editorUrl: "", branch: "", mrBlock: "" };
+    const BRANCH_ICON = "\ue725";
+    const VSCODE_ICON = "\u{f0a1e}";
+    const empty = {
+        projectName: "repo",
+        projectUrl: "",
+        worktreeName: "",
+        worktreeUrl: "",
+        projectEditorUrl: "",
+        worktreeEditorUrl: "",
+        branch: "",
+        branchUrl: "",
+        devServers: [] as string[],
+        mrBlock: ""
+    };
 
-    it("shows only the directory outside a repo", () => {
-        expect(buildLocationLine(empty)).toBe(`${WHITE}📁 repo${RESET}`);
+    it("shows only the project name outside a repo", () => {
+        expect(buildLocationLine(empty)).toBe(`${WHITE}repo${RESET}`);
     });
 
-    it("appends the branch when there is one", () => {
+    it("puts the branch right after the name, with the branch glyph", () => {
         expect(buildLocationLine({ ...empty, branch: "main" })).toBe(
-            `${WHITE}📁 repo${RESET}${SEPARATOR}${GRAY}🔀 main${RESET}`
+            `${WHITE}repo${RESET}${SEPARATOR}${GRAY}${BRANCH_ICON} main${RESET}`
         );
     });
 
-    it("separates each emoji from the text it labels", () => {
-        const line = buildLocationLine({ ...empty, branch: "main" });
-        expect(line).toContain("📁 repo");
-        expect(line).toContain("🔀 main");
+    it("links the branch name to its remote URL, leaving the glyph outside the link", () => {
+        expect(
+            buildLocationLine({ ...empty, branch: "main", branchUrl: "https://github.com/me/repo/tree/main" })
+        ).toBe(
+            `${WHITE}repo${RESET}${SEPARATOR}` +
+                `${GRAY}${BRANCH_ICON} ${hyperlink("https://github.com/me/repo/tree/main", "main")}${RESET}`
+        );
+    });
+
+    it("names both halves of a worktree, project gray and worktree white", () => {
+        expect(
+            buildLocationLine({
+                ...empty,
+                projectUrl: "file:///c/repo/",
+                worktreeName: "wt-fix",
+                worktreeUrl: "file:///c/repo-wt/"
+            })
+        ).toBe(
+            `${GRAY}${hyperlink("file:///c/repo/", "repo")}${RESET}${GRAY}/${RESET}` +
+                `${WHITE}${hyperlink("file:///c/repo-wt/", "wt-fix")}${RESET}`
+        );
+    });
+
+    it("gives each worktree half its own editor icon", () => {
+        expect(
+            buildLocationLine({
+                ...empty,
+                worktreeName: "wt-fix",
+                projectEditorUrl: "file:///c/open-main.url",
+                worktreeEditorUrl: "file:///c/open-wt.url"
+            })
+        ).toBe(
+            `${GRAY}repo${RESET} ${GRAY}${hyperlink("file:///c/open-main.url", VSCODE_ICON)}${RESET} ${GRAY}/${RESET}` +
+                `${WHITE}wt-fix${RESET} ${GRAY}${hyperlink("file:///c/open-wt.url", VSCODE_ICON)}${RESET}`
+        );
     });
 
     it("appends the MR block even when there is no branch section", () => {
         expect(buildLocationLine({ ...empty, mrBlock: `${MR}#42${RESET}` })).toBe(
-            `${WHITE}📁 repo${RESET}${SEPARATOR}${MR}#42${RESET}`
+            `${WHITE}repo${RESET}${SEPARATOR}${MR}#42${RESET}`
         );
     });
 
-    it("joins directory, branch and MR block in that order", () => {
-        expect(buildLocationLine({ ...empty, branch: "main", mrBlock: `${MR}#42${RESET}` })).toBe(
-            `${WHITE}📁 repo${RESET}${SEPARATOR}${GRAY}🔀 main${RESET}${SEPARATOR}${MR}#42${RESET}`
+    it("joins name+editor, branch, dev servers and MR block in that order", () => {
+        expect(
+            buildLocationLine({
+                ...empty,
+                branch: "main",
+                projectEditorUrl: "file:///c/open.url",
+                devServers: [`${DIM}:8100${RESET}`],
+                mrBlock: `${MR}#42${RESET}`
+            })
+        ).toBe(
+            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}` +
+                `${SEPARATOR}${GRAY}${BRANCH_ICON} main${RESET}` +
+                `${SEPARATOR}${DIM}:8100${RESET}${SEPARATOR}${MR}#42${RESET}`
         );
     });
 
-    it("links the directory name when a folder URL is given", () => {
-        expect(buildLocationLine({ ...empty, folderUrl: "file:///c/repo/" })).toBe(
-            `${WHITE}${hyperlink("file:///c/repo/", "📁 repo")}${RESET}`
+    it("links the project name when a folder URL is given", () => {
+        expect(buildLocationLine({ ...empty, projectUrl: "file:///c/repo/" })).toBe(
+            `${WHITE}${hyperlink("file:///c/repo/", "repo")}${RESET}`
         );
     });
 
-    it("gives the editor its own field after the directory name", () => {
-        expect(buildLocationLine({ ...empty, folderUrl: "file:///c/repo/", editorUrl: "file:///c/open.url" })).toBe(
-            `${WHITE}${hyperlink("file:///c/repo/", "📁 repo")}${RESET}${SEPARATOR}${GRAY}${hyperlink("file:///c/open.url", "IDE")}${RESET}`
+    it("attaches the VS Code glyph directly after the project name", () => {
+        expect(buildLocationLine({ ...empty, projectEditorUrl: "file:///c/open.url" })).toBe(
+            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}`
         );
     });
 
-    it("keeps the directory readable when neither URL could be built", () => {
+    it("keeps the name readable when no URL could be built", () => {
         expect(buildLocationLine(empty)).not.toContain("\x1b]8");
+    });
+});
+
+describe("parseWorktreePaths", () => {
+    it("reads common dir and toplevel from the two rev-parse lines", () => {
+        expect(parseWorktreePaths("C:/repo/.git\nC:/repo-wt\n")).toEqual({
+            commonDir: "C:/repo/.git",
+            toplevel: "C:/repo-wt"
+        });
+    });
+
+    it("returns nothing when either line is missing", () => {
+        expect(parseWorktreePaths("C:/repo/.git\n")).toBeUndefined();
+        expect(parseWorktreePaths("")).toBeUndefined();
+    });
+});
+
+describe("resolveProjectLocation", () => {
+    it("uses the cwd alone in a main checkout, where common dir sits inside the toplevel", () => {
+        const location = resolveProjectLocation("C:\\p\\repo", { commonDir: "C:/p/repo/.git", toplevel: "C:/p/repo" });
+        expect(location.projectName).toBe("repo");
+        expect(location.worktreeName).toBe("");
+        expect(location.projectDir).toBe("C:\\p\\repo");
+    });
+
+    it("splits a linked worktree into project and worktree halves", () => {
+        const location = resolveProjectLocation("C:\\p\\repo-wt", {
+            commonDir: "C:/p/repo/.git",
+            toplevel: "C:/p/repo-wt"
+        });
+        expect(location.projectName).toBe("repo");
+        expect(location.worktreeName).toBe("repo-wt");
+        expect(location.projectUrl).toBe("file:///C:/p/repo/");
+        expect(location.worktreeUrl).toBe("file:///C:/p/repo-wt/");
+        expect(location.projectDir).toBe("C:/p/repo");
+    });
+
+    it("survives git's forward slashes against a backslashed cwd", () => {
+        const location = resolveProjectLocation("C:\\p\\repo", { commonDir: "C:/P/REPO/.git", toplevel: "C:/p/repo" });
+        expect(location.worktreeName).toBe("");
+    });
+
+    it("falls back to the cwd when rev-parse produced nothing", () => {
+        const location = resolveProjectLocation("C:\\p\\repo", undefined);
+        expect(location.projectName).toBe("repo");
+        expect(location.worktreeName).toBe("");
+    });
+});
+
+describe("dev server segments", () => {
+    const PENCIL_ICON = "\u{f03eb}";
+
+    it("keeps the scheme of every well-formed probe line and drops the rest", () => {
+        const cache = `8100${UNIT_SEPARATOR}https\n8101${UNIT_SEPARATOR}http\n8102${UNIT_SEPARATOR}down\njunk\n`;
+        expect(parsePortSchemes(cache)).toEqual(
+            new Map([
+                [8100, "https"],
+                [8101, "http"]
+            ])
+        );
+        expect(parsePortSchemes("")).toEqual(new Map());
+    });
+
+    it("colors a listening port green and a silent one dim, both linked to the browser", () => {
+        expect(buildDevServerSegments([8100, 8101], new Map([[8100, "http"]]), "")).toEqual([
+            `${ADD}${hyperlink("http://localhost:8100", ":8100")}${RESET}`,
+            `${DIM}${hyperlink("http://localhost:8101", ":8101")}${RESET}`
+        ]);
+    });
+
+    it("links a TLS dev server over https, since http would draw an empty response", () => {
+        expect(buildDevServerSegments([8100], new Map([[8100, "https"]]), "")).toEqual([
+            `${ADD}${hyperlink("https://localhost:8100", ":8100")}${RESET}`
+        ]);
+    });
+
+    it("closes a configured port list with a dim pencil linking to the config", () => {
+        expect(buildDevServerSegments([8100], new Map(), "file:///c/ports.json")).toEqual([
+            `${DIM}${hyperlink("http://localhost:8100", ":8100")}${RESET}`,
+            `${DIM}${hyperlink("file:///c/ports.json", PENCIL_ICON)}${RESET}`
+        ]);
+    });
+
+    it("offers a dim ports hint when the project has no ports configured", () => {
+        expect(buildDevServerSegments([], new Map(), "file:///c/ports.json")).toEqual([
+            `${DIM}${hyperlink("file:///c/ports.json", `${PENCIL_ICON} ports`)}${RESET}`
+        ]);
+    });
+
+    it("stays entirely silent without ports or a config URL", () => {
+        expect(buildDevServerSegments([], new Map(), "")).toEqual([]);
+    });
+});
+
+describe("buildBranchUrl", () => {
+    it("converts an scp-like remote to the GitHub tree URL", () => {
+        expect(buildBranchUrl("git@github.com:me/repo.git", "main")).toBe(
+            "https://github.com/me/repo/tree/main"
+        );
+    });
+
+    it("strips .git from an https remote and keeps the host's scheme", () => {
+        expect(buildBranchUrl("https://github.com/me/repo.git", "main")).toBe(
+            "https://github.com/me/repo/tree/main"
+        );
+    });
+
+    it("nests the tree path under /-/ for a GitLab host", () => {
+        expect(buildBranchUrl("git@gitlab.com:group/repo.git", "main")).toBe(
+            "https://gitlab.com/group/repo/-/tree/main"
+        );
+    });
+
+    it("rewrites ssh:// remotes to https and drops the ssh port", () => {
+        expect(buildBranchUrl("ssh://git@gitlab.example.com:2222/group/repo.git", "dev")).toBe(
+            "https://gitlab.example.com/group/repo/-/tree/dev"
+        );
+    });
+
+    it("keeps slashes in a branch name while encoding what needs it", () => {
+        expect(buildBranchUrl("git@github.com:me/repo.git", "feat/#12 fix")).toBe(
+            "https://github.com/me/repo/tree/feat/%2312%20fix"
+        );
+    });
+
+    it("returns nothing for an empty, branchless or unparseable remote", () => {
+        expect(buildBranchUrl("", "main")).toBe("");
+        expect(buildBranchUrl("git@github.com:me/repo.git", "")).toBe("");
+        expect(buildBranchUrl("/local/bare/repo.git", "main")).toBe("");
     });
 });
 
@@ -423,28 +644,32 @@ describe("buildBranchStateLine", () => {
         expect(buildBranchStateLine(empty)).toBe("");
     });
 
-    it("joins signs, every dirt kind and the fetch age", () => {
+    it("joins signs, every dirt kind and the fetch age, indented under the location line", () => {
         expect(
             buildBranchStateLine({
-                gitSigns: `${ADD}in sync${RESET}`,
-                gitDirt: [
-                    `${ADD}1 staged${RESET}`,
-                    `${DEL}2 modified${RESET}`,
-                    `${LOCAL}4 untracked${RESET}`,
-                    `${WARN}3 conflicted${RESET}`
-                ],
+                gitSigns: `${DIM}≡${RESET}`,
+                gitDirt: [`${DIM}+1${RESET}`, `${DIM}!2${RESET}`, `${DIM}?4${RESET}`, `${WARN}~3${RESET}`],
                 fetchAge: `${DIM}10m ago${RESET}`
             })
         ).toBe(
-            `${ADD}in sync${RESET}${SEPARATOR}${ADD}1 staged${RESET}${SEPARATOR}${DEL}2 modified${RESET}` +
-                `${SEPARATOR}${LOCAL}4 untracked${RESET}${SEPARATOR}${WARN}3 conflicted${RESET}` +
+            `${INDENT_GUARD}   ${DIM}≡${RESET}${SEPARATOR}${DIM}+1${RESET}${SEPARATOR}${DIM}!2${RESET}` +
+                `${SEPARATOR}${DIM}?4${RESET}${SEPARATOR}${WARN}~3${RESET}` +
                 `${SEPARATOR}${DIM}10m ago${RESET}`
         );
     });
 
     it("never dangles a separator when only one field has content", () => {
-        expect(buildBranchStateLine({ ...empty, gitSigns: `${ADD}in sync${RESET}` })).toBe(`${ADD}in sync${RESET}`);
-        expect(buildBranchStateLine({ ...empty, fetchAge: `${DIM}2h ago${RESET}` })).toBe(`${DIM}2h ago${RESET}`);
+        expect(buildBranchStateLine({ ...empty, gitSigns: `${DIM}≡${RESET}` })).toBe(
+            `${INDENT_GUARD}   ${DIM}≡${RESET}`
+        );
+        expect(buildBranchStateLine({ ...empty, fetchAge: `${DIM}2h ago${RESET}` })).toBe(
+            `${INDENT_GUARD}   ${DIM}2h ago${RESET}`
+        );
+    });
+
+    it("leads with the braille blank so a whitespace trim cannot eat the indent", () => {
+        expect(INDENT_GUARD).toBe("⠀");
+        expect(`${INDENT_GUARD}   x`.trim()).toBe(`${INDENT_GUARD}   x`);
     });
 });
 
@@ -457,22 +682,23 @@ describe("buildUsageLine", () => {
         czkDisplay: ""
     };
 
-    it("emits just the flame when nothing is known", () => {
-        expect(buildUsageLine(empty)).toBe(`${GRAY}🔥 ${RESET}`);
+    it("emits nothing at all when nothing is known, so the row is dropped", () => {
+        expect(buildUsageLine(empty)).toBe("");
     });
 
     it("shows the percentage alone when no token count is available", () => {
-        expect(buildUsageLine({ ...empty, ctxPct: "42" })).toBe(`${GRAY}🔥 42%${RESET}`);
+        expect(buildUsageLine({ ...empty, ctxPct: "42" })).toBe(`${GRAY}42%${RESET}`);
     });
 
-    it("shows tokens with the percentage in parentheses", () => {
+    it("shows tokens with the percentage in parentheses, with no flame prefix", () => {
         expect(buildUsageLine({ ...empty, sessionTokensIn: "52340", tokensK: "52", ctxPct: "26" })).toBe(
-            `${GRAY}🔥 52k (26%)${RESET}`
+            `${GRAY}52k (26%)${RESET}`
         );
     });
 
     it("escalates the context color at exactly 100000, 140000 and 180000 tokens", () => {
-        const colorFor = (tokens: string) => buildUsageLine({ ...empty, sessionTokensIn: tokens }).slice(0, GRAY.length);
+        const colorFor = (tokens: string) =>
+            buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1" }).slice(0, GRAY.length);
         expect(colorFor("99999")).toBe(GRAY);
         expect(colorFor("100000")).toBe(YELLOW);
         expect(colorFor("139999")).toBe(YELLOW);
@@ -481,21 +707,61 @@ describe("buildUsageLine", () => {
         expect(colorFor("180000")).toBe(RED);
     });
 
+    it("moves the escalation with the compaction limit rather than the model window", () => {
+        const colorFor = (tokens: string, compactLimit: number) =>
+            buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1", compactLimit }).slice(0, GRAY.length);
+        // A 400k limit puts the same fractions at 200k / 280k / 360k.
+        expect(colorFor("180000", 400000)).toBe(GRAY);
+        expect(colorFor("200000", 400000)).toBe(YELLOW);
+        expect(colorFor("280000", 400000)).toBe(ORANGE);
+        expect(colorFor("360000", 400000)).toBe(RED);
+    });
+
+    it("draws no bar without both a token count and a limit", () => {
+        expect(buildUsageLine({ ...empty, sessionTokensIn: "100000", tokensK: "100" })).not.toContain(BAR_EMPTY);
+        expect(buildUsageLine({ ...empty, compactLimit: 200000 })).not.toContain(BAR_EMPTY);
+    });
+
+    it("fills the bar against the compaction limit, in the context color", () => {
+        const line = buildUsageLine({ ...empty, sessionTokensIn: "100000", tokensK: "100", compactLimit: 200000 });
+        // 50% of the limit: five filled cells, five empty, all filled ones yellow.
+        expect(line.split(`${YELLOW}█${RESET}`).length - 1).toBe(5);
+        expect(line.split(`${BAR_EMPTY}░${RESET}`).length - 1).toBe(5);
+    });
+
+    it("caps the bar at full rather than overflowing past the limit", () => {
+        const line = buildUsageLine({ ...empty, sessionTokensIn: "400000", tokensK: "400", compactLimit: 200000 });
+        expect(line.split(`${RED}█${RESET}`).length - 1).toBe(10);
+        expect(line).not.toContain(BAR_EMPTY);
+    });
+
+    it("keeps the percentage reading against the model window, not the limit", () => {
+        const line = buildUsageLine({
+            ...empty,
+            sessionTokensIn: "118000",
+            tokensK: "118",
+            ctxPct: "11",
+            compactLimit: 200000
+        });
+        expect(line).toContain("118k (11%)");
+    });
+
     it("appends the converted cost only when a USD figure exists", () => {
-        expect(buildUsageLine({ ...empty, czkDisplay: "11.71Kč" })).toBe(`${GRAY}🔥 ${RESET}`);
+        expect(buildUsageLine({ ...empty, czkDisplay: "11.71Kč" })).toBe("");
         expect(buildUsageLine({ ...empty, usdDisplay: "0.500", czkDisplay: "11.71Kč" })).toBe(
-            `${GRAY}🔥 ${RESET}${SEPARATOR}${DIM}$0.500${RESET}${SEPARATOR}${DIM}11.71Kč${RESET}`
+            `${DIM}$0.500${RESET}${SEPARATOR}${DIM}11.71Kč${RESET}`
         );
     });
 
     it("dims the cost so it never competes with the context gauge", () => {
-        expect(buildUsageLine({ ...empty, usdDisplay: "0.500" })).toBe(
-            `${GRAY}🔥 ${RESET}${SEPARATOR}${DIM}$0.500${RESET}`
+        expect(buildUsageLine({ ...empty, ctxPct: "42", usdDisplay: "0.500" })).toBe(
+            `${GRAY}42%${RESET}${SEPARATOR}${DIM}$0.500${RESET}`
         );
     });
 });
 
 describe("buildQuotaLine", () => {
+    const USAGE_URL = "https://claude.ai/settings/usage";
     const live = {
         fiveRaw: "37",
         fiveResets: "",
@@ -513,19 +779,19 @@ describe("buildQuotaLine", () => {
 
     it("renders both windows separated by the shared separator", () => {
         expect(buildQuotaLine(live)).toBe(
-            `${GRAY}5h ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}7d ${progressBar(61, 8)} 61%${RESET}`
+            `${GRAY}${hyperlink(USAGE_URL, "5h")} ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}${hyperlink(USAGE_URL, "7d")} ${progressBar(61, 8)} 61%${RESET}`
         );
     });
 
     it("falls back to n/a when the seven-day window is unknown", () => {
         expect(buildQuotaLine({ ...live, sevenRaw: "" })).toBe(
-            `${GRAY}5h ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}7d n/a${RESET}`
+            `${GRAY}${hyperlink(USAGE_URL, "5h")} ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}${hyperlink(USAGE_URL, "7d")} n/a${RESET}`
         );
     });
 
     it("clamps a percentage above 100", () => {
         expect(buildQuotaLine({ ...live, fiveRaw: "104", sevenRaw: "" })).toBe(
-            `${GRAY}5h ${progressBar(100, 8)} 100%${SEPARATOR}${GRAY}7d n/a${RESET}`
+            `${GRAY}${hyperlink(USAGE_URL, "5h")} ${progressBar(100, 8)} 100%${SEPARATOR}${GRAY}${hyperlink(USAGE_URL, "7d")} n/a${RESET}`
         );
     });
 
@@ -551,7 +817,7 @@ describe("buildQuotaLine", () => {
         const fresh = { ...live, usageSource: "cache" as const, usageAgeSeconds: 900 };
         expect(buildQuotaLine(fresh)).toBe(buildQuotaLine(live));
         expect(buildQuotaLine({ ...fresh, usageAgeSeconds: 901 })).toBe(
-            `${GRAY}5h ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}7d ${progressBar(61, 8)} 61%` +
+            `${GRAY}${hyperlink(USAGE_URL, "5h")} ${progressBar(37, 8)} 37%${SEPARATOR}${GRAY}${hyperlink(USAGE_URL, "7d")} ${progressBar(61, 8)} 61%` +
                 `${SEPARATOR}${DIM}15m${RESET}`
         );
     });
@@ -559,7 +825,7 @@ describe("buildQuotaLine", () => {
     it("turns coral and warns once cached data passes 30 minutes", () => {
         const old = { ...live, usageSource: "cache" as const, usageAgeSeconds: 1801 };
         expect(buildQuotaLine(old)).toBe(
-            `${WARN}⚠ ${WARN}5h ${progressBar(37, 8)}${WARN} 37%${SEPARATOR}${WARN}7d ${progressBar(61, 8)}${WARN} 61%` +
+            `${WARN}⚠ ${WARN}${hyperlink(USAGE_URL, "5h")} ${progressBar(37, 8)}${WARN} 37%${SEPARATOR}${WARN}${hyperlink(USAGE_URL, "7d")} ${progressBar(61, 8)}${WARN} 61%` +
                 `${SEPARATOR}${WARN}30m old ⚠${RESET}`
         );
     });
