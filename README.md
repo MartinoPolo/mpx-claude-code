@@ -8,7 +8,7 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 - **Dozens of cherry-pickable skills and agents** — git workflows, parallel code review, design pipeline, maintenance sweeps, content generators (tutorials, podcasts, video sheets).
 - **Benchmarked model/effort choices** — every agent's model and effort pin is backed by a measured benchmark, not vibes ([details](docs/SUBAGENTS.md)).
 - **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
-- **Custom status lines** — clickable, quota-aware main bar + per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)).
+- **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)).
 
 ## Workflow
 
@@ -156,6 +156,7 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under 
 | `/mp-script-discovery`   | Discover runnable scripts and dev servers                             |
 | `/mp-symlink`            | Windows symlinks/junctions the way that works in Claude Code          |
 | `/mp-clean-pc`           | Full-disk cleanup sweep — ranked dashboard, quarantine over delete    |
+| `/mp-raycast-config`     | Decrypt, audit and rewrite Raycast quicklinks, aliases and hotkeys    |
 
 ### Content generators
 
@@ -229,8 +230,17 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 - Context tokens with escalating color · bar filling toward the auto-compaction limit · session cost (USD/CZK)
 - Compaction history, one indented row per event: `└─ auto · 205k → 15k · 06:50`. `auto` is amber, `manual` grey, the clock dim; the last 3 are spelled out and older ones collapse into a `N earlier` count. Absent entirely until a session compacts
 - 5-hour & 7-day quota bars with reset countdowns — from stdin `rate_limits`, no network call; the `5h`/`7d` labels link to the claude.ai usage dashboard
+- Sub-agent history, the last block so it sits directly above the panel — every sub-agent that has **finished** this session, long after the panel below has evicted it:
+  ```
+  Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
+  ⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
+  ⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02s  231.4k  2×auto
+  ⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
+  ⠀ +3 more
+  ```
+  A tally row with tokens charged per tier, then one row per agent — status · type · tier · effort gauge · elapsed · tokens · compaction counts (`2×auto` amber, `1×manual` grey; silent when it never compacted). **Five rows plus every failure**, failures always first: up to five agents keep spawn order, past five they rank by tokens, largest first, and the remainder become `+N more`. Agent types come from the `agent-<id>.meta.json` sidecars Claude Code writes at spawn; a **type name opens the `.claude/agents/<type>.md` that defines it** (project-level first, then user-level, no link for a built-in nobody overrode) while a row's **status glyph opens that run's own transcript**. A red `!` marks a banned tier. Absent until the first agent finishes
 
-**Sub-agent panel** (`scripts/subagent-status-line.mts`, Ctrl+T): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line.
+**Sub-agent panel** (`scripts/subagent-status-line.mts`, visible below the main bar whenever a sub-agent is running): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (`fable`, effort above `high`, effort on haiku) get a red `!` on the offending cell with a reason line. The panel is the **live** view and the main bar's `Σ` row is the **ledger** — running agents appear in one, finished agents in the other, never both.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 

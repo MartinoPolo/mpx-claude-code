@@ -16,6 +16,7 @@ import {
     buildMrBlock,
     buildQuotaLine,
     buildSessionLine,
+    buildSubagentLine,
     buildUsageLine,
     expandBackslashEscapes,
     extractPayloadFields,
@@ -33,10 +34,12 @@ import {
     resolveProjectLocation,
     roundN,
     timeUntil,
-    trimModelName
+    trimModelName,
+    type SubagentLineInput
 } from "../status-line.mts";
 // Lives in the shared lib because both renderers draw the same gauge.
 import { effortGauge } from "../lib/statusline-ansi.mts";
+import { type FinishedAgent } from "../lib/subagent-history.mts";
 
 // Written out literally rather than imported, so a change to the shared ANSI
 // helper cannot silently move the colors this line is specified to emit.
@@ -730,6 +733,151 @@ describe("buildBranchStateLine", () => {
     it("leads with the braille blank so a whitespace trim cannot eat the indent", () => {
         expect(INDENT_GUARD).toBe("⠀");
         expect(`${INDENT_GUARD}   x`.trim()).toBe(`${INDENT_GUARD}   x`);
+    });
+});
+
+describe("buildSubagentLine", () => {
+    const RED = "\x1b[38;5;196m";
+    const YELLOW = "\x1b[38;5;220m";
+    const AMBER = "\x1b[38;5;214m";
+    const GREEN = "\x1b[38;5;71m";
+
+    function group(label: string, count = 1, extra: { tokens?: number; drifted?: boolean } = {}) {
+        return { label, count, tokens: extra.tokens ?? 0, drifted: extra.drifted ?? false };
+    }
+
+    function agent(id: string, overrides: Partial<FinishedAgent> = {}): FinishedAgent {
+        return {
+            id,
+            type: "Explore",
+            tier: "sonnet",
+            effort: "low",
+            tokens: 15_600,
+            elapsedMs: 12_000,
+            status: "completed",
+            drifted: false,
+            ...overrides
+        };
+    }
+
+    const summary = {
+        agents: 3,
+        tiers: [group("opus", 1, { tokens: 95_200 }), group("sonnet", 2, { tokens: 99_000 })],
+        types: [group("Explore", 2), group("mp-executor")],
+        rows: [],
+        hiddenRows: 0
+    };
+
+    /** No definitions on disk, no compactions — the plainest possible session. */
+    function build(overrides: Partial<SubagentLineInput> = {}): string[] {
+        return buildSubagentLine({
+            summary,
+            sessionTranscript: "",
+            agentDefinition: () => "",
+            compactions: () => ({ auto: 0, manual: 0 }),
+            ...overrides
+        });
+    }
+
+    it("emits nothing before any agent has finished, so the block is dropped", () => {
+        expect(build({ summary: { ...summary, agents: 0 } })).toEqual([]);
+    });
+
+    it("lays out the count, the per-tier tally and the agent types", () => {
+        expect(build()[0]).toBe(
+            `${DIM}Σ 3 agents${RESET}` +
+                `${SEPARATOR}${ACCENT}1×Opus ${DIM}95.2k${RESET} ${YELLOW}2×Sonnet ${DIM}99.0k${RESET}` +
+                `${SEPARATOR}${GRAY}2×Explore${RESET} ${GRAY}mp-executor${RESET}`
+        );
+    });
+
+    it("charges each tier only its own agents' tokens", () => {
+        expect(build()[0]).not.toContain("194.2k");
+    });
+
+    it("says agent, not agents, for a single one", () => {
+        expect(build({ summary: { ...summary, agents: 1 } })[0]).toContain(`${DIM}Σ 1 agent${RESET}`);
+    });
+
+    it("drops the multiplier for a type that ran once", () => {
+        const line = build({ summary: { ...summary, types: [group("Explore")] } })[0]!;
+        expect(line).toContain(`${GRAY}Explore${RESET}`);
+        expect(line).not.toContain("1×Explore");
+    });
+
+    it("marks a type that ran on a banned tier, in the panel's red", () => {
+        const line = build({ summary: { ...summary, types: [group("fork", 1, { drifted: true })] } })[0]!;
+        expect(line).toContain(`${RED}!fork${RESET}`);
+    });
+
+    it("collapses everything past the sixth type into a count", () => {
+        const types = ["one", "two", "three", "four", "five", "six", "seven", "eight"].map((label) => group(label));
+        const line = build({ summary: { ...summary, types } })[0]!;
+        expect(line).toContain(`${GRAY}six${RESET}`);
+        expect(line).toContain(`${DIM}+2${RESET}`);
+        expect(line).not.toContain("seven");
+    });
+
+    it("links an agent type to the file that defines it", () => {
+        const line = build({ agentDefinition: (type) => (type === "mp-executor" ? "/agents/mp-executor.md" : "") })[0]!;
+        expect(line).toContain(hyperlink("file:///agents/mp-executor.md", "mp-executor"));
+        expect(line).toContain(`${GRAY}2×Explore${RESET}`);
+    });
+
+    it("spells out one row per selected agent, beneath the tally", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("a"), agent("b", { type: "mp-executor" })] } });
+        expect(rows).toHaveLength(3);
+        expect(rows[1]).toBe(
+            `${INDENT_GUARD} ${GREEN}✓${RESET}` +
+                ` ${GRAY}Explore    ${RESET}` +
+                ` ${YELLOW}sonnet${RESET}` +
+                ` ${DIM}${effortGauge("low")}${RESET}` +
+                ` ${DIM}   12s${RESET}` +
+                ` ${GRAY}  15.6k${RESET}`
+        );
+    });
+
+    it("pads the name column to the widest agent type on screen", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("a"), agent("b", { type: "mp-executor" })] } });
+        expect(rows[1]).toContain(`${GRAY}Explore    ${RESET}`);
+        expect(rows[2]).toContain(`${GRAY}mp-executor${RESET}`);
+    });
+
+    it("draws a failed run with the panel's red cross", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("a", { status: "failed" })] } });
+        expect(rows[1]).toContain(`${RED}×${RESET}`);
+    });
+
+    it("marks a row that ran on a banned tier and reserves the marker slot", () => {
+        const rows = build({
+            summary: { ...summary, rows: [agent("a", { tier: "fable", drifted: true }), agent("b")] }
+        });
+        expect(rows[1]).toContain(`${RED}!fable${RESET}`);
+        expect(rows[2]).toContain(`${YELLOW}sonnet${RESET}`);
+    });
+
+    it("appends compaction counts, automatic first", () => {
+        const rows = build({
+            summary: { ...summary, rows: [agent("a")] },
+            compactions: () => ({ auto: 2, manual: 1 })
+        });
+        expect(rows[1]).toContain(`${AMBER}2×auto${RESET} ${GRAY}1×manual${RESET}`);
+    });
+
+    it("says nothing at all about an agent that never compacted", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("a")] } });
+        expect(rows[1]).not.toContain("auto");
+        expect(rows[1]).not.toContain("manual");
+    });
+
+    it("counts the agents that got no row of their own", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("a")], hiddenRows: 7 } });
+        expect(rows[2]).toBe(`${INDENT_GUARD} ${DIM}+7 more${RESET}`);
+    });
+
+    it("leaves a run unlinked when its transcript is not on disk", () => {
+        const rows = build({ summary: { ...summary, rows: [agent("nope")] }, sessionTranscript: "/absent/s.jsonl" });
+        expect(rows[1]).not.toContain("\x1b]8;;");
     });
 });
 

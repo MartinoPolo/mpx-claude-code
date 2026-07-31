@@ -64,6 +64,12 @@
 // then vanish, so the session tally is accumulated in a state file keyed by
 // session_id. A task's tokens and elapsed time freeze the first tick it is seen
 // terminal, so a finished agent stops accruing time.
+//
+// That state file is also what the main bar reads to render its own ledger of
+// finished agents, long after this panel is gone — which is why its row format,
+// the tier colors and the `N×Name` count idiom live in lib/subagent-history.mts
+// rather than here. This panel owns the *live* view; the main bar owns the
+// history. Nothing renders in both.
 
 import {
     appendFileSync,
@@ -99,15 +105,41 @@ import {
     readCompactionHistory,
     subagentTranscriptPath,
 } from "./lib/compaction.mts";
+import {
+    DRIFT,
+    DRIFT_MARKER,
+    TIER_COLORS,
+    TIER_ORDER,
+    UNKNOWN_TIER,
+    capitalize,
+    countLabel,
+    formatDuration,
+    formatTokens,
+    isTerminalStatus,
+    modelTier,
+    parseRecord,
+    readSessionRecords,
+    serializeRecord,
+    sessionStateDir,
+    statusStyle,
+    tierDriftReasons,
+    type StateRecord,
+} from "./lib/subagent-history.mts";
 
-// Model tier colors. Shared with the effort scale where the hue means the same
-// thing, so the two columns read as one palette rather than two. Declaration
-// order is also the order the session tally groups tiers in.
-const TIER_COLORS: Readonly<Record<string, string>> = {
-    opus: fg(74), // blue
-    sonnet: fg(220), // yellow
-    haiku: fg(211), // pink
-    fable: fg(208), // orange
+// The tally the main status line renders after this panel is gone reads the very
+// state file written below, so the vocabulary that describes an agent — tier
+// colors, terminal statuses, the `N×Name` count idiom, the on-disk row format —
+// lives in the shared lib rather than here. Re-exported because this module's
+// tests are where all of it is covered.
+export {
+    formatDuration,
+    formatTokens,
+    isTerminalStatus,
+    modelTier,
+    parseRecord,
+    serializeRecord,
+    tierDriftReasons,
+    type StateRecord,
 };
 
 const EFFORT_COLORS: Readonly<Record<string, string>> = {
@@ -119,25 +151,6 @@ const EFFORT_COLORS: Readonly<Record<string, string>> = {
 };
 const EFFORT_BUDGET = fg(80); // cyan: a numeric token budget, not a level
 
-interface StatusStyle {
-    glyph: string;
-    color: string;
-}
-// Glyphs are constrained to what Cascadia Mono (Windows Terminal's default face)
-// actually carries. `✗ U+2717` was not one of them: it font-fell-back to Segoe UI
-// Emoji, which drew double-width into this one-cell column and smeared over the
-// model beside it, so `× U+00D7` replaces it. `✓ U+2713` does render in Cascadia
-// and stays — it is the clearest "completed" mark and this column is too narrow
-// for the words status-line.mts uses. Consolas lacks it, so a face change there
-// would need the same treatment.
-const STATUS_STYLES: Readonly<Record<string, StatusStyle>> = {
-    running: { glyph: "●", color: fg(80) }, // cyan
-    completed: { glyph: "✓", color: fg(71) }, // green
-    failed: { glyph: "×", color: fg(196) }, // red
-    killed: { glyph: "×", color: fg(196) },
-};
-const UNKNOWN_STATUS_STYLE: StatusStyle = { glyph: "○", color: GRAY };
-
 // Context escalation mirrors status-line.sh, but keyed to percentage rather than
 // absolute tokens: subagent windows vary by model, so the main bar's fixed
 // 100k/140k/180k cut-offs would mean different things on different rows.
@@ -145,10 +158,8 @@ const CTX_YELLOW = fg(220); // >=50%
 const CTX_ORANGE = fg(208); // >=70%
 const CTX_RED = fg(196); // >=90%
 
-const DRIFT = fg(196); // red: the cell a ! marker accuses
-const DRIFT_REASON = fg(203); // coral: the explanation beneath it
+const DRIFT_REASON = fg(203); // coral: the explanation beneath a ! marker
 const INHERITED_EFFORT = fg(214); // amber: the cell a ? marker qualifies
-const DRIFT_MARKER = "!";
 const INHERITED_EFFORT_MARKER = "?";
 // Every marked cell reserves the slot whether or not it has a marker to put in
 // it, so the value behind it starts at the same column on every row. Without
@@ -177,7 +188,7 @@ const CACHE_DIR = process.env.TMPDIR || "/tmp";
 const CONFIG_DIR =
     process.env.CLAUDE_CONFIG_DIR || `${process.env.HOME || homedir()}/.claude`;
 const SETTINGS_FILE = `${CONFIG_DIR}/settings.json`;
-const STATE_DIR = `${CONFIG_DIR}/subagent-statusline-state`;
+const STATE_DIR = sessionStateDir(CONFIG_DIR);
 
 // Both widths count the reserved marker slot: `!sonnet`, `?◆◆◆◇◇`, ` 120.0k`.
 // An unrecognized level renders as `<level>` and may overrun rather than be
@@ -207,9 +218,6 @@ const MIN_DESCRIPTION_WIDTH = 10;
 // to change it, and `"; "` is the obvious correction whenever that happens.
 const DRIFT_REASON_SEPARATOR = ";";
 
-const TERMINAL_STATUSES = ["completed", "failed", "killed"];
-const UNKNOWN_TIER = "unknown";
-const TIER_ORDER = [...Object.keys(TIER_COLORS), UNKNOWN_TIER];
 const EFFORT_ORDER = Object.keys(EFFORT_COLORS);
 const PRUNE_AFTER_DAYS = 7;
 
@@ -226,16 +234,6 @@ export interface TaskFields {
     description: string;
 }
 
-/** One line of the session state file, tab-delimited on disk. */
-export interface StateRecord {
-    id: string;
-    tier: string;
-    effort: string;
-    tokens: string;
-    elapsedMs: string;
-    status: string;
-}
-
 export interface SessionTally {
     agents: number;
     tierText: string;
@@ -248,57 +246,6 @@ export interface RenderedRow {
     id: string;
     content: string;
     record: StateRecord;
-}
-
-export function isTerminalStatus(status: string): boolean {
-    return TERMINAL_STATUSES.includes(status);
-}
-
-/** Normalizes either an alias ("sonnet") or a full id ("claude-sonnet-5"). */
-export function modelTier(model: string): string {
-    return Object.keys(TIER_COLORS).find((tier) => model.includes(tier)) ?? "";
-}
-
-/**
- * 25032 -> 25.0k ; below 1000 stays exact.
- *
- * The integer arithmetic is the point, not an approximation of a rounded
- * divide: 25032 rounds to 25082, whose thousands digit is 25 and whose hundreds
- * digit is 0, so the tenth reads 0 rather than the 25.1k a float would give.
- */
-export function formatTokens(value: string | number): string {
-    if (isNonNegativeInt(value) && Number(value) >= 1000) {
-        const rounded = Number(value) + 50;
-        return `${Math.trunc(rounded / 1000)}.${Math.trunc((rounded % 1000) / 100)}k`;
-    }
-    const text = String(value);
-    return text === "" ? "0" : text;
-}
-
-export function formatDuration(milliseconds: number): string {
-    let totalSeconds = Math.trunc(milliseconds / 1000);
-    if (totalSeconds < 0) totalSeconds = 0;
-    if (totalSeconds < 60) return `${totalSeconds}s`;
-    if (totalSeconds < 3600) {
-        const seconds = totalSeconds % 60;
-        return `${Math.trunc(totalSeconds / 60)}m${String(seconds).padStart(2, "0")}s`;
-    }
-    const minutes = Math.trunc((totalSeconds % 3600) / 60);
-    return `${Math.trunc(totalSeconds / 3600)}h${String(minutes).padStart(2, "0")}m`;
-}
-
-/**
- * Drift checks, each mapped to a rule in instructions/AGENTS.md. Model drift
- * (declared vs. actual) is unreachable here — no field carries which agent a
- * task is — so only the tier rule that needs no identity runs. fable is banned
- * outright, independent of effort.
- *
- * Split from the effort rules because the two mark different cells: a banned
- * tier is a fact about the model, and hanging its marker off the effort would
- * accuse the wrong value.
- */
-export function tierDriftReasons(tier: string): string[] {
-    return tier === "fable" ? ["fable is never allowed"] : [];
 }
 
 /**
@@ -333,7 +280,7 @@ export function renderTaskRow(
     task: TaskFields,
     options: { columns: number; sessionEffort: string; nowMs: number },
 ): RenderedRow {
-    const status = STATUS_STYLES[task.status] ?? UNKNOWN_STATUS_STYLE;
+    const status = statusStyle(task.status);
 
     const tier = modelTier(task.model);
     const tierReasons = tierDriftReasons(tier);
@@ -444,29 +391,6 @@ export function renderTaskRow(
     };
 }
 
-export function serializeRecord(record: StateRecord): string {
-    return [
-        record.id,
-        record.tier,
-        record.effort,
-        record.tokens,
-        record.elapsedMs,
-        record.status,
-    ].join("\t");
-}
-
-export function parseRecord(line: string): StateRecord {
-    const fields = line.split("\t");
-    return {
-        id: fields[0] ?? "",
-        tier: fields[1] ?? "",
-        effort: fields[2] ?? "",
-        tokens: fields[3] ?? "",
-        elapsedMs: fields[4] ?? "",
-        status: fields[5] ?? "",
-    };
-}
-
 /** Longest leading numeric prefix, the coercion the reference awk pass applied. */
 function numericPrefix(text: string): number {
     const parsed = Number.parseFloat(text);
@@ -510,10 +434,12 @@ export function mergeSessionState(
         if (!isTerminalStatus(record.status)) running++;
     }
 
+    // `2×Opus`, not `opus 2`: the same idiom the main bar's session tally uses,
+    // so a count in front of a name means one thing across both renderers.
     const groupText = (order: string[], counts: Map<string, number>): string =>
         order
             .filter((key) => (counts.get(key) ?? 0) > 0)
-            .map((key) => `${key} ${counts.get(key)}`)
+            .map((key) => countLabel(counts.get(key)!, capitalize(key)))
             .join(" ");
 
     return {
@@ -600,17 +526,6 @@ function readSessionEffort(): string {
         return effort === "" || effort === "null" ? "medium" : effort;
     } catch {
         return "medium";
-    }
-}
-
-function readPriorState(stateFile: string): StateRecord[] {
-    try {
-        return readFileSync(stateFile, "utf8")
-            .split("\n")
-            .filter((line) => line !== "")
-            .map(parseRecord);
-    } catch {
-        return [];
     }
 }
 
@@ -720,7 +635,7 @@ function main(): void {
 
     const { records, tally } = mergeSessionState(
         rows.map((row) => row.record),
-        readPriorState(stateFile),
+        readSessionRecords(stateFile),
     );
     writeState(stateFile, records);
 

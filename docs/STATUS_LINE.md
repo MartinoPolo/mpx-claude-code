@@ -49,6 +49,9 @@ comment saying how to restore it.
 Compaction history is the one value not in the payload — it is read from the transcript at
 `transcript_path`, which the payload does carry. See [Compaction history](#compaction-history).
 
+Sub-agent history is the other, and it comes from two files the payload never mentions. See
+[Sub-agent history on the main bar](#sub-agent-history-on-the-main-bar).
+
 Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a
 background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive
 rate limit is never hit during normal use. Cached readings older than 15m show a muted age note;
@@ -289,8 +292,8 @@ columns back to the description.
 The **effort** cell draws the main bar's five-slot gauge (`high` → `◆◆◆◇◇`), not the level's
 name. Down a column of rows the filled slots compare at a glance, where the words had to be read
 one at a time; the six-column cell fits the gauge plus a marker. The state file still records the
-**word**, because the `Σ` tally groups by level and a count needs a name (`high 2`, not
-`◆◆◆◇◇ 2`). A numeric token budget maps to no rank, so it stays the number it is.
+**word**, because the `Σ` tally groups by level and a count needs a name (`2×High`, not
+`2×◆◆◆◇◇`). A numeric token budget maps to no rank, so it stays the number it is.
 
 Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
 medium yellow, high orange, xhigh red, max purple, and cyan for a numeric token budget.
@@ -327,7 +330,7 @@ observed peaked at 320,628 tokens on 16 July, eleven days before `autoCompactWin
 all. The display is therefore correct by construction but unexercised by real data; the synthetic
 fixture in `scripts/__tests__/compaction.test.ts` is what covers it.
 
-**No per-agent identity — a hard limit of the data, not a bug.** `.type` is always the literal
+**No per-agent identity in the payload.** `.type` is always the literal
 string `"local_agent"`, and `.name` is always `null` for Task-tool sub-agents (it is the
 `agentNameRegistry` entry, which only teammates and named background agents get; it is rendered
 when present). Both verified by capturing raw stdin payloads. The task object carries a real
@@ -339,6 +342,14 @@ OTEL is push-based batch export to an external collector regardless, unusable in
 synchronous 5s tick. So *declared-vs-actual model drift* stays uncheckable here; only the
 tier/effort rules that need no identity run.
 
+It is recoverable **off the payload**, though — Claude Code writes
+`<project>/<session>/subagents/agent-<id>.meta.json` at spawn, carrying `agentType`,
+`description`, `toolUseId` and `spawnDepth`, and the filename's id is the same `task.id` the
+panel already keys on. The main bar's history row reads exactly that (below); the panel does not,
+because its rows already have the label to say what an agent is doing and no column to spare.
+Reading it here would also make declared-vs-actual model drift checkable for the first time —
+`agentType` names the frontmatter file whose declared model the row could be compared against.
+
 To inspect the raw payload yourself, `touch ~/.claude/subagent-statusline-debug` — every tick is
 then appended to `~/.claude/subagent-statusline-debug.jsonl`. Delete the marker file to stop.
 The gate is a file rather than an env var because the panel runs the script from inside Claude
@@ -348,6 +359,110 @@ Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; id
 keep the built-in `name · description · tokens` row. For history that survives the session
 entirely, use `scripts/analyze-subagent-models.py`, which reads the same data from
 `~/.claude/projects/**/*.jsonl` after the fact.
+
+## Sub-agent history on the main bar
+
+The tasks panel is a **live view**, never a ledger: it renders only agents Claude Code still has
+in its payload, and evicts a terminal task 30s after it ends. Until this row existed, a finished
+agent left no trace anywhere on screen — the panel's own `Σ` line went with the last row it hung
+off. The main bar carries the ledger instead: a tally row, then one row per agent for the handful
+worth spelling out.
+
+```
+Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
+⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
+⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02k  231.4k  2×auto
+⠀ ✓ mp-executor     opus   ◆◆◇◇◇  3m30s  198.7k  1×manual
+⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
+⠀ ✓ mp-executor     opus   ◆◆◇◇◇  1m44s   88.1k
+⠀ +3 more
+```
+
+Tally columns: **count** — **tier tally, each with its own tokens** — **agent types**. Everything
+is DIM except the tier counts, which keep the panel's palette (opus blue, sonnet yellow, haiku
+pink, fable orange) because tier mix is the one comparison worth making at a glance. Tokens are
+charged per tier rather than summed into one figure: what a session spent only means something
+next to what it spent it on, and the total is still the sum of what is on screen. The whole block
+is dropped until at least one agent has finished.
+
+Row columns: **status** — **agent type** — **tier** — **effort gauge** — **elapsed** —
+**tokens** — **compaction counts**. The name and tier columns size themselves to the widest value
+actually on screen, so an all-`Explore` session is not indented for the width of
+`mp-reviewer-security` while the gauges still start at one column and compare down the block.
+
+**Rendered last**, below the quota bars, so it sits directly above the tasks panel — the ledger
+and the live view read as one block, and the rows extend into empty terminal instead of shifting
+every row beneath them.
+
+**Which agents get a row.** Five (`AGENT_DETAIL_ROWS`), plus every failure. A failed or killed
+agent is always spelled out and always first, however many there are: a run that broke is the one
+thing in this history you might still act on, so no cap may hide it. Below them the ordering
+depends on whether everything fits — up to five agents all do, so they keep spawn order and the
+block reads as the session's chronology; past five the block has to choose, and it ranks by
+tokens, largest first. Whatever is left over is counted in a trailing `+N more`.
+
+**Compactions are counted, not listed.** The tasks panel draws each agent's full compaction
+history under its row; there is no room for that here and, after the fact, less reason: `2×auto`
+says the agent was handed more than it could hold, and which tokens it shed at 14:02 no longer
+changes anything. Auto keeps the panel's amber, manual its gray, and an agent that never compacted
+says nothing at all. Only the agents with a row of their own are scanned, so a session with forty
+finished agents still costs at most five reads — each the same cached, incremental scan described
+in [Compaction history](#compaction-history).
+
+**Only finished agents.** The panel renders directly beneath this bar for exactly as long as any
+agent is alive, so a running agent is already on screen with far more detail than a ledger row
+could carry. Including it would say the same thing twice while it ran and nothing at all
+afterwards. The two renderers therefore split cleanly: **panel = running, main bar = finished.**
+
+**`N×Name`, one idiom everywhere.** `2×Explore`, `1×Opus`, `2×High` — a number in front of a name
+means the same thing on both renderers, for tiers, effort levels and agent types alike. `×` is
+U+00D7, already proven in the Cascadia Mono cmap as the panel's `failed` glyph. A type that ran
+once drops the redundant `1×`. Types sort by count, heaviest first, ties keeping spawn order;
+past the sixth the rest collapse into `+N`.
+
+**Two files, neither in the payload.**
+
+| File | Supplies |
+| --- | --- |
+| `~/.claude/subagent-statusline-state/<session_id>.tsv` | tier, effort, tokens, elapsed, **status** — written by the panel, frozen on terminal |
+| `<project>/<session>/subagents/agent-<id>.meta.json` | **`agentType`** — written by Claude Code at spawn |
+| `<session>/subagents/agent-<id>.jsonl` | the run's own compaction boundaries, for the rows that show counts |
+
+The TSV is the spine: it is the only source that knows an agent's status, and it is complete,
+because the panel ticks continuously for as long as any agent runs. The sidecars are read by id
+rather than by scanning the directory — the TSV already names every agent worth drawing — and
+they are read fresh rather than cached, being small, immutable once written, and cheaper in
+total than the one `git` call the bar already makes every tick. An agent whose sidecar cannot be
+read still counts toward the tally and its tier's tokens; only its name goes `unknown`, because
+dropping it would make the count disagree with the panel's.
+
+**The `!` marker outlives the panel that raised it.** A type on the tally is marked red when any
+of its agents ran on a banned tier (`!fork` = the fork ran on fable) — the tier tally beside it
+already says a banned model ran, and this says *which agent* ran on it, which is the pairing that
+used to vanish with the panel. On a spelled-out row the marker sits on the tier cell itself
+(`!fable`), exactly as the panel prefixes it. Only the tier rule is reachable: the state file
+records the *resolved* effort, not whether the agent declared it, and flagging an inherited level
+would accuse an agent of a choice it never made. Those effort rules stay with the panel, which
+knows the difference. The amber `?` has no place here for the same reason — it qualifies a
+declared-vs-inherited distinction this block does not carry.
+
+**Two links, because a name and a run are two different questions.**
+
+| Click | Opens |
+| --- | --- |
+| an agent **type** — on the tally, or at the head of a row | `.claude/agents/<type>.md`, the file that *defines* it |
+| a row's **status glyph** (`✓` / `×`) | `<session>/subagents/agent-<id>.jsonl`, that run's own transcript |
+
+A type name is a thing you edit: its frontmatter sets the model and effort, so the definition is
+where a surprise on this bar actually gets fixed. Project-level `.claude/agents/` wins over
+user-level, the order Claude Code resolves a `subagent_type` in; a built-in type nobody has
+overridden (`general-purpose`, `Plan`) has no file and so gets no link. The transcript link hangs
+off the status glyph because that cell belongs to one run alone — a type name shared by four
+agents has four transcripts and no honest target.
+
+Shared code lives in [`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) —
+tier colors, the status glyphs, the `N×` idiom, `formatDuration`, the state-file row format, the
+drift rule — so the two renderers cannot drift into two dialects of the same vocabulary.
 
 ## Sub-agent effort markers
 
@@ -433,6 +548,13 @@ incremental byte-offset cache, the limit math, and the row renderer. Both render
 `CompactionStyle` into one `buildCompactionLines`, so a compaction row means the same thing
 wherever it appears rather than drifting into two dialects.
 
+`scripts/lib/subagent-history.mts` holds everything both renderers say *about a sub-agent*: tier
+colors, the `N×Name` count idiom, the on-disk state-file row format, the `fable` drift rule, and
+the readers for the state file and the `agent-<id>.meta.json` sidecars. The panel writes that
+state file and the main bar reads it, so the format has exactly one definition. Rendering is
+**not** shared — the panel draws padded columns and the main bar draws a sentence, and forcing
+one builder to do both would serve neither.
+
 Two bash behaviors are reproduced deliberately, because the on-disk cache formats and the
 numbers users have grown used to both depend on them: `basename` under Git Bash treats a Windows
 `\` as a path separator, and `printf '%.0f'` rounds half **to even**, so `0.5`→`0` and `2.5`→`2`
@@ -498,7 +620,7 @@ The sub-agent status column keeps `✓`/`×` because it is one cell wide and has
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 258 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # 482 unit tests over the pure helpers
 ```
 
 The harness began as a byte-parity golden diff against the bash originals, which is how the port
@@ -508,7 +630,12 @@ and the diff went with them. What remains is what unit tests structurally cannot
 fixture runs through the real executable in a throwaway sandbox (`TMPDIR` +
 `CLAUDE_CONFIG_DIR`), asserting a clean exit, valid JSONL with a row per task, no
 `undefined`/`NaN` leaking into a rendered line, and **no fallback-prone glyph** — that last
-guard caught `✗` still sitting in the sub-agent status column.
+guard caught `✗` still sitting in the sub-agent status column. A fixture may also assert
+`expect`/`reject` substrings, which is how the sub-agent history block is covered: it is assembled
+from files nothing in the payload mentions, so only a fixture that seeds a state file and its
+meta sidecars proves it renders — that the running agent in that fixture stays out of it, and
+that a second fixture of seven agents keeps the failure, ranks the rest by tokens and counts the
+two it drops.
 
 **Previewing colors is its own trap on Windows.** Running a renderer straight into a Git Bash
 terminal shows the wrong colors: `node` writing to a Windows TTY sends its escapes through

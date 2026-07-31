@@ -29,10 +29,31 @@ import {
 } from "./lib/statusline-ansi.mts";
 import {
     type CompactionStyle,
+    type CompactionTally,
+    NO_COMPACTIONS,
     autoCompactLimit,
     buildCompactionLines,
-    readCompactionHistory
+    countCompactions,
+    readCompactionHistory,
+    subagentTranscriptPath
 } from "./lib/compaction.mts";
+import {
+    AGENT_TYPE_ROWS,
+    DRIFT,
+    DRIFT_MARKER,
+    type SubagentSummary,
+    TIER_COLORS,
+    agentDefinitionPath,
+    capitalize,
+    countLabel,
+    formatDuration,
+    formatTokens,
+    readSessionRecords,
+    readSubagentMeta,
+    sessionStateFile,
+    statusStyle,
+    summarizeFinishedAgents
+} from "./lib/subagent-history.mts";
 
 export { cacheKey };
 
@@ -1513,6 +1534,142 @@ export function buildQuotaLine(input: QuotaInput): string {
     return line;
 }
 
+export interface SubagentLineInput {
+    summary: SubagentSummary;
+    /** The *session* transcript; each agent's own sits beneath it. */
+    sessionTranscript: string;
+    /** The `.md` that defines an agent type, or "" when the type has no file. */
+    agentDefinition: (agentType: string) => string;
+    /** How often one agent compacted. Called only for agents that get a row. */
+    compactions: (agentId: string) => CompactionTally;
+}
+
+/** Widths the detail rows pad to. The name and tier columns size themselves. */
+const AGENT_EFFORT_WIDTH = 5; // one gauge: ◆◆◇◇◇
+const AGENT_DURATION_WIDTH = 6; // 1h06m
+const AGENT_TOKENS_WIDTH = 7; // 612.4k
+
+/**
+ * Every sub-agent that has *finished* this session: a tally row — how many, of
+ * which tiers, for how many tokens each tier cost, and which agent types they
+ * were — followed by one row per agent for the handful worth spelling out.
+ *
+ * Rendered last, so it sits directly above the tasks panel: the ledger and the
+ * live view read as one block, and the block grows downward into empty terminal
+ * rather than pushing the quota bars around as agents accumulate.
+ *
+ * The tasks panel below this bar owns the live view and evicts a task 30s after
+ * it ends, so before these rows a completed agent left no trace anywhere.
+ * Running agents are deliberately absent: the panel is on screen for exactly as
+ * long as one is alive, so including them would double up while it runs and
+ * still say nothing once it stops.
+ *
+ * Two different links, because a name and a run are two different questions. An
+ * agent *type* — on the tally and at the head of each row — opens the file that
+ * defines it, which is where its model and effort are set and the only place a
+ * surprise on this bar can be fixed. A single *run* hangs off its own status
+ * glyph, which is the one cell on the row that belongs to that run alone.
+ */
+export function buildSubagentLine(input: SubagentLineInput): string[] {
+    const { summary } = input;
+    if (summary.agents === 0) {
+        return [];
+    }
+
+    // Tokens per tier rather than one total: what a session spent is only worth
+    // reading next to what it spent it on, and the sum of the parts is still
+    // right there to be added up.
+    const tiers = summary.tiers
+        .map((group) => {
+            const color = TIER_COLORS[group.label] ?? GRAY;
+            return `${color}${countLabel(group.count, capitalize(group.label))} ${DIM}${formatTokens(group.tokens)}${RESET}`;
+        })
+        .join(" ");
+
+    const shownTypes = summary.types.slice(0, AGENT_TYPE_ROWS);
+    const types = shownTypes.map((group) => {
+        const name = group.count === 1 ? group.label : countLabel(group.count, group.label);
+        // Same `!` the tasks panel prefixes a drifted cell with, and the same
+        // red — a rule broken means one thing on both renderers. Here it names
+        // the agent that broke it, which the tier tally beside it cannot.
+        const label = group.drifted ? `${DRIFT_MARKER}${name}` : name;
+        return `${group.drifted ? DRIFT : GRAY}${maybeLink(definitionUrl(input, group.label), label)}${RESET}`;
+    });
+    const hiddenTypes = summary.types.length - shownTypes.length;
+    if (hiddenTypes > 0) {
+        types.push(`${DIM}+${hiddenTypes}${RESET}`);
+    }
+
+    // DIM throughout: this is a ledger you consult, never a state to act on —
+    // the same weight the compaction history and the cost totals carry. The tier
+    // counts keep their palette because that is the one comparison worth making
+    // at a glance.
+    const lines = [
+        joinSegments([
+            `${DIM}Σ ${summary.agents} agent${summary.agents === 1 ? "" : "s"}${RESET}`,
+            tiers,
+            types.join(" ")
+        ])
+    ];
+
+    // Both columns size to the widest value actually on screen: an all-`Explore`
+    // session should not be indented for the width of `mp-reviewer-security`,
+    // and the gauges still have to start at one column so their filled slots
+    // compare down the block.
+    const nameWidth = Math.max(...summary.rows.map((agent) => agent.type.length));
+    const tierWidth = Math.max(...summary.rows.map((agent) => agent.tier.length + (agent.drifted ? 1 : 0)));
+    for (const agent of summary.rows) {
+        lines.push(buildAgentRow(agent, nameWidth, tierWidth, input));
+    }
+    if (summary.hiddenRows > 0) {
+        lines.push(`${INDENT_GUARD} ${DIM}+${summary.hiddenRows} more${RESET}`);
+    }
+    return lines;
+}
+
+function definitionUrl(input: SubagentLineInput, agentType: string): string {
+    const definition = input.agentDefinition(agentType);
+    return definition === "" ? "" : toFileUrl(definition);
+}
+
+function buildAgentRow(
+    agent: SubagentSummary["rows"][number],
+    nameWidth: number,
+    tierWidth: number,
+    input: SubagentLineInput
+): string {
+    const status = statusStyle(agent.status);
+    const transcript = subagentTranscriptPath(input.sessionTranscript, agent.id);
+    const runUrl = transcript === "" || !existsSync(transcript) ? "" : toFileUrl(transcript);
+
+    const tierText = `${agent.drifted ? DRIFT_MARKER : ""}${agent.tier}`;
+    const tierColor = agent.drifted ? DRIFT : (TIER_COLORS[agent.tier] ?? GRAY);
+
+    // Padded outside the link, so the underline a terminal draws on hover covers
+    // the name and not the empty column behind it.
+    const name = maybeLink(definitionUrl(input, agent.type), agent.type) + " ".repeat(nameWidth - agent.type.length);
+
+    let row =
+        `${INDENT_GUARD} ${status.color}${maybeLink(runUrl, status.glyph)}${RESET}` +
+        ` ${GRAY}${name}${RESET}` +
+        ` ${tierColor}${tierText.padEnd(tierWidth)}${RESET}` +
+        ` ${DIM}${effortGauge(agent.effort).padEnd(AGENT_EFFORT_WIDTH)}${RESET}` +
+        ` ${DIM}${formatDuration(agent.elapsedMs).padStart(AGENT_DURATION_WIDTH)}${RESET}` +
+        ` ${GRAY}${formatTokens(agent.tokens).padStart(AGENT_TOKENS_WIDTH)}${RESET}`;
+
+    // Counts, not the tasks panel's full history: after the fact, three
+    // auto-compactions says the agent was handed more than it could hold, and
+    // which tokens it shed at 14:02 no longer changes anything.
+    const { auto, manual } = input.compactions(agent.id);
+    if (auto > 0) {
+        row += ` ${AMBER}${countLabel(auto, "auto")}${RESET}`;
+    }
+    if (manual > 0) {
+        row += ` ${GRAY}${countLabel(manual, "manual")}${RESET}`;
+    }
+    return row;
+}
+
 // --- Background workers ------------------------------------------------------
 
 const SELF_PATH = fileURLToPath(import.meta.url);
@@ -1870,6 +2027,34 @@ function render(): string {
                   path.join(CACHE_DIR, `claude-compact-${cacheKey(fields.transcriptPath)}.tsv`)
               );
 
+    // --- Sub-agent history ---
+    // Two cheap reads: the tasks panel's own session state file, plus one small
+    // `agent-<id>.meta.json` per finished agent. No network, no child process,
+    // and nothing at all when the session has spawned no agents.
+    const configDir = resolveConfigDir();
+    const subagentRecords = readSessionRecords(sessionStateFile(configDir, fields.sessionId));
+    const subagents = summarizeFinishedAgents(subagentRecords, (agentId) =>
+        readSubagentMeta(fields.transcriptPath, agentId)
+    );
+    // Only the agents that get a row of their own are scanned for compactions,
+    // so a session with forty finished agents still costs at most five reads —
+    // and each is the same incremental, cached scan the compaction history above
+    // already pays for the main transcript.
+    const subagentLines = buildSubagentLine({
+        summary: subagents,
+        sessionTranscript: fields.transcriptPath,
+        agentDefinition: (agentType) => agentDefinitionPath(agentType, fields.cwd, configDir),
+        compactions: (agentId): CompactionTally => {
+            const transcript = subagentTranscriptPath(fields.transcriptPath, agentId);
+            if (transcript === "") {
+                return NO_COMPACTIONS;
+            }
+            return countCompactions(
+                readCompactionHistory(transcript, path.join(CACHE_DIR, `claude-compact-${cacheKey(transcript)}.tsv`))
+            );
+        }
+    });
+
     const transcriptUrl = fields.transcriptPath === "" ? "" : toFileUrl(fields.transcriptPath);
     const lines = [
         buildSessionLine(accountLabel, accountColor, fields.sessionName, shortId, transcriptUrl),
@@ -1889,7 +2074,8 @@ function render(): string {
         buildBranchStateLine({ gitSigns, gitDirt, fetchAge }),
         buildUsageLine({ sessionTokensIn: fields.sessionTokensIn, tokensK, ctxPct, usdDisplay, czkDisplay, compactLimit }),
         ...buildCompactionLines(compactions, `${INDENT_GUARD} `, COMPACTION_STYLE),
-        quotaLine
+        quotaLine,
+        ...subagentLines
     ];
     // A row with nothing to say is dropped rather than emitted blank — outside a
     // repo the branch state has no content at all.

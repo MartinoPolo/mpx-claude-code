@@ -198,6 +198,29 @@ export function readCompactionHistory(transcriptPath: string, cachePath: string)
     return events;
 }
 
+export interface CompactionTally {
+    auto: number;
+    manual: number;
+}
+
+export const NO_COMPACTIONS: CompactionTally = { auto: 0, manual: 0 };
+
+/**
+ * How many of each trigger. The main bar's ledger has one line per agent and no
+ * room for the full history the tasks panel draws, and after the fact the count
+ * is the part that still means something: three auto-compactions says the agent
+ * was given more than it could hold, whichever tokens it shed and when.
+ */
+export function countCompactions(events: readonly CompactionEvent[]): CompactionTally {
+    let auto = 0;
+    for (const event of events) {
+        if (event.trigger === "auto") {
+            auto += 1;
+        }
+    }
+    return { auto, manual: events.length - auto };
+}
+
 // --- Rendering ---------------------------------------------------------------
 
 /** `227148` -> `227k`, right-aligned so the arrows line up down the column. */

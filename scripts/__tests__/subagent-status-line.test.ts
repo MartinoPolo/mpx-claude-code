@@ -459,8 +459,8 @@ describe("mergeSessionState", () => {
             ],
             [],
         );
-        expect(tally.tierText).toBe("opus 1 sonnet 1 unknown 1");
-        expect(tally.effortText).toBe("low 2 max 1");
+        expect(tally.tierText).toBe("1×Opus 1×Sonnet 1×Unknown");
+        expect(tally.effortText).toBe("2×Low 1×Max");
     });
 
     it("omits an effort group for values that are not named levels", () => {
@@ -488,13 +488,13 @@ describe("buildSummaryLine", () => {
         expect(
             buildSummaryLine({
                 agents: 3,
-                tierText: "opus 2 haiku 1",
-                effortText: "low 1 high 2",
+                tierText: "2×Opus 1×Haiku",
+                effortText: "1×Low 2×High",
                 totalTokens: 53_500,
                 running: 2,
             }),
         ).toBe(
-            "Σ 3 agents this session · opus 2 haiku 1 · low 1 high 2 · 53.5k tokens · 2 running",
+            "Σ 3 agents this session · 2×Opus 1×Haiku · 1×Low 2×High · 53.5k tokens · 2 running",
         );
     });
 
@@ -502,12 +502,12 @@ describe("buildSummaryLine", () => {
         expect(
             buildSummaryLine({
                 agents: 1,
-                tierText: "opus 1",
-                effortText: "high 1",
+                tierText: "1×Opus",
+                effortText: "1×High",
                 totalTokens: 900,
                 running: 0,
             }),
-        ).toBe("Σ 1 agents this session · opus 1 · high 1 · 900 tokens");
+        ).toBe("Σ 1 agents this session · 1×Opus · 1×High · 900 tokens");
     });
 
     it("reproduces the reference field shift when no named effort group exists", () => {
@@ -517,12 +517,12 @@ describe("buildSummaryLine", () => {
         expect(
             buildSummaryLine({
                 agents: 1,
-                tierText: "opus 1",
+                tierText: "1×Opus",
                 effortText: "",
                 totalTokens: 1000,
                 running: 1,
             }),
-        ).toBe("Σ 1 agents this session · opus 1 · 1000 · 1 tokens");
+        ).toBe("Σ 1 agents this session · 1×Opus · 1000 · 1 tokens");
     });
 });
 

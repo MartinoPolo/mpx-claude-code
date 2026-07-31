@@ -24,11 +24,45 @@ const SCRIPTS = path.join(REPO_ROOT, "scripts");
 
 interface Fixture {
     name: string;
-    payload: unknown;
+    /**
+     * A function when the payload has to name a path inside its own sandbox —
+     * a transcript, and through it the `subagents/` sidecars beside it, only
+     * exists once the sandbox does.
+     */
+    payload: unknown | ((sandbox: string) => unknown);
     /** Files pre-seeded into the throwaway cache dir, so cache-path branches are reachable and deterministic. */
     cacheFiles?: Record<string, string>;
-    /** Files pre-seeded into the throwaway config dir. */
+    /** Files pre-seeded into the throwaway config dir. Keys may name subdirectories. */
     configFiles?: Record<string, string>;
+    /** Files pre-seeded anywhere under the sandbox root, for paths the payload points at. */
+    sandboxFiles?: Record<string, string>;
+    /** Substrings the rendered output must contain — a fixture that proves a row, not just that one was emitted. */
+    expect?: string[];
+    /** Substrings the rendered output must not contain. */
+    reject?: string[];
+}
+
+const SUBAGENT_HISTORY_SESSION = "sess-agent-history";
+
+/**
+ * The `agent-<id>.meta.json` sidecars Claude Code writes beside a session's
+ * transcript. Only `agentType` is load-bearing here — it is the one field that
+ * says which agent an id belonged to, and the tasks payload never carries it.
+ */
+function subagentHistorySidecars(typesById: Record<string, string>): Record<string, string> {
+    const files: Record<string, string> = {
+        [`projects/${SUBAGENT_HISTORY_SESSION}.jsonl`]: ""
+    };
+    for (const [agentId, agentType] of Object.entries(typesById)) {
+        files[`projects/${SUBAGENT_HISTORY_SESSION}/subagents/agent-${agentId}.meta.json`] = JSON.stringify({
+            agentType,
+            description: `${agentType} run`,
+            toolUseId: `toolu_${agentId}`,
+            spawnDepth: 1
+        });
+        files[`projects/${SUBAGENT_HISTORY_SESSION}/subagents/agent-${agentId}.jsonl`] = "";
+    }
+    return files;
 }
 
 const UNIT_SEPARATOR = "\x1f";
@@ -94,6 +128,104 @@ const statusLineFixtures: Fixture[] = [
         name: "minimal payload, every optional field absent",
         payload: { session_id: "aaaabbbbccccdddd", cwd: REPO_ROOT },
         cacheFiles: { "claude-czk-cache.txt": "23.417\n" }
+    },
+    {
+        // The one path unit tests cannot reach: the row is assembled from two
+        // files on disk that nothing in the payload mentions — the tasks panel's
+        // session state, and one meta sidecar per agent — and it only renders
+        // for agents that have already finished.
+        name: "sub-agent history read off the tasks panel's state file",
+        payload: (sandbox: string) => ({
+            session_name: "agent-history",
+            session_id: SUBAGENT_HISTORY_SESSION,
+            model: { display_name: "Opus 5" },
+            cwd: REPO_ROOT,
+            transcript_path: `${sandbox}/projects/${SUBAGENT_HISTORY_SESSION}.jsonl`,
+            context_window: { context_window_size: 200000, total_input_tokens: 50000 }
+        }),
+        cacheFiles: { "claude-czk-cache.txt": "23.417\n" },
+        configFiles: {
+            [`subagent-statusline-state/${SUBAGENT_HISTORY_SESSION}.tsv`]: [
+                "a-explore-1\tsonnet\tlow\t75746\t210264\tcompleted",
+                "a-explore-2\tsonnet\tlow\t20000\t60000\tcompleted",
+                "a-fork\tfable\thigh\t77631\t69969\tfailed",
+                "a-live\topus\thigh\t500000\t1000\trunning"
+            ].join("\n") + "\n"
+        },
+        sandboxFiles: subagentHistorySidecars({
+            "a-explore-1": "Explore",
+            "a-explore-2": "Explore",
+            "a-fork": "fork",
+            "a-live": "mp-executor"
+        }),
+        expect: [
+            "Σ 3 agents",
+            "2×Explore",
+            "!fork", // the drift marker outlives the panel that first raised it
+            "2×Sonnet",
+            "95.7k", // 75746 + 20000, charged to sonnet alone
+            "1×Fable",
+            "77.6k",
+            // Three finished agents fit under the cap, so every one gets a row.
+            // The failed fork leads them however late it was spawned.
+            "!fable",
+            "1m09s", // the fork's own elapsed time, frozen when it failed
+            "3m30s",
+            "75.7k",
+            "20.0k"
+        ],
+        // The running agent belongs to the tasks panel, so neither its type, its
+        // tier, nor its half-million tokens may reach these rows.
+        // `Opus` alone would collide with the model line's own "Opus 5", so the
+        // tier is rejected in the `N×` form only this block ever emits.
+        reject: ["mp-executor", "4 agents", "1×Opus", "673.4k", "173.4k", "more"]
+    },
+    {
+        // Past the cap the block stops being a chronology and becomes a ranking:
+        // the five heaviest agents, largest first, with the failure pinned above
+        // them however little it spent.
+        name: "sub-agent rows truncated to the largest consumers",
+        payload: (sandbox: string) => ({
+            session_name: "agent-ranking",
+            session_id: SUBAGENT_HISTORY_SESSION,
+            model: { display_name: "Opus 5" },
+            cwd: REPO_ROOT,
+            transcript_path: `${sandbox}/projects/${SUBAGENT_HISTORY_SESSION}.jsonl`,
+            context_window: { context_window_size: 200000, total_input_tokens: 50000 }
+        }),
+        cacheFiles: { "claude-czk-cache.txt": "23.417\n" },
+        configFiles: {
+            [`subagent-statusline-state/${SUBAGENT_HISTORY_SESSION}.tsv`]: [
+                "a-tiny\tsonnet\tlow\t1100\t1000\tcompleted",
+                "a-huge\topus\thigh\t880000\t1000\tcompleted",
+                "a-broke\tsonnet\tlow\t2200\t1000\tfailed",
+                "a-big\topus\thigh\t770000\t1000\tcompleted",
+                "a-mid\topus\thigh\t660000\t1000\tcompleted",
+                "a-small\tsonnet\tlow\t3300\t1000\tcompleted",
+                "a-least\tsonnet\tlow\t4400\t1000\tcompleted"
+            ].join("\n") + "\n"
+        },
+        sandboxFiles: subagentHistorySidecars({
+            "a-tiny": "Explore",
+            "a-huge": "mp-executor",
+            "a-broke": "fork",
+            "a-big": "mp-executor",
+            "a-mid": "mp-executor",
+            "a-small": "Explore",
+            "a-least": "Explore"
+        }),
+        expect: [
+            "Σ 7 agents",
+            "880.0k", // the heaviest, spelled out first under the failure
+            "770.0k",
+            "660.0k",
+            "4.4k", // the fourth slot, once the failure has taken one
+            "2.2k", // the failure itself, kept however little it spent
+            "+2 more"
+        ],
+        // Six slots' worth of agents, five rows: the two smallest completed ones
+        // are counted and not drawn.
+        reject: ["1.1k", "3.3k"]
     }
 ];
 
@@ -196,12 +328,16 @@ function isolatedEnv(fixture: Fixture): NodeJS.ProcessEnv {
     mkdirSync(cacheDir, { recursive: true });
     mkdirSync(configDir, { recursive: true });
 
-    for (const [name, contents] of Object.entries(fixture.cacheFiles ?? {})) {
-        writeFileSync(path.join(cacheDir, name), contents);
-    }
-    for (const [name, contents] of Object.entries(fixture.configFiles ?? {})) {
-        writeFileSync(path.join(configDir, name), contents);
-    }
+    const seed = (root: string, files: Record<string, string>): void => {
+        for (const [name, contents] of Object.entries(files)) {
+            const target = path.join(root, name);
+            mkdirSync(path.dirname(target), { recursive: true });
+            writeFileSync(target, contents);
+        }
+    };
+    seed(cacheDir, fixture.cacheFiles ?? {});
+    seed(configDir, fixture.configFiles ?? {});
+    seed(sandbox, fixture.sandboxFiles ?? {});
 
     return { ...process.env, TMPDIR: cacheDir, CLAUDE_CONFIG_DIR: configDir, SANDBOX_ROOT: sandbox };
 }
@@ -211,7 +347,9 @@ interface CheckResult { name: string; failures: string[] }
 /** Runs one fixture through a renderer in its own sandbox and returns the stdout. */
 function renderFixture(script: string, fixture: Fixture): RunResult {
     const env = isolatedEnv(fixture);
-    const result = run("node", [path.join(SCRIPTS, script)], JSON.stringify(fixture.payload), env);
+    const sandbox = env.SANDBOX_ROOT!.replaceAll("\\", "/");
+    const payload = typeof fixture.payload === "function" ? fixture.payload(sandbox) : fixture.payload;
+    const result = run("node", [path.join(SCRIPTS, script)], JSON.stringify(payload), env);
     rmSync(env.SANDBOX_ROOT!, { recursive: true, force: true });
     return result;
 }
@@ -230,6 +368,12 @@ function checkStatusLine(fixture: Fixture): CheckResult {
     // best: the line still looks plausible, just with a literal "undefined" in it.
     for (const leak of ["undefined", "NaN", "[object Object]"]) {
         if (stdout.includes(leak)) failures.push(`leaked ${JSON.stringify(leak)} into the rendered line`);
+    }
+    for (const expected of fixture.expect ?? []) {
+        if (!stdout.includes(expected)) failures.push(`never rendered ${JSON.stringify(expected)}`);
+    }
+    for (const rejected of fixture.reject ?? []) {
+        if (stdout.includes(rejected)) failures.push(`rendered ${JSON.stringify(rejected)}, which it must not`);
     }
     return { name: fixture.name, failures };
 }
