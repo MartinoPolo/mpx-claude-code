@@ -34,8 +34,8 @@ not need one, it says nothing about models at all.
 4. the main conversation's model
 
 Valid `model:` values (`DOC` — `sub-agents.md:281`): the aliases `sonnet`, `opus`,
-`haiku`, `fable`; a full model ID such as `claude-sonnet-5`; or `inherit`. Of these, only
-`sonnet`, `opus`, `haiku` are permitted in this repo — § 11. **Omitting
+`haiku`, `fable`; a full model ID such as `claude-sonnet-5`; or `inherit`. The repository's
+model-class policy in § 11 defines when each concrete alias is appropriate. **Omitting
 `model:` is exactly equivalent to `inherit`** — both mean "use the main conversation's
 model". There is no cheap default: silence selects the session model.
 
@@ -165,13 +165,25 @@ the actual call returned `No such tool available: Edit`.
 run: 27 sidechains logged assistant turns from more than one model under a single
 `resolvedModel` (`TESTED`, cause undetermined).
 
-## 9. Choosing a model
+## 9. Choosing a model class
 
-| Model | Best for |
-| -------- | ----------------------------------------------------------- |
-| `haiku` | Fast mechanical work: running checks, committing, simple lookups |
-| `sonnet` | Exploring, reviewing, docs, moderate-complexity implementation |
-| `opus` | Complex reasoning: architecture, analysis, multi-step implementation |
+Skills describe the work using a model class; harness resolvers select the concrete model and
+reasoning setting. This vocabulary is intentional: writing a provider model name in prose does
+not configure a spawned agent (§ 1), while a shared skill must remain portable across harnesses.
+
+| Model class | Claude Code | Pi | Best for |
+| --- | --- | --- | --- |
+| `mechanical` | `haiku`, no effort | Luna, `low` thinking | Bounded, low-judgment work: checks, commits, simple lookups |
+| `standard` | `sonnet`, normally `low` or `medium` | Terra, normally `low` or `medium` thinking | Exploration, review, docs, bounded judgment |
+| `advanced` | `opus`, task-matched effort | Sol, task-matched thinking | Implementation, design, architecture, deep analysis |
+| `frontier` | `fable`, `high` effort | Sol, `high` thinking | Deliberate manual escalation for large-task orchestration |
+
+`frontier` is a recommendation for exceptional main-thread planning or orchestration, not a
+standing sub-agent class. There are no generated frontier agents. Pi's `xhigh` and `max`
+thinking levels are prohibited by this policy; `high` is the ceiling.
+
+Actual agent frontmatter and tool calls must still use the harness-native `model:` value. Model
+classes are policy terms, not valid `model:` values.
 
 ## 10. Effort is frontmatter — prose never sets it
 
@@ -318,22 +330,27 @@ extrapolated to a 100-step horizon.
 
 ### The policy
 
-Three models, no others. **`fable` is banned** — cost without a matching gain for this repo's
-work. `high` is the effort ceiling. **Never pair `sonnet` with `high`**: § 10 measured `high`
-scoring identically to `medium` at identical cost on review, so on sonnet it buys nothing.
+Use the model classes in § 9 to describe work in shared skills. The concrete Claude Code and Pi
+mappings there are the canonical cross-harness resolver contract. `high` is the automatic-agent
+effort ceiling; Pi's `xhigh` and `max` levels are not selected.
 
-| Task shape | Model | Effort | Agents |
-| ------------------------------------- | ------ | ------ | ------------------------------------------------ |
-| Orchestration (multi-phase loop) | opus | high | the session; nested orchestrators |
-| Issue/codebase analysis → fix plan | opus | high | `mp-issue-analyzer` |
-| Design, architecture, interface | opus | medium | `mp-ui-variant-generator` |
-| Implementation — iterating to green | opus | medium | `mp-tdd-executor` |
-| Implementation — pre-analysed chunk | opus | low | `mp-executor` |
-| Exploratory loop against live feedback | opus | high | `mp-chrome-devtools-tester` |
-| Review | sonnet | medium | 7 × `mp-reviewer-*`, `mp-scanner-architecture` |
-| Exploration / codebase search | sonnet | low | `Explore` |
-| Bounded, some judgment | sonnet | low | `mp-pr-manager`, `mp-issue-finder`, `mp-unresolved-issue-tracker` |
-| Bounded, no judgment | haiku | — | `mp-checker`, `mp-git-committer`, `mp-context7-docs-fetcher` |
+`frontier` means Fable at `high` only for deliberate, large-task orchestration. It is a
+recommendation rather than a mandatory escalation: an advanced Opus agent at `high` is sufficient
+when the task does not warrant Fable. Frontier is selected manually and does not appear in the
+standing sub-agent roster.
+
+| Task shape | Model class | Claude effort | Agents |
+| ------------------------------------- | --- | --- | ------------------------------------------------ |
+| Orchestration (multi-phase loop) | frontier or advanced | high | the session; nested orchestrators |
+| Issue/codebase analysis → fix plan | advanced | high | `mp-issue-analyzer` |
+| Design, architecture, interface | advanced | medium | `mp-ui-variant-generator` |
+| Implementation — iterating to green | advanced | medium | `mp-tdd-executor` |
+| Implementation — pre-analysed chunk | advanced | low | `mp-executor` |
+| Exploratory loop against live feedback | advanced | high | `mp-chrome-devtools-tester` |
+| Review | standard | medium | 7 × `mp-reviewer-*`, `mp-scanner-architecture` |
+| Exploration / codebase search | standard | low | `Explore` |
+| Bounded, some judgment | standard | low | `mp-pr-manager`, `mp-issue-finder`, `mp-unresolved-issue-tracker` |
+| Bounded, no judgment | mechanical | — | `mp-checker`, `mp-git-committer`, `mp-context7-docs-fetcher` |
 
 **Pin `effort:` explicitly on every non-haiku agent.** An omitted `effort:` does not mean
 "default" — it inherits the *caller's* effort (§ 10), so an agent intended to run cheaply runs

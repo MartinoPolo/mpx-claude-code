@@ -42,8 +42,10 @@ intent, the constraint, the rejected alternative. Update docs when behaviour cha
 Name the agent type at every spawn. Only a real `model` parameter selects a model; prose is
 ignored.
 
-Opus for orchestration, analysis, design, implementation; sonnet `medium` for review, `low` for
-exploration.
+Use model classes from `skills/shared/SUBAGENT_PROTOCOL.md`: advanced for analysis, design, and
+implementation; standard `medium` for review and `low` for exploration; mechanical for bounded
+work. Frontier (Fable `high`) is a deliberate manual escalation for large-task orchestration, not
+a routine sub-agent choice. Only a real `model` parameter selects a concrete model.
 
 Delegate codebase searches to `Explore`; state breadth `quick`, `medium`, or `very thorough`.
 

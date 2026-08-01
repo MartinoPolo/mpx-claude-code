@@ -254,18 +254,18 @@ export function agentDefinitionPath(agentType: string, projectDir: string, confi
 // --- Grouping ------------------------------------------------------------------
 
 /**
- * Drift checks that survive without the agent's identity. Model drift (declared
- * vs. actual) needs a name the tasks payload never carries, so only the tier
- * rule from instructions/AGENTS.md runs: fable is banned outright, independent
- * of effort.
+ * Model class is selected intentionally at the call site or in agent frontmatter;
+ * the task payload has no information about whether a frontier selection was the
+ * exceptional manual escalation the policy recommends. Do not infer a violation
+ * from a resolved tier alone.
  *
  * The effort rules live with the tasks panel instead, because they only apply to
  * a *declared* level and the state file records the resolved one — an inherited
  * level is the session's own setting, so flagging it here would accuse an agent
  * of a choice it never made.
  */
-export function tierDriftReasons(tier: string): string[] {
-    return tier === "fable" ? ["fable is never allowed"] : [];
+export function tierDriftReasons(_tier: string): string[] {
+    return [];
 }
 
 export interface CountedGroup {

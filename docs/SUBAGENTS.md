@@ -18,9 +18,10 @@ An 80-sub-agent benchmark settled three open questions in `SUBAGENT_PROTOCOL.md`
 
 Model choice by task category is § 11, cross-checked against
 [DeepSWE v1.1](https://deepswe.datacurve.ai/) for implementation and
-[Design Arena](https://www.designarena.ai/leaderboard) for design. Only `opus`, `sonnet`,
-`haiku` are permitted — no `fable` — and `high` is the effort ceiling. Haiku supports no effort
-at all, so its agents declare none.
+[Design Arena](https://www.designarena.ai/leaderboard) for design. The shared model-class policy
+allows Fable only as a deliberate frontier escalation for manual large-task orchestration; the
+standing roster remains advanced, standard, or mechanical. `high` is the effort ceiling. Haiku
+supports no effort at all, so its agents declare none.
 
 Three findings drive the roster table:
 

@@ -140,11 +140,8 @@ describe("modelTier", () => {
 });
 
 describe("tierDriftReasons", () => {
-    it("flags fable, independent of any effort the row carries", () => {
-        expect(tierDriftReasons("fable")).toEqual(["fable is never allowed"]);
-    });
-
-    it("allows every other tier", () => {
+    it("allows every resolved tier because frontier selection is contextual", () => {
+        expect(tierDriftReasons("fable")).toEqual([]);
         expect(tierDriftReasons("opus")).toEqual([]);
         expect(tierDriftReasons("sonnet")).toEqual([]);
         expect(tierDriftReasons("haiku")).toEqual([]);
@@ -234,14 +231,11 @@ describe("renderTaskRow", () => {
         expect(row.content).not.toContain("^ ");
     });
 
-    it("marks the model for a tier violation, not the effort", () => {
-        // fable inherits its effort here, so the tier rule is the only one that
-        // fires — and it is a fact about the model, so it marks the model. The
-        // effort cell keeps the amber `?` it earns for being substituted.
+    it("renders a frontier tier without inferring a policy violation", () => {
         const row = render({ model: "fable", effort: "" });
-        expect(row.content).toContain(`${DRIFT}!fable ${RESET}`);
+        expect(row.content).not.toContain(`${DRIFT}!fable ${RESET}`);
         expect(row.content).toContain(`${AMBER}?◆◆◇◇◇ ${RESET}`);
-        expect(row.content).toContain(`\n${DRIFT_REASON}    ^ fable is never allowed${RESET}`);
+        expect(row.content).not.toContain("^ ");
     });
 
     it("marks the effort for an effort violation and leaves the model alone", () => {
@@ -301,15 +295,10 @@ describe("renderTaskRow", () => {
         );
     });
 
-    it("joins multiple drift reasons with a bare semicolon", () => {
-        // The reference joined through `IFS='; '`, which uses only the first
-        // IFS character, so multiple reasons are separated by a bare semicolon.
+    it("marks a frontier row only for its declared effort violation", () => {
         const row = render({ model: "fable", effort: "max" });
-        expect(row.content).toContain(
-            "^ fable is never allowed;effort above the high ceiling",
-        );
-        // One violation per cell, each marking the value it is about.
-        expect(row.content).toContain(`${DRIFT}!fable ${RESET}`);
+        expect(row.content).toContain("^ effort above the high ceiling");
+        expect(row.content).not.toContain(`${DRIFT}!fable ${RESET}`);
         expect(row.content).toContain(`${DRIFT}!◆◆◆◆◆ ${RESET}`);
     });
 

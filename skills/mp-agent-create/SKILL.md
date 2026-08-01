@@ -37,7 +37,7 @@ Ask all of the following in a single numbered list (one round-trip):
 
 1. **Purpose**: What task does this agent handle? What problem does it solve?
 2. **Tools needed**: Which tools should it access? (Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, WebFetch, WebSearch, MCP tools)
-3. **Model**: haiku (fast mechanical work), sonnet (exploring, reviewing, moderate implementation), or opus (complex reasoning)? Every agent in this repo names one — see Model Selection below for why `inherit` is not offered.
+3. **Model class**: mechanical (fast bounded work), standard (exploration and review), or advanced (implementation and deep reasoning)? Every standing agent names its concrete model — see Model Selection below for why `inherit` is not offered. Frontier is manual-only and is not a standing-agent option.
 4. **Read-only or read-write?**: Does it modify files or only analyze?
 5. **Color**: Status line color (red, green, yellow, blue, magenta, cyan, white)
 
@@ -133,13 +133,14 @@ granting it is always dead.
 
 #### Model Selection
 
-| Model    | Best for                                                             |
-| -------- | -------------------------------------------------------------------- |
-| `haiku`  | Fast mechanical work: running checks, committing, simple lookups     |
-| `sonnet` | Exploring, reviewing, docs, moderate-complexity implementation       |
-| `opus`   | Complex reasoning: architecture, analysis, multi-step implementation |
+| Model class | Concrete Claude model | Best for |
+| --- | --- | --- |
+| mechanical | `haiku` | Fast bounded work: running checks, committing, simple lookups |
+| standard | `sonnet` | Exploration, review, docs, bounded judgment |
+| advanced | `opus` | Implementation, architecture, analysis, multi-step reasoning |
+| frontier | `fable` at `high` | Deliberate manual large-task orchestration; do not create a standing agent |
 
-**Name a model in every agent this repo owns.** `inherit` is valid, and omitting
+**Name a concrete model in every standing agent this repo owns.** `inherit` is valid, and omitting
 `model:` means exactly the same thing — both resolve to the main conversation's model,
 which on this machine is `claude-opus-5[1m]`, the most expensive option. An agent left
 on `inherit` gets silently expensive the moment the session model changes.

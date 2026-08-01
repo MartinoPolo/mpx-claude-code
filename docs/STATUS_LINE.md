@@ -301,8 +301,8 @@ line cannot show.
 ●  opus   !◆◆◆◆◆       0s 152.0k (76%)  opus, declared max
     ^ effort above the high ceiling
 ●  opus    120.0k      0s 40.0k (20%)   opus, numeric budget
-× !fable  !◆◆◆◆◆       0s 3.0k (1%)     fable, declared max
-    ^ fable is never allowed;effort above the high ceiling
+×  fable  !◆◆◆◆◆       0s 3.0k (1%)     fable, declared max
+    ^ effort above the high ceiling
 ```
 
 Columns: **status** (`●` running cyan, `✓` completed green, `×` failed/killed red) — **model** —
@@ -507,7 +507,7 @@ a gauge at all — stops working.
 
 | Marker | Cell | Meaning |
 | --- | --- | --- |
-| `!` red (fg 196) | model | `fable`, which is never allowed. Carries a `^ reason` line. |
+| `!` red (fg 196) | model | a model-class violation identified by the caller. Carries a `^ reason` line. |
 | `!` red (fg 196) | effort | a *declared* value violates a rule — above the `high` ceiling, or declared on haiku. Carries a `^ reason` line. |
 | `?` amber (fg 214) | effort | the value was substituted from the session `effortLevel` because the agent declared none. No reason line: inheriting is routine for `general-purpose`, `claude`, `Plan` and `fork`, and one per row would bury the real `!` rows. |
 | unmarked | either | a declared value, no violation. |
@@ -521,8 +521,9 @@ thing being flagged, and it counts toward the `Σ` tally like any other declared
 
 Effort drift checks only ever judge *declared* values. Flagging a substituted one blames an
 agent for a setting it never made, which is how every `general-purpose` row used to acquire a
-violation it had no way to cause. The `fable` check is independent of effort and needs no
-declared value, since the model is always reported.
+violation it had no way to cause. A resolved model tier alone does not prove that a frontier
+selection violated policy, because the task payload has no record of whether it was deliberately
+selected for exceptional manual orchestration.
 
 ## Implementation
 
@@ -730,7 +731,7 @@ The sub-agent status column keeps `✓`/`×` because it is one cell wide and has
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 482 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # 313 unit tests over the pure helpers
 ```
 
 The harness began as a byte-parity golden diff against the bash originals, which is how the port

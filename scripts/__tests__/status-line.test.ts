@@ -858,7 +858,7 @@ describe("buildSubagentLine", () => {
         expect(line).not.toContain("1×Explore");
     });
 
-    it("marks a type that ran on a banned tier, in the panel's red", () => {
+    it("marks a type with a detected policy drift in the panel's red", () => {
         const line = build({ summary: { ...summary, types: [group("fork", 1, { drifted: true })] } })[0]!;
         expect(line).toContain(`${RED}!fork${RESET}`);
     });
@@ -901,11 +901,11 @@ describe("buildSubagentLine", () => {
         expect(rows[1]).toContain(`${RED}×${RESET}`);
     });
 
-    it("marks a row that ran on a banned tier and reserves the marker slot", () => {
+    it("marks a detected drift and reserves the marker slot", () => {
         const rows = build({
-            summary: { ...summary, rows: [agent("a", { tier: "fable", drifted: true }), agent("b")] }
+            summary: { ...summary, rows: [agent("a", { tier: "opus", drifted: true }), agent("b")] }
         });
-        expect(rows[1]).toContain(`${RED}!fable${RESET}`);
+        expect(rows[1]).toContain(`${RED}!opus ${RESET}`);
         expect(rows[2]).toContain(`${YELLOW}sonnet${RESET}`);
     });
 

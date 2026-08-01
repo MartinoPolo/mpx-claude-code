@@ -106,8 +106,8 @@ describe("groupByOrder", () => {
 });
 
 describe("tierDriftReasons", () => {
-    it("flags fable and nothing else", () => {
-        expect(tierDriftReasons("fable")).toEqual(["fable is never allowed"]);
+    it("does not infer a policy violation from a resolved model tier", () => {
+        expect(tierDriftReasons("fable")).toEqual([]);
         expect(tierDriftReasons("opus")).toEqual([]);
     });
 });
@@ -253,12 +253,12 @@ describe("summarizeFinishedAgents", () => {
         ]);
     });
 
-    it("marks the type that ran on a banned tier", () => {
+    it("does not mark a type solely because it ran on a frontier tier", () => {
         const summary = summarizeFinishedAgents(
             [record({ id: "a", tier: "fable" }), record({ id: "b", tier: "opus" })],
             (agentId) => meta(agentId === "a" ? "fork" : "Explore")
         );
-        expect(summary.types.find((group) => group.label === "fork")?.drifted).toBe(true);
+        expect(summary.types.find((group) => group.label === "fork")?.drifted).toBe(false);
         expect(summary.types.find((group) => group.label === "Explore")?.drifted).toBe(false);
     });
 
