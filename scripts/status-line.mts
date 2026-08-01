@@ -156,6 +156,9 @@ const BRANCH_ICON = "";
 /** VS Code logo (U+F0A1E, Nerd Font Material Design set) — drawn larger than the devicon U+E70C it replaced. */
 const VSCODE_ICON = "󰨞";
 
+/** Console (U+F018D, Nerd Font Material Design set) — the open-a-terminal-tab click target beside the VS Code logo. */
+const TERMINAL_ICON = "󰆍";
+
 /** Pencil (U+F03EB, Nerd Font Material Design set) — the edit-this-config click target beside the dev-server ports. */
 const PENCIL_ICON = "󰏫";
 
@@ -1274,30 +1277,75 @@ export function buildMrBlock(mr: MrFields, cacheAge: number): string {
 }
 
 /**
- * Path to a generated `.url` shortcut that opens `folder` in VS Code, or "" when
- * it cannot be written. Called once per rendered VS Code icon — the cwd always,
- * plus the main checkout when the cwd is a linked worktree.
+ * Path to a generated launcher file in the cache directory, or "" when it cannot
+ * be written. Every icon on the location line that has to *do* something rather
+ * than open a URL goes through one of these: Windows Terminal opens a hyperlink
+ * only when its scheme is http, https or file, so the action has to be parked in
+ * a file that the shell knows how to run, and the icon links to that file.
  *
- * `vscode://file/...` is the direct way to open a folder in VS Code, and it is
- * unreachable from a hyperlink here — Windows Terminal refuses every scheme
- * outside http/https/file, so the click never reaches the registered `vscode:`
- * handler. A `.url` file gets the URL there anyway: it is inert data, `.url` is
- * bound to InternetShortcut on every Windows install, and opening one hands its
- * URL back to the shell, which dispatches `vscode:` to Code.exe. `.code-workspace`
- * was tried first and silently opened the wrong folder — its ProgID exists but no
- * extension is bound to it, so the click had no handler at all. Rewritten every
- * render rather than guarded by `existsSync`, so a change of format can never be
- * shadowed by a stale file left in the temp directory.
+ * Rewritten every render rather than guarded by `existsSync`, so a change of
+ * format can never be shadowed by a stale file left in the temp directory.
  */
-function vscodeShortcutFile(folder: string): string {
-    const file = path.join(CACHE_DIR, `claude-open-${cacheKey(folder)}.url`);
-    const url = toFileUrl(folder).replace("file:///", "vscode://file/");
+function launcherFile(name: string, contents: string): string {
+    const file = path.join(CACHE_DIR, name);
     try {
-        writeFileSync(file, `[InternetShortcut]\nURL=${url}\n`);
+        writeFileSync(file, contents);
         return file;
     } catch {
         return "";
     }
+}
+
+/**
+ * A `.url` shortcut that opens `folder` in VS Code. Called once per rendered VS
+ * Code icon — the cwd always, plus the main checkout when the cwd is a linked
+ * worktree.
+ *
+ * `vscode://file/...` is the direct way to open a folder in VS Code, and it is
+ * unreachable from a hyperlink here — see `launcherFile`. A `.url` file gets the
+ * URL there anyway: it is inert data, `.url` is bound to InternetShortcut on
+ * every Windows install, and opening one hands its URL back to the shell, which
+ * dispatches `vscode:` to Code.exe. `.code-workspace` was tried first and
+ * silently opened the wrong folder — its ProgID exists but no extension is bound
+ * to it, so the click had no handler at all.
+ */
+function vscodeShortcutFile(folder: string): string {
+    const url = toFileUrl(folder).replace("file:///", "vscode://file/");
+    return launcherFile(`claude-open-${cacheKey(folder)}.url`, `[InternetShortcut]\nURL=${url}\n`);
+}
+
+/**
+ * A `.cmd` launcher that opens a new Windows Terminal tab at `folder` — the
+ * status line's answer to "duplicate this tab".
+ *
+ * `wt -w 0` addresses the most recently used window, which is the one the click
+ * came from, so the tab lands beside the session that drew the icon. The profile
+ * comes from `WT_PROFILE_ID`, exported by Windows Terminal into every session it
+ * starts and inherited all the way down to this renderer: without it the tab
+ * would open under the *default* profile rather than the current one, which is a
+ * copy of the wrong thing. Outside Windows Terminal the variable is unset and
+ * the flag is dropped, leaving `-w 0` to open a window from scratch.
+ *
+ * `.cmd` rather than a `.url` because there is no `wt:` URI scheme to point at,
+ * and rather than a `.lnk` because writing one means driving COM through
+ * PowerShell — a process spawn on a line that renders on every keystroke. The
+ * cost is the console window `cmd.exe` flashes while it hands off to `wt`.
+ * `start ""` keeps that flash to the shortest possible: cmd exits without
+ * waiting. A `%` in the path is doubled because cmd would otherwise read it as
+ * the start of a variable reference and swallow it.
+ */
+function terminalTabShortcutFile(folder: string): string {
+    const profileId = process.env.WT_PROFILE_ID ?? "";
+    const profileFlag = profileId === "" ? "" : ` -p "${profileId}"`;
+    return launcherFile(
+        `claude-newtab-${cacheKey(folder)}.cmd`,
+        `@start "" wt.exe -w 0 nt${profileFlag} -d "${folder.replace(/%/g, "%%")}"\r\n`
+    );
+}
+
+/** `file:` URL of a generated launcher, passing through the "" that means it could not be written. */
+function launcherUrl(file: string): string {
+    return file === "" ? "" : toFileUrl(file);
 }
 
 // --- Line builders -----------------------------------------------------------
@@ -1344,6 +1392,10 @@ export interface LocationLineInput {
     projectEditorUrl: string;
     /** `file:` URL of a shortcut opening VS Code at the cwd; "" outside a worktree. */
     worktreeEditorUrl: string;
+    /** `file:` URL of a launcher opening a terminal tab at the main project folder. */
+    projectTerminalUrl: string;
+    /** `file:` URL of a launcher opening a terminal tab at the cwd; "" outside a worktree. */
+    worktreeTerminalUrl: string;
     branch: string;
     /** Web URL of the branch on its remote host; "" leaves the branch unlinked. */
     branchUrl: string;
@@ -1357,21 +1409,33 @@ export interface LocationLineInput {
  * dev servers, MR/PR and its CI. In a worktree the two path halves are separate
  * click targets — the project name opens the original folder, the worktree name
  * opens the worktree — and the worktree half takes WHITE because it, not the
- * project, answers "where am I". Each half carries its own VS Code icon, so
- * both the original checkout and the worktree are one click away in the editor.
+ * project, answers "where am I". Each half carries its own icon pair — VS Code
+ * and a terminal tab — so both the original checkout and the worktree are one
+ * click away in either tool.
  */
 export function buildLocationLine(input: LocationLineInput): string {
-    // The icon always keeps a plain space on each side: the VS Code glyph comes
-    // from the double-width Symbols Nerd Font fallback and paints into the cell
-    // after its own, so any visible character glued to it would get smeared.
-    const editorIcon = (url: string) =>
-        url === "" ? "" : ` ${GRAY}${hyperlink(url, VSCODE_ICON)}${RESET} `;
+    // Every icon keeps a plain space behind it, the last one included: these
+    // glyphs come from the double-width Symbols Nerd Font fallback and paint
+    // into the cell after their own, so any visible character glued to one would
+    // get smeared. The trailing space of the run is trimmed off the whole name
+    // when nothing follows it.
+    const icons = (editorUrl: string, terminalUrl: string) => {
+        const run = [
+            [editorUrl, VSCODE_ICON],
+            [terminalUrl, TERMINAL_ICON]
+        ]
+            .filter(([url]) => url !== "")
+            .map(([url, glyph]) => `${GRAY}${hyperlink(url, glyph)}${RESET}`);
+        return run.length === 0 ? "" : ` ${run.join(" ")} `;
+    };
+    const projectIcons = icons(input.projectEditorUrl, input.projectTerminalUrl);
+    const worktreeIcons = icons(input.worktreeEditorUrl, input.worktreeTerminalUrl);
     const project = maybeLink(input.projectUrl, input.projectName);
     const name = (
         input.worktreeName === ""
-            ? `${WHITE}${project}${RESET}${editorIcon(input.projectEditorUrl)}`
-            : `${GRAY}${project}${RESET}${editorIcon(input.projectEditorUrl)}${GRAY}/${RESET}` +
-              `${WHITE}${maybeLink(input.worktreeUrl, input.worktreeName)}${RESET}${editorIcon(input.worktreeEditorUrl)}`
+            ? `${WHITE}${project}${RESET}${projectIcons}`
+            : `${GRAY}${project}${RESET}${projectIcons}${GRAY}/${RESET}` +
+              `${WHITE}${maybeLink(input.worktreeUrl, input.worktreeName)}${RESET}${worktreeIcons}`
     ).trimEnd();
     return joinSegments([
         name,
@@ -1863,8 +1927,8 @@ function render(): string {
     const fields = extractPayloadFields(readStdin());
     const maxContext = toNonNegativeInt(fields.maxContext, 200000);
     const shortId = fields.sessionId.slice(0, 8);
-    const cwdShortcut = fields.cwd === "" ? "" : vscodeShortcutFile(fields.cwd);
-    const cwdEditorUrl = cwdShortcut === "" ? "" : toFileUrl(cwdShortcut);
+    const cwdEditorUrl = fields.cwd === "" ? "" : launcherUrl(vscodeShortcutFile(fields.cwd));
+    const cwdTerminalUrl = fields.cwd === "" ? "" : launcherUrl(terminalTabShortcutFile(fields.cwd));
 
     const accountLabel = resolveAccountLabel(resolveConfigDir());
     const accountColor = accountLabel === "Work" ? WORK : PERSONAL;
@@ -1877,16 +1941,15 @@ function render(): string {
 
     const location = resolveProjectLocation(fields.cwd, branch === "" ? undefined : readWorktreePaths(fields.cwd));
 
-    // In a worktree the cwd shortcut belongs to the worktree half; the project
-    // half gets its own shortcut into the original checkout.
+    // In a worktree the cwd launchers belong to the worktree half; the project
+    // half gets its own pair pointing into the original checkout.
     const inWorktree = location.worktreeName !== "";
-    const projectShortcut = inWorktree ? vscodeShortcutFile(location.projectDir) : "";
-    const projectEditorUrl = inWorktree
-        ? projectShortcut === ""
-            ? ""
-            : toFileUrl(projectShortcut)
-        : cwdEditorUrl;
+    const projectEditorUrl = inWorktree ? launcherUrl(vscodeShortcutFile(location.projectDir)) : cwdEditorUrl;
+    const projectTerminalUrl = inWorktree
+        ? launcherUrl(terminalTabShortcutFile(location.projectDir))
+        : cwdTerminalUrl;
     const worktreeEditorUrl = inWorktree ? cwdEditorUrl : "";
+    const worktreeTerminalUrl = inWorktree ? cwdTerminalUrl : "";
 
     // --- Dev servers: cached probe results, refreshed by a detached child ---
     const devServerPorts = devServerPortsFor(location.projectName);
@@ -2063,6 +2126,8 @@ function render(): string {
             worktreeUrl: location.worktreeUrl,
             projectEditorUrl,
             worktreeEditorUrl,
+            projectTerminalUrl,
+            worktreeTerminalUrl,
             branch,
             branchUrl: remote.branchUrl,
             devServers,

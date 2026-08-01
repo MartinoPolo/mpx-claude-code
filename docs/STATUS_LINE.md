@@ -133,6 +133,7 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 | --- | --- |
 | project / worktree name | Explorer in that folder |
 | VS Code glyph (U+F0A1E) beside a name | VS Code in that folder |
+| terminal glyph (U+F018D) beside a name | a new Windows Terminal tab in that folder, same profile |
 | branch name | the branch on its remote host (`.../tree/<branch>`, GitLab `/-/tree/`) |
 | `↑3` / `↑3↓2` unpushed count | the compare view of the default branch against this one |
 | `:8100` port | `localhost:8100` in the browser, over the scheme the probe saw it speak |
@@ -203,6 +204,25 @@ A `.code-workspace` shim was tried first and silently opened whatever folder VS 
 last: its ProgID is registered but no extension is bound to it, so the click had no handler at
 all.
 
+**The terminal glyph (U+F018D) duplicates the tab** — a new Windows Terminal tab in the same
+folder, one per name on the line, sitting right after that name's VS Code glyph. There is no
+`wt:` URI scheme to park in a `.url`, so this one is a generated
+`$TMPDIR/claude-newtab-<key>.cmd` running `start "" wt.exe -w 0 nt -p "<profile>" -d "<folder>"`:
+
+- `-w 0` addresses the **most recently used** window, which is the one the click came from, so
+  the tab lands beside the session that drew the icon rather than in a window of its own.
+- `-p` carries `WT_PROFILE_ID`, which Windows Terminal exports into every session it starts and
+  which is inherited all the way down to this renderer. Without it the tab opens under the
+  *default* profile — a copy of the wrong thing. Outside Windows Terminal the variable is unset,
+  the flag is dropped, and `-w 0` opens a window from scratch.
+- A `%` in the path is doubled, because `cmd` would otherwise read it as the start of a variable
+  reference and swallow it.
+
+A `.lnk` would launch `wt` with no console in the way, but writing one means driving COM through
+PowerShell — a process spawn on a line that renders on every keystroke. The `.cmd` costs a brief
+`cmd.exe` flash instead; `start ""` keeps it to the shortest possible, since cmd hands off and
+exits without waiting for the terminal.
+
 The links terminate with `BEL` rather than the usual `ESC \`. Every line is emitted through
 `expandBackslashEscapes`, which would pair that trailing backslash with the first character of
 the label — a directory named `trace` would render as a tab followed by `race`, and one named
@@ -211,10 +231,10 @@ the label — a directory named `trace` would render as a tab followed by `race`
 ## Branch signs and MR/PR block
 
 ```
-mpx-claude-code <VS Code glyph> ·  main
+mpx-claude-code <VS Code glyph> <terminal glyph> ·  main
     ≡ · +2 · !28 · ?9 · 2h ago
 
-yoursafe-components <VS Code glyph> ·  martas/agentic-setup · :8100 · :8101 · !252 draft · ci run · 💬 3
+yoursafe-components <VS Code glyph> <terminal glyph> ·  martas/agentic-setup · :8100 · :8101 · !252 draft · ci run · 💬 3
     ↑3 · +2 · 16m ago
 ```
 
@@ -661,8 +681,9 @@ The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (s
 `profiles.defaults.font.face` in Windows Terminal's settings.json; WT walks the comma list
 per glyph). Text comes from the bundled Cascadia Mono; every Private Use Area glyph falls
 through to Symbols Nerd Font (the symbols-only nerd-fonts build, installed per-user
-2026-07-30), which licenses the two pictograms on the location line: the git-branch glyph
-U+E725 (devicons), the VS Code logo U+F0A1E and the pencil U+F03EB (both Material Design set).
+2026-07-30), which licenses the pictograms on the location line: the git-branch glyph U+E725
+(devicons), the VS Code logo U+F0A1E, the console U+F018D and the pencil U+F03EB (all three
+Material Design set).
 
 That pair is the third iteration, each driven by a live look. Cascadia Mono NF (Microsoft's
 official NF build, still installed) came first, but it scales every symbol down into a single
@@ -690,6 +711,7 @@ Current symbol assignments:
 | `◆◇` (five slots) | effort gauge: low `◆◇◇◇◇` → max `◆◆◆◆◆` |
 | U+E725 branch | precedes the branch name |
 | U+F0A1E VS Code | after each folder name; opens the editor there (was the word `IDE`) |
+| U+F018D console | after each folder name's VS Code glyph; opens a terminal tab there |
 | U+F03EB pencil | after the dev-server ports; opens `statusline-projects.json` |
 | U+2800 braille blank | first character of every indented row (branch state, compaction) |
 | `≡` | branch in sync with upstream |

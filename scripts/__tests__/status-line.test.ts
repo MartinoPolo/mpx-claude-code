@@ -415,6 +415,7 @@ describe("buildModelLine", () => {
 describe("buildLocationLine", () => {
     const BRANCH_ICON = "\ue725";
     const VSCODE_ICON = "\u{f0a1e}";
+    const TERMINAL_ICON = "\u{f018d}";
     const empty = {
         projectName: "repo",
         projectUrl: "",
@@ -422,6 +423,8 @@ describe("buildLocationLine", () => {
         worktreeUrl: "",
         projectEditorUrl: "",
         worktreeEditorUrl: "",
+        projectTerminalUrl: "",
+        worktreeTerminalUrl: "",
         branch: "",
         branchUrl: "",
         devServers: [] as string[],
@@ -472,6 +475,39 @@ describe("buildLocationLine", () => {
         ).toBe(
             `${GRAY}repo${RESET} ${GRAY}${hyperlink("file:///c/open-main.url", VSCODE_ICON)}${RESET} ${GRAY}/${RESET}` +
                 `${WHITE}wt-fix${RESET} ${GRAY}${hyperlink("file:///c/open-wt.url", VSCODE_ICON)}${RESET}`
+        );
+    });
+
+    it("gives each worktree half its own terminal icon", () => {
+        expect(
+            buildLocationLine({
+                ...empty,
+                worktreeName: "wt-fix",
+                projectTerminalUrl: "file:///c/newtab-main.cmd",
+                worktreeTerminalUrl: "file:///c/newtab-wt.cmd"
+            })
+        ).toBe(
+            `${GRAY}repo${RESET} ${GRAY}${hyperlink("file:///c/newtab-main.cmd", TERMINAL_ICON)}${RESET} ${GRAY}/${RESET}` +
+                `${WHITE}wt-fix${RESET} ${GRAY}${hyperlink("file:///c/newtab-wt.cmd", TERMINAL_ICON)}${RESET}`
+        );
+    });
+
+    it("puts the terminal icon after the VS Code icon, one space between them", () => {
+        expect(
+            buildLocationLine({
+                ...empty,
+                projectEditorUrl: "file:///c/open.url",
+                projectTerminalUrl: "file:///c/newtab.cmd"
+            })
+        ).toBe(
+            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}` +
+                ` ${GRAY}${hyperlink("file:///c/newtab.cmd", TERMINAL_ICON)}${RESET}`
+        );
+    });
+
+    it("renders the terminal icon alone when no editor shortcut could be written", () => {
+        expect(buildLocationLine({ ...empty, projectTerminalUrl: "file:///c/newtab.cmd" })).toBe(
+            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/newtab.cmd", TERMINAL_ICON)}${RESET}`
         );
     });
 
