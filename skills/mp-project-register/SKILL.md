@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, AskUserQuestion, Bash(node *), Bash(python *), Bash(ls *), Bash(gh repo view *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: setup
 ---
 

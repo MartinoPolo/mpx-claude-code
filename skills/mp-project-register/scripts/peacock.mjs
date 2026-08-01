@@ -13,6 +13,8 @@ import { join } from "node:path";
 
 // Keys Peacock owns and rewrites from `peacock.color`. Anything else a user put in
 // `workbench.colorCustomizations` is theirs and survives a write.
+// Verbatim values of the `ColorSettings` enum in `src/models/enums.ts` of
+// johnpapa/vscode-peacock (37 keys) — re-check there when Peacock adds a token.
 const PEACOCK_OWNED_KEYS = new Set([
   "activityBar.activeBackground",
   "activityBar.background",
@@ -26,17 +28,31 @@ const PEACOCK_OWNED_KEYS = new Set([
   "activityBarTop.inactiveForeground",
   "commandCenter.border",
   "commandCenter.foreground",
+  "editorError.foreground",
+  "editorGroup.border",
+  "editorInfo.foreground",
+  "editorWarning.foreground",
+  "panel.border",
   "sash.hoverBorder",
+  "sideBar.border",
   "statusBar.background",
+  "statusBar.border",
   "statusBar.debuggingBackground",
+  "statusBar.debuggingBorder",
   "statusBar.debuggingForeground",
   "statusBar.foreground",
   "statusBarItem.hoverBackground",
+  "statusBarItem.remoteBackground",
+  "statusBarItem.remoteForeground",
+  "tab.activeBackground",
   "tab.activeBorder",
   "titleBar.activeBackground",
   "titleBar.activeForeground",
+  "titleBar.border",
   "titleBar.inactiveBackground",
   "titleBar.inactiveForeground",
+  "window.activeBorder",
+  "window.inactiveBorder",
 ]);
 
 // Every peacock.color already committed under the machine roots, so a new project can be
