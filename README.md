@@ -197,7 +197,7 @@ Retired skills, agents, hooks and scripts are archived under [`deprecated/`](dep
 | mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for PRD-end review                         |
 
 - Model and effort pins come from a July 2026 benchmark (80 sub-agents); the `Explore` agent overrides Claude Code's built-in to keep automatic explorations off Opus — rationale, findings, and gotchas in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
-- Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md).
+- Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md); the raw benchmark tables behind the `TESTED` verdicts live in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
 - Reviewers share [`skills/shared/REVIEWER_PROTOCOL.md`](skills/shared/REVIEWER_PROTOCOL.md) and load language guides from `agents/references/` (TypeScript, React, Svelte 5, Python, Rust).
 
 ## Hooks

@@ -98,4 +98,4 @@ Design work runs on opus, always. Every agent these skills spawn is an `mp-*` ag
 own model and effort, so no call site passes `model`. Adding a `general-purpose` or `claude` spawn
 would require `model: opus` — prefer a declaring agent, since the `Agent` tool has no `effort`
 parameter and generative design must not inherit a low session effort.
-See [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 11.
+See [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 8.

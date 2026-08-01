@@ -29,7 +29,7 @@ If `$ARGUMENTS` is a skill name or path, audit only that skill.
 
 ## Step 2: Run Checks (per skill)
 
-Spawn parallel `general-purpose` sub-agents with `model: "sonnet"`, each auditing 3-5 skills. `general-purpose` declares no model of its own, so the parameter is load-bearing here — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 3.
+Spawn parallel `general-purpose` sub-agents with `model: "sonnet"`, each auditing 3-5 skills. `general-purpose` declares no model of its own, so the parameter is load-bearing here — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 1.
 
 Each agent runs all 16 checks against each skill and returns findings. Checks 12 and 14 run once repo-wide, in the main session.
 
@@ -111,7 +111,7 @@ Runs once for the repo. Glob `skills/*/SKILL.md`, `agents/*.md`, `hooks/*` and d
 
 ### Check 13: Model Specification
 
-Rules and evidence: [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) §§ 1-3. Only a real `model` parameter selects a model; prose is measured at 0% obeyed, and `effort` is not a call-site parameter at all. Four distinct defects:
+Rules and evidence: [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) §§ 1 and 7. Only a real `model` parameter selects a model; prose is measured at 0% obeyed, and `effort` is not a call-site parameter at all. Four distinct defects:
 
 **13a — Prose model mention (no-op).** Grep the body case-insensitively for `sonnet`, `haiku`, `opus`, `fable`. Flag every occurrence that sits in an English sentence rather than in a `model:` field — `Spawn a Sonnet sub-agent`, `(Haiku)`, `10 Sonnet Sub-Agents`, `the Opus orchestrator`. Each one reads as an instruction and does nothing.
 

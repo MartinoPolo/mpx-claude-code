@@ -53,7 +53,7 @@ When `notebooklm` is absent from PATH the shell predates the install: use
 ## Step 3: Research and personalization — one message, parallel
 
 Send every spawn below in a **single message** so they run concurrently, and orchestrate them
-from this thread ([`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 5).
+from this thread ([`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 2).
 
 **Topic research.** The brief is built from gathered sources, so gather them first:
 

@@ -15,7 +15,7 @@ For anything about spawning sub-agents or choosing models, see
 | Shared doc | `skills/shared/<NAME>.md` | none |
 
 Custom agents are named `mp-<role>`. An agent that overrides a built-in instead matches
-the built-in's name and capitalisation exactly — see SUBAGENT_PROTOCOL.md § 7.
+the built-in's name and capitalisation exactly — see SUBAGENT_PROTOCOL.md § 4.
 
 The two identities work differently. For a skill, the invocable command comes from the
 **directory name**; frontmatter `name` is only a display label. For an agent, `name` **is**
@@ -76,9 +76,8 @@ Vagueness at a call site becomes a guess at runtime. Name things exactly:
 
 - **Sub-agents** — the exact type: "Spawn `mp-issue-analyzer`". A skill that spawns
   anything lists `Agent` in `allowed-tools`.
-- **Models** — a real `model` parameter, or nothing at all. Prose is a no-op
-  (SUBAGENT_PROTOCOL.md § 1), and the parameter is omitted for agents that declare
-  their own model (§ 3).
+- **Models** — a real `model` parameter, or nothing at all. Prose is a no-op, and the
+  parameter is omitted for agents that declare their own model — SUBAGENT_PROTOCOL.md § 1.
 - **GitHub** — the exact `gh` command: `gh issue create`, `gh pr list`.
 - **Scripts and commands** — the exact path and invocation.
 - **Searches** — delegate to `Explore`, with the breadth stated
@@ -134,7 +133,7 @@ explicit error handling, or would otherwise be more than ~10 lines of inline bas
 
 `allowed-tools` (skills) and `tools` (agents) are allowlists — grant exactly what the
 body actually uses, and no more. A grant with no corresponding usage in the body is dead
-and gets removed. Tool-grant semantics for agents are in SUBAGENT_PROTOCOL.md § 6.
+and gets removed. Tool-grant semantics for agents are in SUBAGENT_PROTOCOL.md § 3.
 
 An agent that needs MCP tools lists none of them. Every name in `tools` is reprinted in
 the agent roster in **every** session: the retired `mp-playwright-tester` once spent 794

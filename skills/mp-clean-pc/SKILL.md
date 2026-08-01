@@ -50,7 +50,7 @@ When none is found, offer the install once via the platform file's command. If t
 
 ### Step 3: Scan All Domains in Parallel
 
-Spawn one `general-purpose` sub-agent per domain with `model: "sonnet"`, all in a single message so they run concurrently. `general-purpose` declares no model of its own, so the parameter is load-bearing — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 3. Tell each to keep its analysis brief: this is a scan, not a review. Give each sub-agent:
+Spawn one `general-purpose` sub-agent per domain with `model: "sonnet"`, all in a single message so they run concurrently. `general-purpose` declares no model of its own, so the parameter is load-bearing — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 1. Tell each to keep its analysis brief: this is a scan, not a review. Give each sub-agent:
 
 - The domain's section from `DOMAINS.md` and the platform file
 - The resolved roots, the exclusion list, and the quarantine roots

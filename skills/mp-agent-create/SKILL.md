@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Agent
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: utility
 ---
 
@@ -87,7 +87,7 @@ color: <color>
 
 **Optional:** `disallowedTools`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`,
 `hooks`, `memory`, `background`, `effort`, `isolation`, `initialPrompt`. Semantics in
-[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 6.
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3.
 
 #### Body Conventions
 
@@ -102,7 +102,7 @@ than restating it here.
 
 An agent that overrides a built-in keeps its body **deliberately thin** — the override
 replaces the built-in's tuned system prompt, so a verbose body trades cost for worse
-behaviour. See [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 7.
+behaviour. See [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 4.
 
 #### Tool Selection Guidelines
 
@@ -118,7 +118,7 @@ behaviour. See [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md
 entirely. `Agent` is **not** granted by default — an agent without it cannot delegate,
 and its parent must spawn on its behalf and pass results back in. Full tool-grant
 semantics, including `disallowedTools`, are in
-[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 6.
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3.
 
 **An agent that needs MCP tools enumerates none of them.** Every name in `tools` is
 reprinted in the agent roster in every session, so a long MCP list is a standing context
@@ -150,8 +150,8 @@ on `inherit` gets silently expensive the moment the session model changes.
 - GitHub CLI: specify exact `gh` command (e.g., `gh pr list`)
 - Bash commands: name exact command/script
 - Sub-agent spawns: name the exact agent type, and pass `model` only when that type
-  declares none — [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 3.
-  `effort` is not a spawn parameter; pin it in the agent's frontmatter instead (§ 10)
+  declares none — [`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 1.
+  `effort` is not a spawn parameter; pin it in the agent's frontmatter instead (§ 7)
 - Describe a model in prose nowhere: only a real `model` parameter selects one (§ 1)
 
 ### Step 4: Validate Against Guidelines
@@ -202,8 +202,8 @@ Before finalizing, verify:
 - [ ] Agent is focused on one responsibility (single-purpose)
 
 When overriding a built-in, additionally verify against
-[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 7:
+[`../shared/SUBAGENT_PROTOCOL.md`](../shared/SUBAGENT_PROTOCOL.md) § 4:
 
 - [ ] `description` copied verbatim from the built-in (it drives auto-delegation)
 - [ ] `disallowedTools` re-denies every tool the built-in denied
-- [ ] Permissions verified by making the agent **attempt** each call, never by asking it (§ 8)
+- [ ] Permissions verified by making the agent **attempt** each call, never by asking it (§ 5)

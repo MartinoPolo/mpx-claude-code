@@ -1,11 +1,22 @@
 # Next benchmark session — paste this as the opening prompt
 
+> **Deprecated 2026-08-01.** All three questions below were answered by the July 2026
+> round: haiku stays on `mp-checker`/`mp-git-committer` but lost `mp-pr-manager` to
+> sonnet, `mp-reviewer-*` pinned to `effort: medium`, and `Explore`'s `effort: low` pin
+> confirmed on the real agent. Verdicts are in `skills/shared/SUBAGENT_PROTOCOL.md` § 7;
+> raw tables in `docs/SUBAGENTS.md` § Benchmark evidence.
+>
+> Kept for the **methodology rules** below — each fixes a real failure and applies to any
+> future round. Still open, if a next round happens: `mp-context7-docs-fetcher`
+> (unbenchmarked), effort for `mp-scanner-architecture` and `mp-issue-analyzer`, and
+> whether the `Explore` override corrects nested spawns.
+
 Run a sub-agent capability benchmark for this repo (`C:\_MP_projects\mpx-claude-code`).
 You have explicit opt-in to use the `Workflow` tool and as many sub-agents as needed.
 
-Read `skills/shared/SUBAGENT_PROTOCOL.md` § 10 first — it records the previous round's
-results, its `TESTED` / `UNVERIFIED` tags, and the methodology failures listed below.
-Do not re-derive what § 10 already establishes.
+Read `skills/shared/SUBAGENT_PROTOCOL.md` § 7 first for the previous round's verdicts
+and their `TESTED` / `UNVERIFIED` tags; the raw result tables live in
+`docs/SUBAGENTS.md` § Benchmark evidence. Do not re-derive what they already establish.
 
 ## Three open questions
 
@@ -32,7 +43,7 @@ not "is haiku as smart" but "does haiku cost less *per completed task* after ret
 tool-call flailing". Report cost per task, not per token, and report tool-call counts.
 Recommend keep-or-promote per agent individually.
 
-### Q2 — Effort for reviewing and analysis (`UNVERIFIED` in § 10)
+### Q2 — Effort for reviewing and analysis (`UNVERIFIED` in § 7)
 
 `mp-reviewer-*` (7), `mp-scanner-architecture`, `mp-issue-analyzer` deliberately have no
 `effort:` set, so they inherit session effort. Benchmark review-shaped work — seeded real
@@ -45,7 +56,7 @@ The pin is an extrapolation: the previous benchmark spawned default workflow sub
 not `Explore` itself. Spawn the actual `Explore` agent (via the `Agent` tool, omitting
 `model` — it declares its own) and confirm `low` matches `medium` on real multi-hop
 searches. Also test whether `Explore.md`'s 36-line body helps or hurts against
-`SUBAGENT_PROTOCOL.md` § 7's "keep the body thin" rule.
+`SUBAGENT_PROTOCOL.md` § 4's "keep the body thin" rule.
 
 ## Setup required before benchmarking
 
@@ -80,6 +91,7 @@ searches. Also test whether `Explore.md`'s 36-line body helps or hurts against
 ## Deliverable
 
 Concrete `model:` / `effort:` recommendations per agent, each tagged `TESTED` or
-`UNVERIFIED`, ready to fold into `SUBAGENT_PROTOCOL.md` § 10. Update `README.md` in the
+`UNVERIFIED`, ready to fold into `SUBAGENT_PROTOCOL.md` § 7 (verdicts) and
+`docs/SUBAGENTS.md` § Benchmark evidence (raw tables). Update `README.md` in the
 same change per repo convention. Flag any recommendation the data does not actually
 support rather than filling the table.

@@ -20,7 +20,7 @@ asking — already runs on sonnet. Verified: bare `Explore` spawns resolve to
 
 Passing `model` at the call site re-states what the agent already declares and
 drifts the moment the agent changes. Omit it — see
-[SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 3.
+[SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 1.
 
 ## `Explore` does not see CLAUDE.md — restate what matters in the prompt
 
@@ -49,7 +49,7 @@ against repo conventions.
 
 Breadth is a search-scope instruction, not a reasoning-effort setting. It reaches the
 agent as prompt text and the agent body acts on it. The `effort:` reasoning knob is
-frontmatter only — see [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 10.
+frontmatter only — see [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md) § 7.
 
 ## Explore instead of asking
 
