@@ -28,7 +28,10 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import { subagentTranscriptPath } from "./compaction.mts";
-import { GRAY, fg, isNonNegativeInt } from "./statusline-ansi.mts";
+import { isNonNegativeInt } from "./statusline-ansi.mts";
+import { loadPalette } from "./terminal-theme.mts";
+
+const PALETTE = loadPalette();
 
 /**
  * Model tier colors. Shared with the effort scale where the hue means the same
@@ -36,10 +39,10 @@ import { GRAY, fg, isNonNegativeInt } from "./statusline-ansi.mts";
  * order is also the order every tally groups tiers in.
  */
 export const TIER_COLORS: Readonly<Record<string, string>> = {
-    opus: fg(74), // blue
-    sonnet: fg(220), // yellow
-    haiku: fg(211), // pink
-    fable: fg(208) // orange
+    opus: PALETTE.accent, // blue
+    sonnet: PALETTE.contextYellow, // yellow
+    haiku: PALETTE.tierHaiku, // pink
+    fable: PALETTE.contextOrange // orange
 };
 
 /**
@@ -48,7 +51,7 @@ export const TIER_COLORS: Readonly<Record<string, string>> = {
  * agent type. Amber `?` stays with the panel — it qualifies an effort level,
  * and the main bar renders none.
  */
-export const DRIFT = fg(196);
+export const DRIFT = PALETTE.contextRed;
 export const DRIFT_MARKER = "!";
 
 export const UNKNOWN_TIER = "unknown";
@@ -87,12 +90,12 @@ export interface StatusStyle {
  * treatment.
  */
 export const STATUS_STYLES: Readonly<Record<string, StatusStyle>> = {
-    running: { glyph: "●", color: fg(80) }, // cyan
-    completed: { glyph: "✓", color: fg(71) }, // green
-    failed: { glyph: "×", color: fg(196) }, // red
-    killed: { glyph: "×", color: fg(196) }
+    running: { glyph: "●", color: PALETTE.effortBudget }, // cyan
+    completed: { glyph: "✓", color: PALETTE.add }, // green
+    failed: { glyph: "×", color: PALETTE.contextRed }, // red
+    killed: { glyph: "×", color: PALETTE.contextRed }
 };
-export const UNKNOWN_STATUS_STYLE: StatusStyle = { glyph: "○", color: GRAY };
+export const UNKNOWN_STATUS_STYLE: StatusStyle = { glyph: "○", color: PALETTE.gray };
 
 export function statusStyle(status: string): StatusStyle {
     return STATUS_STYLES[status] ?? UNKNOWN_STATUS_STYLE;

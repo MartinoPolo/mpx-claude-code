@@ -88,17 +88,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-    AMBER,
-    DIM,
-    GRAY,
     RESET,
     cacheKey,
     effortGauge,
-    fg,
     isNonNegativeInt,
     readStdin,
     toNonNegativeInt,
 } from "./lib/statusline-ansi.mts";
+import { loadPalette } from "./lib/terminal-theme.mts";
 import {
     type CompactionStyle,
     buildCompactionLines,
@@ -142,24 +139,33 @@ export {
     type StateRecord,
 };
 
+// Derived from the terminal's scheme rather than fixed palette indices — see
+// lib/terminal-theme.mts. The main bar resolves the same palette, which is what
+// keeps a hue meaning the same thing on both renderers.
+const PALETTE = loadPalette();
+
+const GRAY = PALETTE.gray;
+const DIM = PALETTE.dim;
+const AMBER = PALETTE.amber;
+
 const EFFORT_COLORS: Readonly<Record<string, string>> = {
-    low: fg(71), // green
-    medium: fg(220), // yellow
-    high: fg(208), // orange
-    xhigh: fg(196), // red
-    max: fg(141), // purple
+    low: PALETTE.effortLow, // green
+    medium: PALETTE.effortMedium, // yellow
+    high: PALETTE.effortHigh, // orange
+    xhigh: PALETTE.effortXhigh, // red
+    max: PALETTE.effortMax, // purple
 };
-const EFFORT_BUDGET = fg(80); // cyan: a numeric token budget, not a level
+const EFFORT_BUDGET = PALETTE.effortBudget; // cyan: a numeric token budget, not a level
 
 // Context escalation mirrors status-line.sh, but keyed to percentage rather than
 // absolute tokens: subagent windows vary by model, so the main bar's fixed
 // 100k/140k/180k cut-offs would mean different things on different rows.
-const CTX_YELLOW = fg(220); // >=50%
-const CTX_ORANGE = fg(208); // >=70%
-const CTX_RED = fg(196); // >=90%
+const CTX_YELLOW = PALETTE.contextYellow; // >=50%
+const CTX_ORANGE = PALETTE.contextOrange; // >=70%
+const CTX_RED = PALETTE.contextRed; // >=90%
 
-const DRIFT_REASON = fg(203); // coral: the explanation beneath a ! marker
-const INHERITED_EFFORT = fg(214); // amber: the cell a ? marker qualifies
+const DRIFT_REASON = PALETTE.warn; // coral: the explanation beneath a ! marker
+const INHERITED_EFFORT = PALETTE.amber; // amber: the cell a ? marker qualifies
 const INHERITED_EFFORT_MARKER = "?";
 // Every marked cell reserves the slot whether or not it has a marker to put in
 // it, so the value behind it starts at the same column on every row. Without

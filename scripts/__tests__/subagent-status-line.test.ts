@@ -1,6 +1,23 @@
 import { describe, it, expect } from "vitest";
 
-import { GRAY, RESET, fg } from "../lib/statusline-ansi.mts";
+import { RESET } from "../lib/statusline-ansi.mts";
+import { loadPalette } from "../lib/terminal-theme.mts";
+
+// Resolved from the palette, not written as literal escapes: these colors are
+// derived from the terminal's color scheme now, so pinning the bytes would only
+// assert whichever scheme the machine running the tests happens to use. What has
+// to hold is that each cell draws the semantic color it is specified to.
+const PALETTE = loadPalette();
+const GRAY = PALETTE.gray;
+const DIM = PALETTE.dim;
+const AMBER = PALETTE.amber;
+const DRIFT = PALETTE.contextRed;
+const DRIFT_REASON = PALETTE.warn;
+const CTX_YELLOW = PALETTE.contextYellow;
+const EFFORT_LOW = PALETTE.effortLow;
+const EFFORT_HIGH = PALETTE.effortHigh;
+const EFFORT_BUDGET = PALETTE.effortBudget;
+const TIER_OPUS = PALETTE.accent;
 import {
     buildSummaryLine,
     effortDriftReasons,
@@ -185,35 +202,35 @@ describe("effortDriftReasons", () => {
 describe("renderTaskRow", () => {
     it("lays the row out cell by cell, with nothing between tokens and text", () => {
         expect(render().content).toBe(
-            `${fg(80)}●${RESET}` +
-                ` ${fg(74)} opus  ${RESET}` +
-                ` ${fg(208)} ◆◆◆◇◇ ${RESET}` +
-                ` ${fg(240)}     0s${RESET}` +
+            `${EFFORT_BUDGET}●${RESET}` +
+                ` ${TIER_OPUS} opus  ${RESET}` +
+                ` ${EFFORT_HIGH} ◆◆◆◇◇ ${RESET}` +
+                ` ${DIM}     0s${RESET}` +
                 ` ${GRAY}1.0k (0%)    ${RESET} ` +
                 `${GRAY}agent a${RESET}`,
         );
     });
 
     it("draws a named level as the main bar's gauge while recording the word", () => {
-        expect(render({ effort: "low" }).content).toContain(`${fg(71)} ◆◇◇◇◇ ${RESET}`);
+        expect(render({ effort: "low" }).content).toContain(`${EFFORT_LOW} ◆◇◇◇◇ ${RESET}`);
         expect(render({ effort: "high" }).record.effort).toBe("high");
     });
 
     it("question-marks an inherited effort and records it without the marker", () => {
         const row = render({ effort: "" });
-        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
+        expect(row.content).toContain(`${AMBER}?◆◆◇◇◇ ${RESET}`);
         expect(row.record.effort).toBe("medium");
     });
 
     it("colors the whole inherited effort cell amber and adds no reason", () => {
         const row = render({ model: "sonnet", effort: "" });
-        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
+        expect(row.content).toContain(`${AMBER}?◆◆◇◇◇ ${RESET}`);
         expect(row.content).not.toContain("^ ");
     });
 
     it("leaves a declared effort unmarked in its own level color", () => {
         const row = render({ model: "sonnet", effort: "high" });
-        expect(row.content).toContain(`${fg(208)} ◆◆◆◇◇ ${RESET}`);
+        expect(row.content).toContain(`${EFFORT_HIGH} ◆◆◆◇◇ ${RESET}`);
         expect(row.content).not.toContain("^ ");
     });
 
@@ -222,15 +239,15 @@ describe("renderTaskRow", () => {
         // fires — and it is a fact about the model, so it marks the model. The
         // effort cell keeps the amber `?` it earns for being substituted.
         const row = render({ model: "fable", effort: "" });
-        expect(row.content).toContain(`${fg(196)}!fable ${RESET}`);
-        expect(row.content).toContain(`${fg(214)}?◆◆◇◇◇ ${RESET}`);
-        expect(row.content).toContain(`\n${fg(203)}    ^ fable is never allowed${RESET}`);
+        expect(row.content).toContain(`${DRIFT}!fable ${RESET}`);
+        expect(row.content).toContain(`${AMBER}?◆◆◇◇◇ ${RESET}`);
+        expect(row.content).toContain(`\n${DRIFT_REASON}    ^ fable is never allowed${RESET}`);
     });
 
     it("marks the effort for an effort violation and leaves the model alone", () => {
         const row = render({ model: "opus", effort: "max" });
-        expect(row.content).toContain(`${fg(196)}!◆◆◆◆◆ ${RESET}`);
-        expect(row.content).toContain(`${fg(74)} opus  ${RESET}`);
+        expect(row.content).toContain(`${DRIFT}!◆◆◆◆◆ ${RESET}`);
+        expect(row.content).toContain(`${TIER_OPUS} opus  ${RESET}`);
     });
 
     describe("haiku", () => {
@@ -246,10 +263,10 @@ describe("renderTaskRow", () => {
 
         it("shows a declared effort marked, since blanking would hide the violation", () => {
             const row = render({ model: "haiku", effort: "medium" });
-            expect(row.content).toContain(`${fg(196)}!◆◆◇◇◇ ${RESET}`);
+            expect(row.content).toContain(`${DRIFT}!◆◆◇◇◇ ${RESET}`);
             expect(row.record.effort).toBe("medium");
             expect(row.content).toContain(
-                `\n${fg(203)}    ^ haiku has no effort setting${RESET}`,
+                `\n${DRIFT_REASON}    ^ haiku has no effort setting${RESET}`,
             );
         });
     });
@@ -273,14 +290,14 @@ describe("renderTaskRow", () => {
 
     it("renders a numeric budget in cyan through formatTokens, with no gauge to draw", () => {
         const row = render({ effort: "32000" });
-        expect(row.content).toContain(`${fg(80)} 32.0k ${RESET}`);
+        expect(row.content).toContain(`${EFFORT_BUDGET} 32.0k ${RESET}`);
         expect(row.record.effort).toBe("32.0k");
     });
 
     it("appends the drift reason on its own line", () => {
         const row = render({ model: "opus", effort: "max" });
         expect(row.content).toContain(
-            `\n${fg(203)}    ^ effort above the high ceiling${RESET}`,
+            `\n${DRIFT_REASON}    ^ effort above the high ceiling${RESET}`,
         );
     });
 
@@ -292,8 +309,8 @@ describe("renderTaskRow", () => {
             "^ fable is never allowed;effort above the high ceiling",
         );
         // One violation per cell, each marking the value it is about.
-        expect(row.content).toContain(`${fg(196)}!fable ${RESET}`);
-        expect(row.content).toContain(`${fg(196)}!◆◆◆◆◆ ${RESET}`);
+        expect(row.content).toContain(`${DRIFT}!fable ${RESET}`);
+        expect(row.content).toContain(`${DRIFT}!◆◆◆◆◆ ${RESET}`);
     });
 
     it("separates the tokens column from the description with a single space", () => {
@@ -322,11 +339,11 @@ describe("renderTaskRow", () => {
         };
 
         it("stays gray below 50 percent", () => tokensAt(49, GRAY));
-        it("turns yellow at exactly 50 percent", () => tokensAt(50, fg(220)));
-        it("stays yellow below 70 percent", () => tokensAt(69, fg(220)));
-        it("turns orange at exactly 70 percent", () => tokensAt(70, fg(208)));
-        it("stays orange below 90 percent", () => tokensAt(89, fg(208)));
-        it("turns red at exactly 90 percent", () => tokensAt(90, fg(196)));
+        it("turns yellow at exactly 50 percent", () => tokensAt(50, CTX_YELLOW));
+        it("stays yellow below 70 percent", () => tokensAt(69, CTX_YELLOW));
+        it("turns orange at exactly 70 percent", () => tokensAt(70, EFFORT_HIGH));
+        it("stays orange below 90 percent", () => tokensAt(89, EFFORT_HIGH));
+        it("turns red at exactly 90 percent", () => tokensAt(90, DRIFT));
 
         it("reports zero percent when the window size is missing", () => {
             expect(render({ contextWindowSize: "0" }).content).toContain(

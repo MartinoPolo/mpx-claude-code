@@ -61,10 +61,10 @@ mklink "%DEST%\WINDOWS-SETUP.md"    "%REPO%\WINDOWS-SETUP.md"
 
 Run two permanently-logged-in Claude Code accounts at once — one per terminal — using the official `CLAUDE_CONFIG_DIR` env var. Each config dir has its own `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, and `plugins/`, so the logins never clobber each other.
 
-| Alias | Config dir | Account |
-|-------|-----------|---------|
-| `cc` / `ccd` | `~/.claude` (default) | Personal |
-| `ccw` / `ccwd` | `~/.claude-work` | Work / Team |
+| Command | Config dir | Account | Pane tint |
+|-------|-----------|---------|-----------|
+| `cc` / `ccd` | `~/.claude` (default) | Personal | green `#0c2e16` |
+| `ccw` / `ccwd` | `~/.claude-work` | Work / Team | amber `#3a1f00` |
 
 ### Shared vs per-account
 
@@ -97,15 +97,30 @@ New-Item -ItemType SymbolicLink -Path "$work\WINDOWS-SETUP.md"    -Target "$repo
 
 **Moving an existing login into a dir without re-auth:** `Move-Item` the `.credentials.json` instead of running `/logout` (logout can revoke the token server-side). The dir it lands in stays authenticated; the dir it left prompts a fresh login next launch.
 
-### Git Bash aliases (`~/.bashrc`)
+### Git Bash launchers (`~/.bashrc`)
 
-The `claude` binary is a native `.exe`, so the env var must be a real Windows path — build it with `cygpath -w`:
+The `claude` binary is a native `.exe`, so the env var must be a real Windows path — build it with `cygpath -w`.
+
+Each launch also repaints the pane background to the account's tint and exports `CLAUDE_PANE_ACCOUNT`, which is what tells the status line to derive its palette against that background rather than the Windows Terminal color scheme's — see [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md) "Account background". The `EXIT` trap restores the profile's own colors however Claude Code ends, Ctrl-C included.
+
+Functions rather than aliases: the painter runs `node`, which only reaches PATH once `fnm env` is eval'd later in `.bashrc`, and one definition serves both accounts while forwarding `"$@"` properly.
 
 ```bash
-alias cc='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude")" claude'
-alias ccd='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude")" claude --dangerously-skip-permissions'
-alias ccw='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude-work")" claude'
-alias ccwd='CLAUDE_CONFIG_DIR="$(cygpath -w "$HOME/.claude-work")" claude --dangerously-skip-permissions'
+_claude_account_launch() {
+  local account="$1" config_dir="$2"
+  shift 2
+  local painter="C:/_MP_projects/mpx-claude-code/scripts/account-color.mts"
+  (
+    trap 'node "$painter" reset' EXIT
+    node "$painter" "$account"
+    CLAUDE_CONFIG_DIR="$(cygpath -w "$config_dir")" CLAUDE_PANE_ACCOUNT="$account" claude "$@"
+  )
+}
+
+cc()   { _claude_account_launch personal "$HOME/.claude"      "$@"; }
+ccd()  { _claude_account_launch personal "$HOME/.claude"      --dangerously-skip-permissions "$@"; }
+ccw()  { _claude_account_launch work     "$HOME/.claude-work" "$@"; }
+ccwd() { _claude_account_launch work     "$HOME/.claude-work" --dangerously-skip-permissions "$@"; }
 ```
 
 ### Verify

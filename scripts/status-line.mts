@@ -14,19 +14,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-    AMBER,
     BOLD,
-    DIM,
-    GRAY,
     RESET,
     cacheKey,
     effortGauge,
-    fg,
     isNonNegativeInt,
     readFileOrEmpty,
     readStdin,
     toNonNegativeInt
 } from "./lib/statusline-ansi.mts";
+import { loadPalette } from "./lib/terminal-theme.mts";
 import {
     type CompactionStyle,
     type CompactionTally,
@@ -59,33 +56,33 @@ export { cacheKey };
 
 // --- Theme -------------------------------------------------------------------
 
-/** Color theme: gray, orange, blue, teal, green, lavender, rose, gold, slate, cyan */
-const COLOR = "blue";
+/**
+ * Every color below is derived from the terminal's own color scheme and the
+ * launching account's background, rather than being a fixed xterm-256 index —
+ * see lib/terminal-theme.mts for why, and for the blend factors that keep the
+ * default scheme looking exactly as it did before. Switching scheme in Windows
+ * Terminal now recolors the bar; the hue picker that used to live here (`COLOR`
+ * plus a nine-entry ACCENT_BY_THEME table) is gone, because the scheme is the
+ * single place that choice belongs.
+ */
+const PALETTE = loadPalette();
 
-const ACCENT_BY_THEME: Record<string, string> = {
-    orange: fg(173),
-    blue: fg(74),
-    teal: fg(66),
-    green: fg(71),
-    lavender: fg(139),
-    rose: fg(132),
-    gold: fg(136),
-    slate: fg(60),
-    cyan: fg(37)
-};
+const GRAY = PALETTE.gray;
+const DIM = PALETTE.dim;
+const AMBER = PALETTE.amber;
 
-const ACCENT = ACCENT_BY_THEME[COLOR] ?? GRAY;
-const BAR_EMPTY = fg(238);
+const ACCENT = PALETTE.accent;
+const BAR_EMPTY = PALETTE.barEmpty;
 
 /**
  * Brightest foreground, spent on the one field that answers "where am I" — the
  * directory name. Everything else on that line is gray, so the eye lands there
  * first without any glyph or box drawing to carry the emphasis.
  */
-const WHITE = fg(255);
+const WHITE = PALETTE.white;
 
 /** Warning color for a state the user has to act on (coral red). */
-const WARN = fg(203);
+const WARN = PALETTE.warn;
 
 // Age notes — "last fetched 3d ago", "this cache is 11m old" — are always DIM,
 // never WARN. They answer "how much do I trust the number beside me", which is
@@ -96,9 +93,9 @@ const WARN = fg(203);
 // Context-consumption escalation (absolute input tokens): the 🔥 token count
 // shifts yellow -> orange -> red as context fills, so a heavy session is
 // obvious at a glance.
-const CONTEXT_YELLOW = fg(220); // >=100k tokens
-const CONTEXT_ORANGE = fg(208); // >=140k tokens
-const CONTEXT_RED = fg(196); // >=180k tokens
+const CONTEXT_YELLOW = PALETTE.contextYellow; // >=100k tokens
+const CONTEXT_ORANGE = PALETTE.contextOrange; // >=140k tokens
+const CONTEXT_RED = PALETTE.contextRed; // >=180k tokens
 
 /**
  * Compaction history ranks its own fields: `auto` is the only thing on the row
@@ -118,18 +115,18 @@ const COMPACTION_STYLE: CompactionStyle = {
 
 // Account colors — distinct from ACCENT and from each other, so
 // model/account/work-vs-personal all read as separate signals at a glance.
-const PERSONAL = fg(71); // green
-const WORK = fg(173); // orange
+const PERSONAL = PALETTE.personal; // green
+const WORK = PALETTE.work; // orange
 
 // Line-edit colors: green additions, red deletions.
-const ADD = fg(71);
-const DEL = fg(167);
+const ADD = PALETTE.add;
+const DEL = PALETTE.del;
 
 // Git/MR colors: sand for "never left this machine" (local branch, draft MR),
 // blue for the MR/PR reference itself.
-const LOCAL = fg(180);
-const DRAFT = fg(180);
-const MR = fg(74);
+const LOCAL = PALETTE.local;
+const DRAFT = PALETTE.local;
+const MR = PALETTE.mr;
 
 /**
  * Session name (line 1): bold magenta. It is the title of the thing you are
@@ -137,7 +134,7 @@ const MR = fg(74);
  * other rank on this bar is carried by color alone. Lavender fg(141) sat too
  * close to the panel's `max` effort purple to read as a heading of its own.
  */
-const SESSION = `${BOLD}${fg(213)}`;
+const SESSION = `${BOLD}${PALETTE.session}`;
 
 // --- Glyph vocabulary --------------------------------------------------------
 

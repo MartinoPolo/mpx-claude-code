@@ -245,7 +245,11 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
-Both are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a ~3.5× render speedup. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
+**Account color** — `cc`/`ccw` repaint the terminal background before launching, so personal (green `#0c2e16`) and work (amber `#3a1f00`) are distinguishable at a glance without a profile per account. `scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the two tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color.
+
+**Account tab title** — the pane tint only reads once a pane is focused, so `cc`/`ccw` also name the tab `[P] agentic-setup · yoursafe-components`: account prefix, then the worktree, then the project. Worktree first because it is what differs between panes on one project, and a tab strip truncates from the right; outside a linked worktree the name appears once. `scripts/terminal-title.mts` emits the OSC 0 and takes both prefixes from `statusline-accounts.json`, so an account's tint and its tab label stay in one file. The launcher sets `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1` alongside it — Claude Code otherwise overwrites the title with the session summary on every status change. Keeping the summary *and* the prefix is possible but was rejected: the summary is memory-only and libuv caches `process.title`, so re-prefixing needs a PowerShell process per session polling `[Console]::Title`.
+
+All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a ~3.5× render speedup. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
 
 ## Installation — the repo is the live config
 

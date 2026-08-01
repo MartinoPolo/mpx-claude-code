@@ -8,11 +8,6 @@ import { readFileSync } from "node:fs";
 
 export const RESET = "\x1b[0m";
 
-/** 256-color foreground escape. Mirrors the bash `$'\033[38;5;Nm'` literals. */
-export function fg(code: number): string {
-    return `\x1b[38;5;${code}m`;
-}
-
 /**
  * Weight, not hue — the one emphasis that survives a recolor. Reserved for a
  * field that has to be found before the eye has read anything else; every other
@@ -20,24 +15,13 @@ export function fg(code: number): string {
  */
 export const BOLD = "\x1b[1m";
 
-/** Gray used for default text in both renderers. */
-export const GRAY = fg(245);
-
-/**
- * One step darker than GRAY, for facts that are context rather than signal —
- * how stale a cache is, how long ago a fetch ran, the sub-agent session tally.
- * Reserving a dimmer shade for "you never need to act on this" is what lets the
- * eye skip it, so both renderers have to use the same one.
- */
-export const DIM = fg(240);
-
-/**
- * Amber: a fact you did not choose and would want to catch. Already the hue the
- * tasks panel uses to qualify an inherited effort level; the compaction history
- * reuses it for `auto`, which is the same kind of statement — this happened
- * without you.
- */
-export const AMBER = fg(214);
+// GRAY, DIM and AMBER used to live here as fixed xterm-256 indices, alongside an
+// `fg(code)` helper that emitted them. They are now derived per scheme in
+// terminal-theme.mts and emitted as 24-bit color by its `rgb()` — GRAY and DIM in
+// particular are blends of the scheme's own foreground toward its background, so
+// they cannot be constants. Their meanings are unchanged and documented there:
+// GRAY is default text, DIM one step back for facts that are context rather than
+// signal, and AMBER marks a fact you did not choose and would want to catch.
 
 // Effort levels, weakest to strongest — a filled/empty gauge reads instantly
 // where the old `<high>` word had to be parsed. Five slots because Claude Code

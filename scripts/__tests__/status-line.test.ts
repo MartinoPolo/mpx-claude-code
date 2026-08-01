@@ -40,25 +40,40 @@ import {
 // Lives in the shared lib because both renderers draw the same gauge.
 import { effortGauge } from "../lib/statusline-ansi.mts";
 import { type FinishedAgent } from "../lib/subagent-history.mts";
+import { loadPalette } from "../lib/terminal-theme.mts";
 
-// Written out literally rather than imported, so a change to the shared ANSI
-// helper cannot silently move the colors this line is specified to emit.
+// Resolved from the palette rather than written out as literal escapes. These
+// were literals until the colors became scheme-derived, on the reasoning that a
+// change to the shared ANSI helper should not silently move them — but the whole
+// point now is that they move with the terminal's color scheme, so pinning the
+// bytes would only assert whichever scheme the machine running the tests happens
+// to use. What still has to hold is that each field draws the *semantic* color it
+// is specified to, and that is what comparing against the palette checks.
+const PALETTE = loadPalette();
+
 const RESET = "\x1b[0m";
-const GRAY = "\x1b[38;5;245m";
-const WHITE = "\x1b[38;5;255m";
-const DIM = "\x1b[38;5;240m";
-const ACCENT = "\x1b[38;5;74m";
-const BAR_EMPTY = "\x1b[38;5;238m";
-const WARN = "\x1b[38;5;203m";
-const YELLOW = "\x1b[38;5;220m";
-const ORANGE = "\x1b[38;5;208m";
-const RED = "\x1b[38;5;196m";
-const ADD = "\x1b[38;5;71m";
-const DEL = "\x1b[38;5;167m";
-const LOCAL = "\x1b[38;5;180m";
-const DRAFT = "\x1b[38;5;180m";
-const SESSION = "\x1b[1m\x1b[38;5;213m";
-const MR = "\x1b[38;5;74m";
+const GRAY = PALETTE.gray;
+const WHITE = PALETTE.white;
+const DIM = PALETTE.dim;
+const ACCENT = PALETTE.accent;
+const BAR_EMPTY = PALETTE.barEmpty;
+const WARN = PALETTE.warn;
+const YELLOW = PALETTE.contextYellow;
+const ORANGE = PALETTE.contextOrange;
+const RED = PALETTE.contextRed;
+const ADD = PALETTE.add;
+const DEL = PALETTE.del;
+const LOCAL = PALETTE.local;
+const DRAFT = PALETTE.local;
+const SESSION = `\x1b[1m${PALETTE.session}`;
+const MR = PALETTE.mr;
+
+/**
+ * The color a line opens with. Slicing a fixed number of characters worked while
+ * every color was `ESC[38;5;Nm`, but truecolor escapes vary in length with their
+ * channel values, so the sequence has to be matched rather than counted.
+ */
+const leadingColor = (line: string): string => /^\x1b\[[0-9;]*m/.exec(line)?.[0] ?? "";
 
 const UNIT_SEPARATOR = "\x1f";
 const NOW = 1_700_000_000;
@@ -737,10 +752,12 @@ describe("buildBranchStateLine", () => {
 });
 
 describe("buildSubagentLine", () => {
-    const RED = "\x1b[38;5;196m";
-    const YELLOW = "\x1b[38;5;220m";
-    const AMBER = "\x1b[38;5;214m";
-    const GREEN = "\x1b[38;5;71m";
+    // Same reasoning as the palette constants at the top of this file: these are
+    // the panel's own hues, and they follow the terminal's color scheme now.
+    const RED = PALETTE.contextRed;
+    const YELLOW = PALETTE.contextYellow;
+    const AMBER = PALETTE.amber;
+    const GREEN = PALETTE.add;
 
     function group(label: string, count = 1, extra: { tokens?: number; drifted?: boolean } = {}) {
         return { label, count, tokens: extra.tokens ?? 0, drifted: extra.drifted ?? false };
@@ -906,7 +923,7 @@ describe("buildUsageLine", () => {
 
     it("escalates the context color at exactly 100000, 140000 and 180000 tokens", () => {
         const colorFor = (tokens: string) =>
-            buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1" }).slice(0, GRAY.length);
+            leadingColor(buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1" }));
         expect(colorFor("99999")).toBe(GRAY);
         expect(colorFor("100000")).toBe(YELLOW);
         expect(colorFor("139999")).toBe(YELLOW);
@@ -917,7 +934,7 @@ describe("buildUsageLine", () => {
 
     it("moves the escalation with the compaction limit rather than the model window", () => {
         const colorFor = (tokens: string, compactLimit: number) =>
-            buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1", compactLimit }).slice(0, GRAY.length);
+            leadingColor(buildUsageLine({ ...empty, sessionTokensIn: tokens, tokensK: "1", compactLimit }));
         // A 400k limit puts the same fractions at 200k / 280k / 360k.
         expect(colorFor("180000", 400000)).toBe(GRAY);
         expect(colorFor("200000", 400000)).toBe(YELLOW);

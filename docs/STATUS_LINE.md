@@ -17,12 +17,14 @@ The README carries only the feature overview; every design decision and mechanic
   worktree half of `project/worktree`, because that is the actual location.
 - **The first line is account · title · id** — whose session, what it is about, how to refer to
   it — so switching between a Personal and a Work terminal is answered before anything else.
-- **The account is a color, not a background.** Tinting the whole bar per account was built and
-  then removed: the script supplies text to Claude Code, which owns the frame around it, so the
-  fill can never reach the window edges. It stops at the last character of each row, leaves
-  Claude Code's own left indent uncovered, and shares line one with the right-aligned queued-command
-  hint. A ragged block behind ragged rows reads worse than no block, and per-account terminal
-  backgrounds belong to the terminal profile instead.
+- **The account is a color on the bar and the background of the pane.** Tinting the bar's own
+  rows per account was built and then removed: the script supplies text to Claude Code, which owns
+  the frame around it, so the fill can never reach the window edges. It stops at the last character
+  of each row, leaves Claude Code's own left indent uncovered, and shares line one with the
+  right-aligned queued-command hint — a ragged block behind ragged rows reads worse than no block.
+  The pane background is a different mechanism and does work: `cc`/`ccw` emit OSC 11 before
+  launching, so the *terminal* carries the account and the bar only has to name it. See
+  "Account background" below.
 - **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance where `<high>` had to be
   parsed; five slots for the five levels `low medium high xhigh max`, and anything unrecognized
   falls back to the old `<level>` spelling.
@@ -31,10 +33,11 @@ The README carries only the feature overview; every design decision and mechanic
   "how much do I trust the number beside me" or "what is the running total"; coloring them coral
   trains the eye to ignore coral everywhere else. The one exception is a quota cache old enough
   that the percentages themselves are wrong.
-- **The session name is the only field with weight.** Bold magenta `fg(213)`, where every other
+- **The session name is the only field with weight.** Bold magenta, where every other
   rank on the bar is hue alone. It is the title of the thing you are looking at, so it is found
-  before anything else is read. It was lavender `fg(141)`, which sat close enough to the panel's
-  `max` effort purple that neither read as a heading.
+  before anything else is read. It was a lavender that sat close enough to the panel's `max`
+  effort purple that neither read as a heading; it is now the scheme's own bright purple lifted
+  toward white, which keeps the separation on any scheme.
 - A row with nothing to say is dropped rather than emitted blank — outside a repo the branch
   state has no content at all, so the rows below it move up.
 
@@ -527,18 +530,22 @@ ones, `awk` for float formatting, `stat -c %Y` for cache mtimes, and manual `cur
 header/body splitting. The `0x1F` separator survives in the *on-disk cache formats* only,
 because existing caches use it.
 
-**Background fills do not work here — don't try again.** Two separate walls. First, `RESET` clears
-background as well as foreground, and every field on these rows closes itself with one, so a
-background armed at the start of a row dies at the first colored field; rewriting each `RESET` as
-`RESET + background` fixes that much. Second, and fatal: reaching the right margin needs
+**Background fills inside the payload do not work — don't try again.** Two separate walls. First,
+`RESET` clears background as well as foreground, and every field on these rows closes itself with
+one, so a background armed at the start of a row dies at the first colored field; rewriting each
+`RESET` as `RESET + background` fixes that much. Second, and fatal: reaching the right margin needs
 `\x1b[K`, the payload carries no terminal width to pad against instead, and Claude Code strips the
 erase before the row reaches the terminal — colors survive that pass, other CSI sequences do not.
 Even a working fill would be inset, because Claude Code indents the bar and right-aligns its own
-hints on line one. Foreground color is the only lever this script has.
+hints on line one. Foreground color is the only lever *this script* has.
 
-`scripts/lib/statusline-ansi.mts` holds the small shared surface: the 256-color escape helper,
-`BOLD`, the five-slot effort gauge both renderers draw, stdin reading, best-effort cache reads,
-the cache-key sanitizer, and the integer guard
+That limit is about the status-line payload, not about the pane. Painting the whole window
+background does work — it just has to be done from the launch site instead, which is what
+"Account background" below describes.
+
+`scripts/lib/statusline-ansi.mts` holds the small shared surface: `RESET` and `BOLD`, the
+five-slot effort gauge both renderers draw, stdin reading, best-effort cache reads, the cache-key
+sanitizer, and the integer guard
 that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That predicate rejects negatives, decimals, empty
 strings and `"null"` — it stays because nearly every numeric field is gated on it, and a looser
 check would start rendering values the old line silently dropped.
@@ -566,6 +573,87 @@ The bash originals live in `deprecated/scripts/` (`status-line.sh`, `subagent-st
 kept as the byte-parity reference the port was validated against, archived once the renderers
 diverged deliberately. `status-line-mr-refresh.sh` is **not** deprecated — it is still the
 detached child that refreshes MR/PR data.
+
+## Account background
+
+Personal and work sessions run side by side in the same Windows Terminal, and the bar naming the
+account was not enough — the question "which account is this" gets asked from across the room. The
+pane background answers it.
+
+`cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call `scripts/account-color.mts` before handing off to
+`claude`, and an `EXIT` trap calls it again with `reset` so the profile's own colors come back
+however the session ends, Ctrl-C included. The tints live in `statusline-accounts.json`: personal
+`#0c2e16` (green), work `#3a1f00` (amber).
+
+- **OSC 11 sets the background, OSC 12 the cursor**; `reset` sends OSC 111/112. Verified against
+  Windows Terminal 1.24: OSC 11 writes color-table index 262 and repoints the `DefaultBackground`
+  alias, so a profile's configured `background` only *seeds* that value at startup and this
+  overrides it. The 25 per-profile `background` keys were deleted from Windows Terminal's
+  settings.json once this worked — they now have nothing to say.
+- **`unfocusedAppearance` and `useBackgroundImageForWindow` would each undo it** on focus change
+  or repaint. Neither is set on any profile here. A settings.json reload also resets the pane;
+  starting a shell restores it.
+- **One sequence per `write`.** Emitting OSC 11 and OSC 12 as a single concatenated string makes
+  Windows Terminal drop the background sequence — the cursor still changes, so the failure looks
+  like OSC 11 being unsupported rather than a framing problem. Split into two `process.stdout.write`
+  calls, both are honored. Measured, not inferred: screenshots of the pane after each writer put the
+  background at `#0c0c0c` for the concatenated form and `#0c2e16` for the split one, 95% of pixels.
+  This cost a long debugging session, because the symptom is indistinguishable from the terminal
+  ignoring the sequence outright.
+- **Node writes it, not `printf`.** Git Bash's MSYS2 layer runs its own console translation and
+  silently drops the OSC sequences it does not recognise — OSC 0 (window title) survives, OSC 11
+  does not. Confirmed by having bash, node and PowerShell write the same sequence to the same
+  pane: only bash's was swallowed. A native-Windows writer bypasses that layer.
+- **Not a Claude Code hook.** `SessionStart` hook stdout is captured and fed to the model as
+  context, so it never reaches the terminal. The launch site is the only place that both knows the
+  account and owns the tty.
+- **Tab color stays free.** 14 profiles set `tabColor`, which beats VT, so the tab keeps meaning
+  *project* while the background means *account* — two identities, no collision.
+- **Failures are loud, success is silent.** A tint that cannot be applied must never stop Claude
+  Code from starting, so nothing here throws — but an unreadable accounts file or an unknown
+  account name prints to stderr. An earlier blanket `catch` made those cases look identical to a
+  terminal ignoring the sequence. `--verbose` reports the colors sent and whether stdout is a tty.
+
+## The derived palette
+
+Palette indices 16–255 are constants: a color scheme only remaps 0–15, so a bar painted in
+`fg(74)`/`fg(245)`/`fg(240)` rendered identically whichever scheme Windows Terminal was set to,
+and rendered wrong on a light one because those greys were picked by eye against a dark
+background. `scripts/lib/terminal-theme.mts` reads the scheme and emits 24-bit color instead, so
+all 24 tones are *derived* from that scheme's own colors.
+
+- **Which background it derives against** is whatever is actually on screen. The launchers export
+  `CLAUDE_PANE_ACCOUNT`, which is the only evidence an OSC 11 was emitted at all; with it the
+  account tint is the reference, without it (a bare `claude`) the scheme's own background is.
+  Guessing the tint unconditionally would derive the whole palette against a background the pane
+  is not showing.
+- **The scheme is resolved** from `WT_PROFILE_ID` → that profile's `colorScheme` →
+  `profiles.defaults.colorScheme` → `Campbell`. Windows Terminal's settings.json is JSONC — it
+  writes `//` comments and leaves trailing commas behind — so it is parsed by a string-aware
+  stripper rather than `JSON.parse`, because a `//` inside a `startingDirectory` is data.
+- **The built-in schemes are vendored** into `statusline-schemes.json` rather than read from the
+  installed `defaults.json`: that file sits under a version-stamped WindowsApps directory whose
+  parent cannot be listed, and locating it costs a PowerShell process on every render tick.
+  User-defined schemes in settings.json still win, matching Windows Terminal's own precedence.
+- **The neutrals are blends, not literals.** `gray`/`dim`/`barEmpty` mix the scheme's foreground
+  toward the background at 0.35/0.62/0.72 — factors pinned to reproduce the old fixed indices on
+  Campbell, so nothing about the default look changed while every other scheme now gets the same
+  *relationships* instead of those literal greys.
+- **A contrast floor keeps scheme colors legible** on a background the scheme did not choose.
+  Campbell's red `#C50F1F` is the worked example: fine on its near-black default, 2.4:1 against
+  the account tints. Anything under 4.5:1 is walked toward a lift color by binary search; the lift
+  follows the background, which is also what inverts the palette on a light scheme. `white` is
+  held to 7:1 so it stays visibly ahead of `gray` — on a light scheme both would otherwise clamp
+  to 4.5 and land on the same color. `dim` and `barEmpty` are exempt: they are meant to recede.
+- **Two colors are mixed, not taken.** No scheme ships a true orange, so the context ramp's middle
+  step is `mix(yellow, red, 0.5)` — built on plain `yellow`, because several schemes (Campbell
+  included) make `brightYellow` a pale cream and mixing cream toward red gives salmon, which reads
+  softer than the yellow before it rather than harsher. `warn` and the ramp's top are both red and
+  are separated by lightness off `brightRed`; deriving both from `red` puts the floor to work on
+  each and lands them on the same washed pink.
+
+Resolution costs **~1.6 ms** and is memoized per process, which is safe because the process is torn
+down every render tick — a scheme change shows up on the very next one.
 
 ## Glyph vocabulary
 
@@ -641,6 +729,8 @@ two it drops.
 terminal shows the wrong colors: `node` writing to a Windows TTY sends its escapes through
 libuv's ANSI translation, which approximates everything to the 16-color palette — `#005f5f` comes
 out bright blue, `#875f00` comes out red, and only the 232-255 grayscale ramp survives intact.
+Now that the palette is derived 24-bit color, that collapse hides nearly every distinction the
+`terminal-theme.mts` contrast work exists to create, so previewing this way is worse than useless.
 Piping to `cat` should bypass it but Git Bash wraps `node` in `winpty`, which refuses a piped
 stdout (`stdout is not a tty`). Redirect to a file and `cat` that file instead: the redirect keeps
 libuv out, and `cat` hands raw bytes to Windows Terminal, which parses them itself. Claude Code
