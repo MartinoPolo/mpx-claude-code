@@ -157,6 +157,7 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under 
 | `/mp-symlink`            | Windows symlinks/junctions the way that works in Claude Code          |
 | `/mp-clean-pc`           | Full-disk cleanup sweep — ranked dashboard, quarantine over delete    |
 | `/mp-raycast-config`     | Decrypt, audit and rewrite Raycast quicklinks, aliases and hotkeys    |
+| `/mp-project-register`   | One colour → Windows Terminal profile, icon, Peacock, ports, quicklinks |
 
 ### Content generators
 
