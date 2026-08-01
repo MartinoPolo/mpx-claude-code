@@ -211,6 +211,7 @@ Configured via `settings.json`; auto-detect the project toolchain (`vite-plus` |
 | `fallow-gate.js`             | PreToolUse (Bash)        | Blocks commit/push when the fallow audit verdict is fail           |
 | `format-lint-file.js`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files                                |
 | `post-bash-context.js`       | PostToolUse (Bash)       | Enriches context after bash commands                               |
+| `compact-instructions.js`    | PreCompact (*)           | Appends the `## Compact instructions` section of `instructions/AGENTS.md` to the compaction prompt |
 | `notify-flash-beep.ps1`      | Stop                     | Flashes taskbar + notification sound (custom: `~/.claude/sounds/notify.wav`) |
 | `herdr-agent-state.ps1`      | SessionStart (*)         | Reports session state to herdr (no-op unless `HERDR_ENV=1`)        |
 | `machine-paths.js`           | SessionStart (*)         | Surfaces the machine-root `MPX_*` environment variables into session context |

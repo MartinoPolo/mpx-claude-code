@@ -59,6 +59,9 @@ Conventional commits.
 On errors or workflow friction: fix the immediate issue, then propose a rule for this file or
 memory — describe the friction and the proposed rule, and ask before writing it.
 
+<!-- Body read verbatim by the compact-instructions.js PreCompact hook and appended to the
+     compaction prompt — keep the heading below exactly as `## Compact instructions`. -->
+
 ## Compact instructions
 
 Keep the standard sections, and add:
