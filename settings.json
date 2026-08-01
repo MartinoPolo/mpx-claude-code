@@ -129,6 +129,7 @@
   "autoCompactWindow": 233000,
   "autoUpdatesChannel": "stable",
   "minimumVersion": "2.1.220",
+  "tui": "fullscreen",
   "voice": {
     "enabled": true,
     "mode": "hold"
