@@ -22,8 +22,8 @@ decides whether the image is usable. The entry describes *body geometry*, not co
 "One foot forward, opposite hand on the ground, other arm up" is drawable. "Keep your spine
 long and breathe into the stretch" is not — an image model given a coaching cue draws a
 person standing still. The extraction step therefore keeps the drawing instructions apart
-from the coaching text: the poses go in the prompt, `formCue` goes in the markdown table
-where a human reads it.
+from the coaching text: the poses go in the prompt body, `formCue` goes in the restatement
+table below it.
 
 **A single drawn position is not enough.** An exercise travels, and one frozen figure cannot
 tell a Cossack Squat from a lateral lunge, or a bear crawl from a plank. Each entry therefore
@@ -53,18 +53,23 @@ and for the denser grid:
 
 > modern, visually pleasing, flat vector art with a cohesive color palette
 
-**4. The exact text, restated verbatim.** Both prompts end by repeating the source material
-in full — "For your reference, here are the 5 exercises shown in the video", "these are the
-exact points:". Without it the model paraphrases labels; with it, the labels on the sheet
-match the video. Restating costs nothing and is the difference between a decorative poster
-and one that can be trained from.
+**4. The exact text, restated verbatim.** Both hand-written prompts end by repeating the
+source material in full. Without it the model paraphrases labels; with it, the labels on the
+sheet match the source. `prompt.md` carries that restatement as one markdown table per section
+rather than a trailing paragraph — pasting the tables alongside the prompt produced a visibly
+better image than the prompt alone, because the exact names, amounts and cues stay legible to
+the model. Restating costs nothing and is the difference between a decorative poster and one
+that can be trained from.
 
 ## Layout follows item count
 
 | Items | Shape | Figures per item | Per-item text |
-| ------- | ------------------------------------------- | ------------------------ | ------------------------- |
-| Up to 8 | A single row or two rows of numbered panels | Two, plus the arrow | Full name plus the amount |
+| ------- | ------------------------------------------- | ------------------------ | ---------------------------------------- |
+| Up to 8 | A single row or two rows of numbered panels | Two, plus the arrow | Full name, plus an amount only if stated |
 | Over 8 | A grid of small icon tiles | One, the end position | 2-5 words |
+
+An amount reaches the prompt only when the video prescribed one; see
+[`EXERCISE.md`](EXERCISE.md) for why an invented amount is worse than none.
 
 A tile has no room for a second figure, so past the panel limit the end position carries the
 drawing and the arrow alone keeps the direction readable.
@@ -130,7 +135,9 @@ simply left out.
 - Panels are grouped into rows only when a section actually holds several items; a video that
   titles each item separately needs no grouping line
 - The style block survived any editing
-- The verbatim restatement is still at the end
+- The restatement tables are still under the prompt, one per section, lead-in printed once
+- Nothing in the file mentions a video, a source or what the user does with the image — the
+  whole file is pasted, so anything in it is something the image model reads
 
 Exercise mode adds its own checks — the two positions and the arrow clause — in
 [`EXERCISE.md`](EXERCISE.md).

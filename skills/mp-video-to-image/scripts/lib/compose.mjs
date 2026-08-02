@@ -28,6 +28,9 @@ const FOLDER_NAME_LIMIT = 120;
 
 function sanitizeFolderName(name) {
   const cleaned = name
+    // YouTube titles carry curly apostrophes, which break the file:// links the report
+    // renders; the straight apostrophe survives both Windows and markdown links.
+    .replace(/[‘’]/g, "'")
     .replace(WINDOWS_ILLEGAL_CHARACTERS, " ")
     .replace(/\s+/g, " ")
     .trim()
@@ -140,14 +143,9 @@ const EXERCISE_ITEM_SCHEMA = {
     "movementDirection",
     "formCue",
   ],
-  required: [
-    "name",
-    "amount",
-    "startPose",
-    "endPose",
-    "movementDirection",
-    "formCue",
-  ],
+  // amount is deliberately absent: a required string is a string the model fills, and what it
+  // fills a prescriptionless exercise with is "1 rep" or the demo clip's length.
+  required: ["name", "startPose", "endPose", "movementDirection", "formCue"],
   properties: {
     name: { type: "string" },
     amount: { type: "string" },
@@ -173,7 +171,8 @@ const EXERCISE_INSTRUCTION = [
   "Watch this workout video and transcribe every exercise demonstrated, in the order performed.",
   "Give the video a short title and a one-sentence summary.",
   "Group the exercises into the sections the video itself uses (warm-up, circuits, cool-down); use a single section when the video has none.",
-  "Write amount as sets and reps when the video states them (for example 3 x 12 reps) and as a duration otherwise (for example 45 seconds).",
+  "Write amount only for a prescription the video actually states: sets and reps (for example 3 x 12 reps), a duration to hold or work for (for example 45 seconds), or a frequency (for example twice a day).",
+  "Leave amount empty whenever the video prescribes nothing — a setup step, a demonstration of a mistake, a movement shown once, or 'hold it as long as you like'. Never invent an amount, never write a filler such as '1 set', '1 rep' or 'as needed', and never use how long the exercise happens to be demonstrated on screen as its amount.",
   "An exercise travels between two positions, so describe both. Write startPose and endPose as clauses completing the sentence 'A person ...', each describing only the visible body position an illustrator could draw from, for example 'standing tall with feet together and arms at their sides' and 'in a deep side lunge with one leg straight and the toes pointed up'.",
   "For a static hold, write startPose as the entry position and endPose as the held position.",
   "Write movementDirection as a short phrase completing the sentence 'an arrow ...', naming only the path the body travels between those two positions, for example 'sweeping down and out to the left hip' or 'pointing straight down through the hips'; leave the word arrow out of it.",
@@ -205,9 +204,19 @@ function escapeTableCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|");
 }
 
+function readAmount(exercise) {
+  return String(exercise?.amount ?? "").trim();
+}
+
+// An exercise the video never prescribed carries no amount, and printing empty parentheses
+// after its name reads as a prescription the video never made.
 function describeAmount(exercise) {
-  const amount = String(exercise.amount ?? "").trim();
+  const amount = readAmount(exercise);
   return amount ? ` (${amount})` : "";
+}
+
+function hasAnyAmount(exercises) {
+  return exercises.some((exercise) => readAmount(exercise));
 }
 
 // The arrow noun lives here rather than in the model's output: asked for an arrow, the model
@@ -230,14 +239,24 @@ function describeVisual(point) {
 const SHEET_MODES = {
   exercise: {
     itemsKey: "exercises",
-    itemNoun: "exercises",
     schema: sheetSchema("exercises", EXERCISE_ITEM_SCHEMA),
     instruction: EXERCISE_INSTRUCTION,
     styleBlock: EXERCISE_STYLE_BLOCK,
-    tableHeader: ["Exercise", "Amount", "Form cue"],
-    tableRow: (exercise) => [exercise.name, exercise.amount, exercise.formCue],
+    tableLeadIn:
+      "For reference, the exercises restated exactly — use these names verbatim as the labels.",
+    // A sheet where no exercise was prescribed anything would print a column of blanks, so
+    // the Amount column only appears when at least one exercise carries one.
+    columns: [
+      { header: "Exercise", cell: (exercise) => exercise.name },
+      {
+        header: "Amount",
+        cell: (exercise) => exercise.amount,
+        include: hasAnyAmount,
+      },
+      { header: "Form cue", cell: (exercise) => exercise.formCue },
+    ],
     emptyPromptNote:
-      "No exercises were extracted from the video, so there is nothing to illustrate yet.",
+      "No exercises were extracted, so there is nothing to illustrate yet.",
     openingSentence: (sheet, count) =>
       `A clean, ${count}-panel fitness infographic titled "${sheet.title}". ` +
       `Every panel shows the same exercise twice — its start position and its end position — with an arrow between them.`,
@@ -262,26 +281,28 @@ const SHEET_MODES = {
       const arrow = describeArrow(exercise);
       return `${index + 1}. ${exercise.name}${describeAmount(exercise)} — a figure ${exercise.endPose}${arrow ? `, with ${arrow}` : ""}.`;
     },
-    performerLead:
-      "Draw the same person in every panel, matching the presenter in the video",
-    panelCaption:
-      "Number each panel and label it with the exercise name and its amount.",
-    referenceEntry: (exercise) =>
-      `${exercise.name}${describeAmount(exercise)}: ${exercise.formCue}`,
+    performerLead: "Draw the same person in every panel",
+    panelCaption: (exercises) =>
+      hasAnyAmount(exercises)
+        ? "Number each panel and label it with the exercise name and its amount where one is given."
+        : "Number each panel and label it with the exercise name.",
   },
   generic: {
     itemsKey: "points",
-    itemNoun: "points",
     schema: sheetSchema("points", POINT_ITEM_SCHEMA),
     instruction: GENERIC_INSTRUCTION,
     styleBlock: GENERIC_STYLE_BLOCK,
-    tableHeader: ["Point", "Detail"],
-    tableRow: (point) => [point.label, point.detail],
+    tableLeadIn:
+      "For reference, the points restated exactly — use these labels verbatim.",
+    columns: [
+      { header: "Point", cell: (point) => point.label },
+      { header: "Detail", cell: (point) => point.detail },
+    ],
     emptyPromptNote:
-      "No points were extracted from the video, so there is nothing to illustrate yet.",
+      "No points were extracted, so there is nothing to illustrate yet.",
     openingSentence: (sheet, count) =>
       `A clean, ${count}-panel infographic titled "${sheet.title}". ` +
-      `Every panel illustrates one point from the video and carries its label underneath.`,
+      `Every panel illustrates one point and carries its label underneath.`,
     gridOpeningSentence: (sheet, count) =>
       `A highly organized infographic titled "${sheet.title}" displaying ${count} points in a grid. ` +
       `Each tile features a minimalist, colorful icon of the point paired with a very short 2-5 word label underneath it.`,
@@ -290,9 +311,8 @@ const SHEET_MODES = {
     gridEntry: (point, index) =>
       `${index + 1}. ${point.label} — an illustration of ${describeVisual(point)}.`,
     performerLead:
-      "Wherever a panel shows a person, draw the same person throughout, matching the presenter in the video",
-    panelCaption: "Number each panel and label it with the point's name.",
-    referenceEntry: (point) => `${point.label}: ${point.detail}`,
+      "Wherever a panel shows a person, draw the same person throughout",
+    panelCaption: () => "Number each panel and label it with the point's name.",
   },
 };
 
@@ -383,44 +403,40 @@ export function composePerformerSentence(sheet, mode) {
   return sentences.join(" ");
 }
 
-function renderPerformerBlock(sheet) {
-  const { build, hair, clothing, setting } = performerFields(sheet);
-  const rows = [
-    ["Build", build],
-    ["Hair", hair],
-    ["Clothing", clothing],
-    ["Setting", setting],
-  ].filter(([, value]) => value);
-  if (rows.length === 0) return [];
-
-  return [
-    "## On screen",
-    "",
-    "| Trait | Description |",
-    "| --- | --- |",
-    ...rows.map(
-      ([trait, value]) => `| ${trait} | ${escapeTableCell(value)} |`,
-    ),
-    "",
-  ];
+/**
+ * The columns this sheet's tables actually carry: a column whose `include` predicate rejects
+ * the sheet's items is dropped everywhere, so every section's table has the same shape.
+ */
+function visibleColumns(descriptor, items) {
+  return descriptor.columns.filter(
+    (column) => !column.include || column.include(items),
+  );
 }
 
-export function renderSheetTable(sheet, mode) {
+/**
+ * One markdown table per section, restating the items verbatim. The tables are what stop the
+ * image model paraphrasing the labels, so they belong in the pasted document rather than in a
+ * separate human-only file.
+ */
+export function renderSectionTables(sheet, mode) {
   const descriptor = resolveMode(mode);
-  const lines = [`# ${sheet?.title ?? "Video Sheet"}`, ""];
-  const summary = String(sheet?.summary ?? "").trim();
-  if (summary) lines.push(summary, "");
-  lines.push(...renderPerformerBlock(sheet));
+  const columns = visibleColumns(descriptor, everyItem(sheet, descriptor));
+  const headerRow = `| ${columns.map((column) => column.header).join(" | ")} |`;
+  const dividerRow = `| ${columns.map(() => "---").join(" | ")} |`;
 
-  const headerRow = `| ${descriptor.tableHeader.join(" | ")} |`;
-  const dividerRow = `| ${descriptor.tableHeader.map(() => "---").join(" | ")} |`;
-
+  const lines = [];
+  let leadInPrinted = false;
   for (const section of sheet?.sections ?? []) {
     lines.push(`## ${section.name}`, "");
+    // The lead-in explains every table that follows, so it is printed once.
+    if (!leadInPrinted) {
+      lines.push(descriptor.tableLeadIn, "");
+      leadInPrinted = true;
+    }
     lines.push(headerRow, dividerRow);
     for (const item of section[descriptor.itemsKey] ?? []) {
       lines.push(
-        `| ${descriptor.tableRow(item).map(escapeTableCell).join(" | ")} |`,
+        `| ${columns.map((column) => escapeTableCell(column.cell(item))).join(" | ")} |`,
       );
     }
     lines.push("");
@@ -430,20 +446,17 @@ export function renderSheetTable(sheet, mode) {
 }
 
 /**
- * The single deliverable: the table a human reads and the prompt they paste, in one file.
- * The prompt is fenced so a copy button yields the prompt alone, unmixed with the table.
+ * The single deliverable, `prompt.md`: a document whose entire content is safe to paste into
+ * an image model. Everything about where the material came from lives outside this file —
+ * the image model is told what to draw and nothing else.
  */
-export function renderSheetDocument(sheet, mode) {
+export function renderPromptDocument(sheet, mode) {
+  const tables = renderSectionTables(sheet, mode).trimEnd();
   return [
-    renderSheetTable(sheet, mode).trim(),
+    `# ${sheet?.title ?? "Sheet"}`,
     "",
-    "## Image prompt",
-    "",
-    "Paste this into ChatGPT to generate the sheet image.",
-    "",
-    "```",
     composeImagePrompt(sheet, mode),
-    "```",
+    ...(tables ? ["", tables] : []),
     "",
   ].join("\n");
 }
@@ -469,7 +482,7 @@ function composePanelPrompt(sheet, descriptor, items, performerSentence) {
     descriptor.openingSentence(sheet, items.length),
     panels.join(" "),
     performerSentence,
-    `${descriptor.styleBlock} ${descriptor.panelCaption}${grouping}`,
+    `${descriptor.styleBlock} ${descriptor.panelCaption(items)}${grouping}`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -501,14 +514,9 @@ export function composeImagePrompt(sheet, mode) {
     ].join(" ");
   }
 
-  const body =
-    items.length <= PANEL_LAYOUT_LIMIT
-      ? composePanelPrompt(sheet, descriptor, items, performerSentence)
-      : composeGridPrompt(sheet, descriptor, items, performerSentence);
-
-  // Restating the source verbatim is what stops the model paraphrasing the labels;
-  // reference/PROMPT_STYLE.md records the two prompts this was taken from.
-  const reference = items.map(descriptor.referenceEntry).join(" ");
-
-  return `${body}\n\nFor your reference, here are the ${items.length} ${descriptor.itemNoun} shown in the video: ${reference}`;
+  // The verbatim restatement that keeps labels unparaphrased lives in the section tables
+  // renderPromptDocument appends, so the body ends here.
+  return items.length <= PANEL_LAYOUT_LIMIT
+    ? composePanelPrompt(sheet, descriptor, items, performerSentence)
+    : composeGridPrompt(sheet, descriptor, items, performerSentence);
 }

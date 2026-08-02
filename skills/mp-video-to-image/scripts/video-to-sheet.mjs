@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Reads a YouTube video with the Gemini API and writes a sheet table plus an image prompt.
+ * Reads a YouTube video with the Gemini API and writes the run's single prompt.md.
  * Every decision this file makes is I/O; the composing lives in lib/compose.mjs.
  */
 import { mkdir, writeFile } from "node:fs/promises";
@@ -12,8 +12,7 @@ import {
   assertApiKey,
   describeApiError,
   buildExtractionRequest,
-  renderSheetDocument,
-  composeImagePrompt,
+  renderPromptDocument,
   countItems,
   resolveMode,
 } from "./lib/compose.mjs";
@@ -239,13 +238,10 @@ async function main() {
   );
   await mkdir(outputDirectory, { recursive: true });
 
-  const sheetFile = path.join(outputDirectory, `${slug}.md`);
-  await writeFile(sheetFile, renderSheetDocument(sheet, options.mode), "utf8");
-
-  // The prompt is a file of its own as well as a fenced block in the sheet, so the user can
-  // copy it whole without picking it out of the table.
-  const promptFile = path.join(outputDirectory, "prompt.txt");
-  await writeFile(promptFile, composeImagePrompt(sheet, options.mode), "utf8");
+  // One file, pasted whole: every line in it is material the image model should read, so a
+  // fixed name keeps the deliverable obvious in a folder that also holds the saved image.
+  const promptFile = path.join(outputDirectory, "prompt.md");
+  await writeFile(promptFile, renderPromptDocument(sheet, options.mode), "utf8");
 
   console.log(
     JSON.stringify({
@@ -257,7 +253,6 @@ async function main() {
       channel: videoMetadata?.channel ?? "",
       mode: options.mode,
       itemCount: countItems(sheet, options.mode),
-      sheetFile,
       promptFile,
       promptTokenCount: responseBody?.usageMetadata?.promptTokenCount ?? 0,
     }),

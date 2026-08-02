@@ -6,8 +6,8 @@ daily video quota reached, a rate limit that outlasts a retry, or a video Gemini
 machine's own copy of the video, then hands back to the normal prompt-composition step.
 
 The deliverable is identical: `$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`
-holding `<slug>.md` and `prompt.txt`, with the same columns the chosen mode produces, in the
-video's own order.
+holding a single `prompt.md`, with the same columns the chosen mode produces, in the video's
+own order.
 
 ## Step 1: Subtitles first
 
@@ -74,9 +74,9 @@ generic:  { title, summary, performer, sections: [ { name, points:    [ { label,
 show and omitting any field they do not; leave it out entirely when nobody appears.
 
 Hold to the rules the Gemini prompt uses: every item in the video's own order, drawing fields
-describing visible geometry in the third person, `amount` as sets and reps when the presenter
-states them and a duration otherwise, and prose fields drawn from what the frames and
-captions actually show.
+describing visible geometry in the third person, `amount` filled only with a prescription the
+video actually states and left empty otherwise — never the length of the demonstration — and
+prose fields drawn from what the frames and captions actually show.
 
 ## Step 4: Rejoin the main path
 
@@ -105,8 +105,7 @@ Create that folder, then render into it:
 node -e "import('${CLAUDE_SKILL_DIR}/scripts/lib/compose.mjs').then(async m => { \
   const fs = require('fs'); const mode = '<mode>'; \
   const sheet = JSON.parse(fs.readFileSync('<scratchpad>/<slug>.json','utf8')); \
-  fs.writeFileSync('<out>/<slug>.md', m.renderSheetDocument(sheet, mode)); \
-  fs.writeFileSync('<out>/prompt.txt', m.composeImagePrompt(sheet, mode)); })"
+  fs.writeFileSync('<out>/prompt.md', m.renderPromptDocument(sheet, mode)); })"
 ```
 
 Then hand off exactly as Step 5 of SKILL.md describes — links in the report, no clipboard and

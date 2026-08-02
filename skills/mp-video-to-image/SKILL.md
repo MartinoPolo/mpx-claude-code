@@ -6,7 +6,7 @@ argument-hint: "<youtube-url> [focus instructions] [--mode exercise|generic] [--
 allowed-tools: Read, Write, Bash(node *), Bash(yt-dlp*), Bash(ffmpeg*)
 metadata:
   author: MartinoPolo
-  version: "0.6"
+  version: "0.7"
   category: utility
 ---
 
@@ -48,8 +48,8 @@ Gemini verbatim, so pass the user's own wording rather than a paraphrase.
 
 Resolve machine roots per [`../shared/EXPLORATION.md`](../shared/EXPLORATION.md) § "Paths
 outside the working directory". Every run gets its own folder,
-`$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`, holding `<slug>.md` and
-`prompt.txt`; the user saves the generated image there by hand. With neither
+`$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`, holding a single
+`prompt.md`; the user saves the generated image there by hand. With neither
 `MPX_AI_GENERATED` nor `MPX_ONEDRIVE` set the script stops and names the variable to set —
 pass `--out` to override it.
 
@@ -80,8 +80,9 @@ node ${CLAUDE_SKILL_DIR}/scripts/video-to-sheet.mjs "<youtube-url>" --mode <mode
 
 The script sends the URL to Gemini as a `file_uri` video part, so nothing downloads. It asks
 for structured JSON — a title, a one-sentence summary, a `performer` object, and sections of
-items whose shape the mode decides — then writes `<slug>.md` holding the table and the image
-prompt in a fenced block, and writes the same prompt to `prompt.txt`.
+items whose shape the mode decides — then writes one `prompt.md`: the composed image prompt
+followed by the items restated as tables. Every line of that file is written to be read by the
+image model, so it names no source and carries no instructions to the user.
 
 The script writes files and nothing else. It never touches the clipboard and never opens a
 browser tab — a tab appearing mid-run steals the focus of whoever is watching the terminal,
@@ -90,9 +91,9 @@ and the hand-off in Step 5 is a link the user follows when they are ready.
 **`performer` is what makes the sheet recognisable as this video's.** Gemini describes the
 person on screen — build, hair, clothing colours and type, and the setting — in neutral,
 drawable terms, describing only what is visible and omitting anything it cannot see. Those
-traits become one consistent-character sentence applied to every panel, and an "On screen"
-table in `<slug>.md` so the user can check them. A video with nobody on screen comes back
-with an empty `performer` and the sentence is simply omitted.
+traits become one consistent-character sentence applied to every panel, visible in `prompt.md`
+so the user can check them. A video with nobody on screen comes back with an empty `performer`
+and the sentence is simply omitted.
 
 A run that dies with a network error retries twice on its own — Gemini holds the connection
 open while it pulls the video, and that link drops often enough to matter.
@@ -105,7 +106,7 @@ full resolution.
 The script prints one JSON line on success:
 
 ```json
-{ "slug": "...", "folderName": "[Channel] Video Title", "title": "...", "videoTitle": "...", "channel": "...", "mode": "exercise", "itemCount": 12, "sheetFile": "...", "promptFile": "...", "promptTokenCount": 45033 }
+{ "slug": "...", "folderName": "[Channel] Video Title", "title": "...", "videoTitle": "...", "channel": "...", "mode": "exercise", "itemCount": 12, "promptFile": ".../prompt.md", "promptTokenCount": 45033 }
 ```
 
 `title` is Gemini's sheet header; `videoTitle` and `channel` are YouTube's own and name the
@@ -113,7 +114,7 @@ folder. Both come back empty when the oEmbed lookup failed, which is also what m
 `folderName` fall back to the slug — worth reporting, because the user then has a folder
 named unlike every other run.
 
-Read `<slug>.md` and check its table against the video's own description before moving on. A
+Read `prompt.md` and check its tables against the video's own description before moving on. A
 table that lost a section, or that reads as a summary rather than a list of items, is worth
 one retry with a sharper focus instruction.
 
@@ -128,8 +129,8 @@ that outlasts a retry, or a video Gemini cannot see because it is private or unl
 
 The prompt follows the shape that produced usable sheets in practice: an opening sentence
 naming the artifact and its item count, one numbered entry per item describing what is
-visible, the consistent-character sentence, a flat-vector style block, and the item list
-restated verbatim so the labels come back unparaphrased. Worked examples and the reasoning
+visible, the consistent-character sentence, a flat-vector style block, and the item tables
+restating the labels verbatim so they come back unparaphrased. Worked examples and the reasoning
 behind each part: [`reference/PROMPT_STYLE.md`](reference/PROMPT_STYLE.md), whose closing
 checklist is what to check a prompt against. Exercise mode adds its own checks in
 [`reference/EXERCISE.md`](reference/EXERCISE.md).
@@ -138,13 +139,16 @@ A prompt that generalises to "several mobility exercises" or "various tips" prod
 the user cannot use. Up to eight items render as numbered panels; past that the prompt
 switches to an icon grid.
 
-Reword the prompt when the video needs it. Edit `prompt.txt` in the run folder and mirror the
-edit into the fenced block in `<slug>.md`, so both copies stay the same text.
+Reword the prompt when the video needs it. Edit `prompt.md` in the run folder — it is the only
+copy. Keep the file free of anything the image model should not read: no mention of a source
+video, no instructions addressed to the user.
 
 ## Step 5: Hand off to ChatGPT
 
-End the report with a `file:///` link to `prompt.txt` and a plain link to
-<https://chatgpt.com/>, and say the prompt is copied and pasted by hand. Do not open the
+End the report with a `file:///` link to `prompt.md` and a plain link to
+<https://chatgpt.com/>, and say the **whole file** — prompt and tables — is copied and pasted
+by hand. Pasting the tables alongside the prompt produced a better image than the prompt
+alone, which is why the file holds nothing that should not be pasted. Do not open the
 browser and do not copy anything to the clipboard — the user opens the link when it suits
 them.
 
@@ -158,12 +162,12 @@ for the paid path that removes it.
 
 ## Step 6: Report
 
-- The run folder and the sheet as clickable `file:///` links
+- The run folder and `prompt.md` as clickable `file:///` links
 - The video's own title and channel, the mode that ran, and the item count the table holds,
   plus the fact that the folder fell back to the slug whenever `videoTitle` came back empty
 - Which path ran — Gemini video ingestion or the yt-dlp fallback — and the model used
 - The `performer` traits the sheet will draw, so the user can correct a wrong one
-- The `prompt.txt` link and the ChatGPT link, with the reminder to paste it by hand
+- The ChatGPT link, with the reminder to paste the whole of `prompt.md` by hand
 - Anything Gemini reported thinly, so the user knows which rows to check against the video
 
 ## Notes

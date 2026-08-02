@@ -5,8 +5,8 @@ import {
   assertApiKey,
   describeApiError,
   buildExtractionRequest,
-  renderSheetTable,
-  renderSheetDocument,
+  renderSectionTables,
+  renderPromptDocument,
   composeImagePrompt,
   composePerformerSentence,
   countItems,
@@ -76,6 +76,12 @@ describe("composeFolderName", () => {
     );
     expect(folder).not.toMatch(/[<>:"/\\|?*]/);
     expect(folder).toBe("[Ch an] Push Pull Legs Part 2 Full Guide");
+  });
+
+  it("straightens curly apostrophes, which break file:// links to the folder", () => {
+    expect(
+      composeFolderName({ title: "You Can’t Fix It (Here’s Why)" }, "slug"),
+    ).toBe("You Can't Fix It (Here's Why)");
   });
 
   it("collapses the whitespace a newline in the title would leave behind", () => {
@@ -264,6 +270,21 @@ describe("buildExtractionRequest", () => {
     expect(instruction).toMatch(/Omit any field you cannot see/i);
   });
 
+  it("forbids inventing an amount the video never prescribed", () => {
+    const instruction = textPartOf(buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" }));
+    expect(instruction).toMatch(/Leave amount empty/i);
+    expect(instruction).toMatch(/Never invent an amount/i);
+    expect(instruction).toMatch(/demonstrated on screen/i);
+  });
+
+  it("leaves amount optional so a prescriptionless exercise is not given a filler", () => {
+    const { responseSchema } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" })
+      .generationConfig;
+    expect(
+      responseSchema.properties.sections.items.properties.exercises.items.required,
+    ).not.toContain("amount");
+  });
+
   it("leaves performer optional so an absent presenter is not invented", () => {
     const { responseSchema } = buildExtractionRequest(YOUTUBE_URL, "", { mode: "exercise" })
       .generationConfig;
@@ -381,15 +402,23 @@ const GRID_SHEET = {
   ],
 };
 
+const NO_AMOUNT_SHEET = {
+  ...PANEL_SHEET,
+  sections: PANEL_SHEET.sections.map((section) => ({
+    ...section,
+    exercises: section.exercises.map(({ amount: _unused, ...exercise }) => exercise),
+  })),
+};
+
 const EMPTY_SHEET = { title: "Nothing Found", summary: "", sections: [] };
 
 function everyExercise(sheet) {
   return sheet.sections.flatMap((section) => section.exercises);
 }
 
-describe("renderSheetTable", () => {
+describe("renderSectionTables", () => {
   it("writes one row for every exercise across every section", () => {
-    const rows = renderSheetTable(PANEL_SHEET, "exercise")
+    const rows = renderSectionTables(PANEL_SHEET, "exercise")
       .split("\n")
       .filter((line) => line.startsWith("| ") && !line.includes("---"));
     // Two header rows, one per section, plus the six exercise rows.
@@ -397,12 +426,12 @@ describe("renderSheetTable", () => {
   });
 
   it("keeps the sections in the order the video used them", () => {
-    const table = renderSheetTable(PANEL_SHEET, "exercise");
+    const table = renderSectionTables(PANEL_SHEET, "exercise");
     expect(table.indexOf("## Standing")).toBeLessThan(table.indexOf("## Floor"));
   });
 
   it("carries the name, amount and form cue of every exercise", () => {
-    const table = renderSheetTable(PANEL_SHEET, "exercise");
+    const table = renderSectionTables(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(table).toContain(exercise.name);
       expect(table).toContain(exercise.amount);
@@ -410,8 +439,23 @@ describe("renderSheetTable", () => {
     }
   });
 
-  it("titles the sheet with the video title", () => {
-    expect(renderSheetTable(PANEL_SHEET, "exercise")).toContain("# Daily Mobility Routine");
+  it("prints the lead-in once, before the first table only", () => {
+    const tables = renderSectionTables(PANEL_SHEET, "exercise");
+    const leadIn = "For reference, the exercises restated exactly";
+    expect(tables.split(leadIn)).toHaveLength(2);
+    expect(tables.indexOf(leadIn)).toBeLessThan(tables.indexOf("| Exercise"));
+  });
+
+  it("omits the Amount column when no exercise in the sheet carries one", () => {
+    const tables = renderSectionTables(NO_AMOUNT_SHEET, "exercise");
+    expect(tables).toContain("| Exercise | Form cue |");
+    expect(tables).not.toContain("Amount");
+  });
+
+  it("keeps the Amount column when at least one exercise carries one", () => {
+    expect(renderSectionTables(PANEL_SHEET, "exercise")).toContain(
+      "| Exercise | Amount | Form cue |",
+    );
   });
 
   it("escapes pipe characters so a cell cannot break the table", () => {
@@ -427,7 +471,7 @@ describe("renderSheetTable", () => {
         },
       ],
     };
-    const row = renderSheetTable(piped, "exercise")
+    const row = renderSectionTables(piped, "exercise")
       .split("\n")
       .find((line) => line.includes("Push"));
     expect(row).toContain("Push \\| Pull");
@@ -436,32 +480,51 @@ describe("renderSheetTable", () => {
   });
 
   it("returns a sheet without throwing when no exercises were found", () => {
-    expect(() => renderSheetTable(EMPTY_SHEET, "exercise")).not.toThrow();
+    expect(() => renderSectionTables(EMPTY_SHEET, "exercise")).not.toThrow();
   });
 });
 
-describe("renderSheetDocument", () => {
-  it("carries the whole exercise table", () => {
-    const document = renderSheetDocument(PANEL_SHEET, "exercise");
-    expect(document).toContain(renderSheetTable(PANEL_SHEET, "exercise").trim());
+describe("renderPromptDocument", () => {
+  it("carries the whole set of section tables", () => {
+    const document = renderPromptDocument(PANEL_SHEET, "exercise");
+    expect(document).toContain(renderSectionTables(PANEL_SHEET, "exercise").trim());
   });
 
   it("carries the image prompt verbatim, so pasting it needs no reassembly", () => {
-    const document = renderSheetDocument(PANEL_SHEET, "exercise");
+    const document = renderPromptDocument(PANEL_SHEET, "exercise");
     expect(document).toContain(composeImagePrompt(PANEL_SHEET, "exercise"));
   });
 
-  it("fences the prompt so a copy button takes the prompt and nothing else", () => {
-    const [, fenced] = renderSheetDocument(PANEL_SHEET, "exercise").split("```");
-    expect(fenced.trim()).toBe(composeImagePrompt(PANEL_SHEET, "exercise"));
+  it("titles the document with the sheet title", () => {
+    expect(renderPromptDocument(PANEL_SHEET, "exercise")).toMatch(
+      /^# Daily Mobility Routine\n/,
+    );
   });
 
-  it("heads the prompt section so the table stays the part a human reads", () => {
-    expect(renderSheetDocument(PANEL_SHEET, "exercise")).toContain("## Image prompt");
+  // The whole file is pasted into an image model, which must know nothing about where the
+  // material came from or what the user does with the result.
+  it("never mentions the source or the hand-off in either mode", () => {
+    for (const [sheet, mode] of [
+      [PERFORMER_SHEET, "exercise"],
+      [GRID_SHEET, "exercise"],
+      [GENERIC_SHEET, "generic"],
+      [EMPTY_SHEET, "exercise"],
+    ] as const) {
+      const document = renderPromptDocument(sheet, mode);
+      expect(document).not.toMatch(/video|youtube|chatgpt|paste/i);
+    }
+  });
+
+  it("leaves no fenced block or human-only scaffolding behind", () => {
+    const document = renderPromptDocument(PANEL_SHEET, "exercise");
+    expect(document).not.toContain("```");
+    expect(document).not.toContain("## Image prompt");
+    expect(document).not.toContain("## On screen");
+    expect(document).not.toContain(PANEL_SHEET.summary);
   });
 
   it("renders a document without throwing when no exercises were found", () => {
-    expect(() => renderSheetDocument(EMPTY_SHEET, "exercise")).not.toThrow();
+    expect(() => renderPromptDocument(EMPTY_SHEET, "exercise")).not.toThrow();
   });
 });
 
@@ -528,7 +591,7 @@ describe("composeImagePrompt", () => {
     expect(composeImagePrompt(PANEL_SHEET, "exercise")).toMatch(/6-panel .*infographic/i);
   });
 
-  it("includes the video title", () => {
+  it("includes the sheet title", () => {
     expect(composeImagePrompt(PANEL_SHEET, "exercise")).toContain("Daily Mobility Routine");
   });
 
@@ -538,19 +601,38 @@ describe("composeImagePrompt", () => {
     expect(prompt).toMatch(/white background/i);
   });
 
-  it("restates the exercises verbatim so the labels come back unparaphrased", () => {
+  it("leaves the verbatim restatement to the section tables", () => {
     const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
-    const tail = prompt.slice(prompt.indexOf("For your reference"));
+    expect(prompt).not.toMatch(/For your reference/i);
     for (const exercise of everyExercise(PANEL_SHEET)) {
-      expect(tail).toContain(exercise.formCue);
+      expect(prompt).not.toContain(exercise.formCue);
+    }
+    const document = renderPromptDocument(PANEL_SHEET, "exercise");
+    for (const exercise of everyExercise(PANEL_SHEET)) {
+      expect(document).toContain(exercise.formCue);
+      expect(document).toContain(exercise.amount);
     }
   });
 
-  it("labels each panel with the amount when the video stated one", () => {
+  it("labels each panel with the amount when the sheet carries one", () => {
     const prompt = composeImagePrompt(PANEL_SHEET, "exercise");
     for (const exercise of everyExercise(PANEL_SHEET)) {
       expect(prompt).toContain(exercise.amount);
     }
+  });
+
+  it("qualifies the label instruction when only some exercises carry an amount", () => {
+    expect(composeImagePrompt(PANEL_SHEET, "exercise")).toContain(
+      "label it with the exercise name and its amount where one is given",
+    );
+  });
+
+  it("names the exercise alone when no amounts were prescribed", () => {
+    const prompt = composeImagePrompt(NO_AMOUNT_SHEET, "exercise");
+    expect(prompt).toContain("Panel 1 — Runner's Lunge: two figures side by side");
+    expect(prompt).not.toMatch(/\(\s*\)/);
+    expect(prompt).toContain("label it with the exercise name.");
+    expect(prompt).not.toMatch(/its amount/);
   });
 
   it("switches to an icon grid past the panel limit", () => {
@@ -643,17 +725,15 @@ describe("composeImagePrompt with a performer", () => {
   });
 });
 
-describe("renderSheetTable with a performer", () => {
-  it("surfaces the traits so the user can check them against the video", () => {
-    const table = renderSheetTable(PERFORMER_SHEET, "exercise");
-    expect(table).toContain("## On screen");
+describe("renderPromptDocument with a performer", () => {
+  // The consistent-character sentence in the prompt body already carries the traits, so a
+  // second trait table would only repeat them to the image model.
+  it("carries the traits in the prompt sentence and nowhere else", () => {
+    const document = renderPromptDocument(PERFORMER_SHEET, "exercise");
+    expect(document).not.toContain("## On screen");
     for (const trait of Object.values(PERFORMER)) {
-      expect(table).toContain(trait);
+      expect(document.split(trait)).toHaveLength(2);
     }
-  });
-
-  it("omits the block when no performer was extracted", () => {
-    expect(renderSheetTable(PANEL_SHEET, "exercise")).not.toContain("## On screen");
   });
 });
 
@@ -696,7 +776,7 @@ function everyPoint(sheet) {
 
 describe("generic mode", () => {
   it("renders a point-and-detail table rather than an exercise table", () => {
-    const table = renderSheetTable(GENERIC_SHEET, "generic");
+    const table = renderSectionTables(GENERIC_SHEET, "generic");
     expect(table).toContain("| Point | Detail |");
     for (const point of everyPoint(GENERIC_SHEET)) {
       expect(table).toContain(point.label);
@@ -704,8 +784,8 @@ describe("generic mode", () => {
     }
   });
 
-  it("keeps the drawable field out of the human-readable table", () => {
-    const table = renderSheetTable(GENERIC_SHEET, "generic");
+  it("keeps the drawable field out of the restated table", () => {
+    const table = renderSectionTables(GENERIC_SHEET, "generic");
     expect(table).not.toContain("a covered bowl of dough rising on a counter");
   });
 
@@ -743,11 +823,13 @@ describe("generic mode", () => {
     );
   });
 
-  it("restates the points verbatim so the labels come back unparaphrased", () => {
-    const prompt = composeImagePrompt(GENERIC_SHEET, "generic");
-    const tail = prompt.slice(prompt.indexOf("For your reference"));
+  it("restates the points verbatim in the tables rather than in the prompt body", () => {
+    const document = renderPromptDocument(GENERIC_SHEET, "generic");
+    expect(document).toContain(
+      "For reference, the points restated exactly — use these labels verbatim.",
+    );
     for (const point of everyPoint(GENERIC_SHEET)) {
-      expect(tail).toContain(point.detail);
+      expect(document).toContain(point.detail);
     }
   });
 
@@ -772,7 +854,7 @@ describe("generic mode", () => {
 
   it("renders a document without throwing when no points were found", () => {
     expect(() =>
-      renderSheetDocument({ title: "Nothing", summary: "", sections: [] }, "generic"),
+      renderPromptDocument({ title: "Nothing", summary: "", sections: [] }, "generic"),
     ).not.toThrow();
   });
 });
