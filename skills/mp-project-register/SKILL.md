@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, AskUserQuestion, Bash(node *), Bash(python *), Bash(ls *), Bash(gh repo view *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: setup
 ---
 
@@ -118,6 +118,17 @@ picks the profile up on its own — no restart.
 
 The profile **name** is what Raycast's terminal quicklink targets in step 8, so keep it
 identical to the folder name.
+
+The new-tab dropdown is a grouped `newTabMenu` in the same settings file — general shells,
+mpx tooling, work repositories, a `remainingProfiles` catch-all, then admin shells, with
+`separator` entries between groups. A freshly added profile lands in the catch-all until its
+GUID is placed explicitly. Use `AskUserQuestion` to ask which group the project belongs to
+(mpx tooling, work repositories, or leave it in the catch-all), then `Edit` the settings
+file to insert `{ "type": "profile", "profile": "<guid>" }` at the end of the chosen group.
+Two rules the menu depends on: keep every GUID comment-free JSON (Windows Terminal rejects
+trailing commas), and remember that the `ctrl+shift+<digit>` bindings target dropdown
+*positions* — inserting into a group above the work section shifts every number below it,
+so tell the user when the numbering moves.
 
 ### Step 6: Write the VS Code Peacock colour
 
