@@ -12,7 +12,7 @@
   "permissions": {
     "defaultMode": "auto"
   },
-  "model": "claude-fable-5[1m]",
+  "model": "sonnet",
   "disableClaudeAiConnectors": true,
   "hooks": {
     "PostToolUse": [
@@ -91,6 +91,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/scripts/terminal-title.mts\" --state=idle --set-title",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
@@ -99,7 +109,24 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"$HOME/.claude/scripts/terminal-title.mts\" --state=idle --set-title",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$HOME/.claude/hooks/notify-flash-beep.ps1\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/scripts/terminal-title.mts\" --state=busy --set-title",
             "timeout": 10
           }
         ]
@@ -123,7 +150,8 @@
     "chrome-devtools-mcp@claude-plugins-official": false,
     "context7@claude-plugins-official": true,
     "github@claude-plugins-official": false,
-    "typescript-lsp@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
   "autoCompactWindow": 233000,
