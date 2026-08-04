@@ -15,6 +15,17 @@
   "model": "sonnet",
   "disableClaudeAiConnectors": true,
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo Apply the mp-terse response style: answer first, concise, structured.",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -126,6 +137,7 @@
     "typescript-lsp@claude-plugins-official": true,
     "rust-analyzer-lsp@claude-plugins-official": true
   },
+  "outputStyle": "mp-terse",
   "effortLevel": "high",
   "autoCompactWindow": 233000,
   "autoUpdatesChannel": "stable",

@@ -290,7 +290,7 @@ Markdown does not interpolate env vars, so sub-agents resolve them at runtime wi
 
 ## Global Instructions
 
-[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — output style, sub-agent policy, preferences, compaction rules. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences, compaction rules. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
 
 ## Settings
 

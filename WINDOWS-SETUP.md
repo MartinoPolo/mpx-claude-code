@@ -43,6 +43,7 @@ mklink /J "%DEST%\agents"       "%REPO%\agents"
 mklink /J "%DEST%\assets"       "%REPO%\assets"
 mklink /J "%DEST%\hooks"        "%REPO%\hooks"
 mklink /J "%DEST%\instructions" "%REPO%\instructions"
+mklink /J "%DEST%\output-styles" "%REPO%\output-styles"
 mklink /J "%DEST%\rules"        "%REPO%\rules"
 mklink /J "%DEST%\scripts"      "%REPO%\scripts"
 mklink /J "%DEST%\skills"       "%REPO%\skills"
@@ -68,7 +69,7 @@ Run two permanently-logged-in Claude Code accounts at once — one per terminal 
 
 ### Shared vs per-account
 
-- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions rules scripts skills sounds templates`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
+- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions output-styles rules scripts skills sounds templates`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
 - **Per-account** (real files, independent): `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, `plugins/`, caches, telemetry.
 
 > `settings.local.json` is centralized at the **repo root** and symlinked into both config dirs. It stays git-ignored (`*.local.json`) — a local single source of truth, not version-controlled (it holds machine paths).
@@ -83,7 +84,7 @@ $work = "$HOME\.claude-work"
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 # Directory junctions (no admin)
-"agents","assets","hooks","instructions","rules","scripts","skills","sounds","templates" | ForEach-Object {
+"agents","assets","hooks","instructions","output-styles","rules","scripts","skills","sounds","templates" | ForEach-Object {
   New-Item -ItemType Junction -Path "$work\$_" -Target "$repo\$_"
 }
 
