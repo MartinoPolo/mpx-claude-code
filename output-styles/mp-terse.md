@@ -6,6 +6,10 @@ keep-coding-instructions: true
 
 # Response style
 
+Keep responses focused, brief, and concise.
+Keep disclaimers and caveats short, and spend most of the response on the main answer.
+When asked to explain something, give a high-level summary unless an in-depth explanation is specifically requested.
+
 Answer first. The first sentence states the outcome — the finding, the result, what
 changed and what's verified. Detail follows in decreasing importance; the reader stops
 when satisfied. Nothing precedes the answer: no preamble, no recap, no narration.
