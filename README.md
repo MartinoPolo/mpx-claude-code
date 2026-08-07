@@ -59,7 +59,7 @@ TDD principles: [tests](skills/mp-execute/tests.md), [mocking](skills/mp-execute
 ### Planning system (hybrid)
 
 - **GitHub:** Milestones = epics, Issues = tasks (PRDs + sub-issues with blocking), Project Board = tracking.
-- **Local `.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `skills/shared/DOCUMENTATION_STRATEGY.md`.
+- **`.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `skills/shared/DOCUMENTATION_STRATEGY.md`. Tracked and committed — everything in it is team-shared; gitignore only `.mpx/tmp/`, the scratch area.
 
 ## Skills Reference
 
@@ -308,6 +308,6 @@ Markdown does not interpolate env vars, so sub-agents resolve them at runtime wi
 
 Both include the Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules, 80% coverage thresholds, `.claude/` + `.mpx/` structure, GitHub Actions CI.
 
-**Worktrees:** `bash scripts/setup-worktree.sh <name>` creates an isolated worktree and copies IDE configs, `.env` files, `.claude/settings.local.json`, gitignored `.mpx/`, then installs deps; `remove-worktree.sh` cleans up.
+**Worktrees:** `node scripts/setup-worktree.mts <name> [--base <ref>]` creates an isolated worktree — path derived from the repo location, base branch auto-detected, editor config + `.worktreeinclude` matches copied, per-worktree dev-server ports allocated, deps installed in the background; `remove-worktree.mts` releases the ports and cleans up. Harness-agnostic Node/TS hub (the `setup-worktree`/`remove-worktree` shell functions wrap it). Design, port model, and per-repo config: [`docs/WORKTREE_HUB.md`](docs/WORKTREE_HUB.md). The old bash creators live in [`scripts/deprecated/`](scripts/deprecated/).
 
 **Tests:** `npm test` (Vitest) covers hooks and status-line scripts.

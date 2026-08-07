@@ -33,4 +33,11 @@ tooling (registry, services, ACLs, symlinks).
 Conventional commits.
 
 On errors or workflow friction: fix the immediate issue, then propose a rule for this file or
-memory — describe the friction and the proposed rule, and ask before writing it.
+memory
+
+## Dev-server ports
+
+Before starting any dev / preview / Storybook / e2e server, check `.worktree-ports.json` at the
+worktree root for this worktree's assigned ports and use those. Never assume a fixed port or reuse
+another worktree's. (Fallback defaults live in the project's config/launcher, not here.) See
+`docs/WORKTREE_HUB.md`.

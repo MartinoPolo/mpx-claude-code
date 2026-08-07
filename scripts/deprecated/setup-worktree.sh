@@ -195,12 +195,14 @@ find . -name ".env.example" | while read -r example; do
   fi
 done
 
-# Copy .mpx if gitignored (local-only project system)
+# Copy .mpx only where the repo keeps it local-only. The current convention is
+# a tracked .mpx/ with just .mpx/tmp/ ignored, and git already puts tracked
+# files in the worktree — scratch is meant to stay behind.
 if git -C "$SOURCE_DIR" check-ignore -q .mpx 2>/dev/null && [ -d "$SOURCE_DIR/.mpx" ]; then
-  echo -e "${CYAN}→${RESET} Copying .mpx/ (gitignored, local-only)..."
+  echo -e "${CYAN}→${RESET} Copying .mpx/ (gitignored in this repo, local-only)..."
   copy_dir "$SOURCE_DIR/.mpx" "$PWD/.mpx"
 elif [ -d "$SOURCE_DIR/.mpx" ]; then
-  echo -e "${DIM}  Skipped .mpx/ (not gitignored in source repo — commit .gitignore first?)${RESET}"
+  echo -e "${DIM}  Skipped .mpx/ (tracked — the worktree already has it)${RESET}"
 fi
 
 echo -e "${CYAN}→${RESET} Opening VSCode..."

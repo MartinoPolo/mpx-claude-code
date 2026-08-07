@@ -7,10 +7,13 @@
 _MPX_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 setup-worktree() {
-  bash "$_MPX_SCRIPTS_DIR/setup-worktree.sh" "$@"
+  # Show the live output while capturing it, then cd into the worktree the hub
+  # reports on its final `WORKTREE_PATH=` line (a stdout marker avoids Windows
+  # temp-path translation between Git Bash and Node).
+  local out
+  out=$(node "$_MPX_SCRIPTS_DIR/setup-worktree.mts" "$@" | tee /dev/tty)
   local target
-  target=$(cat "${TMPDIR:-/tmp}/worktree-cd-path" 2>/dev/null)
-  rm -f "${TMPDIR:-/tmp}/worktree-cd-path"
+  target=$(printf '%s\n' "$out" | sed -n 's/^WORKTREE_PATH=//p' | tail -1)
   if [ -n "$target" ] && [ -d "$target" ]; then
     cd "$target" || return
     claude
@@ -18,7 +21,7 @@ setup-worktree() {
 }
 
 remove-worktree() {
-  bash "$_MPX_SCRIPTS_DIR/remove-worktree.sh" "$@"
+  node "$_MPX_SCRIPTS_DIR/remove-worktree.mts" "$@"
 }
 
 # Project-scoped herdr. Bare `herdr` attaches a per-project named session
