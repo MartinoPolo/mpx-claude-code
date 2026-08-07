@@ -6,8 +6,10 @@ from scratch instead of polishing it.
 
 ## Code
 
-DRY. Full descriptive names, no abbreviations. Comments are rare and explain *why* — the
+DRY. Full descriptive names, no abbreviations. Comments are rare and explain _why_ — the
 intent, the constraint, the rejected alternative. Update docs when behaviour changes.
+
+Avoid numeric values describing repo state in comments, docs, skills, reference files. These drift over time and are not useful to readers. Instead, describe general shape or place to find.
 
 ## Sub-agents
 
