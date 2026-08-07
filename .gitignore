@@ -33,6 +33,10 @@ paste-cache/
 *.local.md
 *.local.json
 
+# Machine-local links into the work repo's KanbanFlow skills (see mp-symlink)
+skills/kf-*/
+skills/shared/KF_*.md
+
 # Notes (personal)
 *-notes.md
 
