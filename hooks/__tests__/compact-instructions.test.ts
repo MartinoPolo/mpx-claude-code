@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { extractCompactInstructions } from "../compact-instructions.js";
+import { readCompactInstructions } from "../compact-instructions.js";
 
 const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "compact-instructions.js");
 const scratch = mkdtempSync(path.join(tmpdir(), "compact-instructions-"));
@@ -28,40 +28,33 @@ function writeFixture(name: string, contents: string): string {
   return filePath;
 }
 
-describe("extractCompactInstructions", () => {
-  it("returns the section body and stops at the next '## ' heading", () => {
-    const result = extractCompactInstructions(
-      ["# Title", "", "## Compact instructions", "", "Keep the sections.", "", "## Preferences", "", "Other."].join("\n"),
-    );
-    expect(result).toBe("Keep the sections.");
+describe("readCompactInstructions", () => {
+  it("returns the trimmed contents of the first readable source", () => {
+    const source = writeFixture("instructions.md", "\nKeep the sections.\n\n");
+    expect(readCompactInstructions([source])).toBe("Keep the sections.");
   });
 
-  it("returns the section body when it runs to end of file", () => {
-    const result = extractCompactInstructions(["## Compact instructions", "", "Last line.", ""].join("\n"));
-    expect(result).toBe("Last line.");
+  it("falls through past missing and empty candidates", () => {
+    const empty = writeFixture("empty.md", "  \n\n");
+    const fallback = writeFixture("fallback.md", "Fallback instructions.");
+    const missing = path.join(scratch, "missing.md");
+    expect(readCompactInstructions([missing, empty, fallback])).toBe("Fallback instructions.");
   });
 
-  it("ignores '###' subheadings inside the section", () => {
-    const result = extractCompactInstructions(
-      ["## Compact instructions", "", "Intro.", "", "### Detail", "", "More.", "", "## Next"].join("\n"),
-    );
-    expect(result).toBe("Intro.\n\n### Detail\n\nMore.");
-  });
-
-  it("returns an empty string when the heading is absent", () => {
-    expect(extractCompactInstructions("# Title\n\n## Preferences\n\nText.")).toBe("");
+  it("returns an empty string when no candidate is usable", () => {
+    expect(readCompactInstructions([path.join(scratch, "missing.md")])).toBe("");
   });
 });
 
 describe("compact-instructions hook process", () => {
-  it("exits 0 and prints the section body", () => {
+  it("exits 0 and prints the source file contents", () => {
     const source = writeFixture(
-      "with-section.md",
-      ["## Compact instructions", "", "Preserve file paths.", "", "## Preferences", "", "Ignored."].join("\n"),
+      "with-content.md",
+      "Preserve file paths.\n\n- **Key Decisions** — what and why.\n",
     );
     const { stdout, status } = runHook(source);
     expect(status).toBe(0);
-    expect(stdout.trim()).toBe("Preserve file paths.");
+    expect(stdout.trim()).toBe("Preserve file paths.\n\n- **Key Decisions** — what and why.");
   });
 
   it("exits 0 and prints nothing when the source file is missing", () => {
@@ -70,8 +63,8 @@ describe("compact-instructions hook process", () => {
     expect(stdout).toBe("");
   });
 
-  it("exits 0 and prints nothing when the heading is absent", () => {
-    const source = writeFixture("no-section.md", "# Title\n\n## Preferences\n\nText.\n");
+  it("exits 0 and prints nothing when the source file is empty", () => {
+    const source = writeFixture("empty-source.md", "\n  \n");
     const { stdout, status } = runHook(source);
     expect(status).toBe(0);
     expect(stdout).toBe("");

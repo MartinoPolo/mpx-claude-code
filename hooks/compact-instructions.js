@@ -1,12 +1,14 @@
 /**
  * PreCompact hook (matcher: *)
- * Feeds the "## Compact instructions" section of instructions/AGENTS.md into the
- * compaction prompt.
+ * Feeds instructions/COMPACT.md into the compaction prompt.
  *
  * Claude Code builds that prompt from a fixed template and appends exactly one
  * user-controlled block, "Additional Instructions". Only `/compact <args>` and
- * PreCompact hook stdout reach it — CLAUDE.md / AGENTS.md do not, so without this
- * hook the section is honoured only when it happens to survive in context.
+ * PreCompact hook stdout reach it — CLAUDE.md / AGENTS.md do not, which is why the
+ * instructions live in a dedicated file injected here instead of sitting in
+ * AGENTS.md where they would cost context every turn without ever reaching the
+ * summarizer. pi consumes the same file through
+ * mpx-pi/extensions/compact-instructions.ts.
  *
  * A non-zero exit BLOCKS compaction ("Compaction blocked by PreCompact hook"), so
  * every failure path here stays silent and exits 0.
@@ -16,42 +18,23 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const HEADING = "## Compact instructions";
-
 // hooks/ is reached through a symlink at ~/.claude/hooks and Node resolves realpath
 // by default, so __dirname lands inside the repo checkout.
 const SOURCE_PATHS = [
-  path.join(__dirname, "..", "instructions", "AGENTS.md"),
-  path.join(os.homedir(), ".claude", "AGENTS.md"),
+  path.join(__dirname, "..", "instructions", "COMPACT.md"),
+  path.join(os.homedir(), ".claude", "COMPACT.md"),
 ];
 
 /**
- * Extract the body of the "## Compact instructions" section.
- * @param {string} markdown - Full file contents
- * @returns {string} Section body, trimmed; empty string when the heading is absent
- */
-function extractCompactInstructions(markdown) {
-  const lines = String(markdown ?? "").split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === HEADING);
-  if (start === -1) return "";
-
-  const body = [];
-  for (const line of lines.slice(start + 1)) {
-    if (/^## /.test(line)) break;
-    body.push(line);
-  }
-  return body.join("\n").trim();
-}
-
-/**
- * Read the first readable source file and extract its compact instructions.
+ * Read the first source file that exists and is non-empty.
  * @param {string[]} [sourcePaths] - Candidate files, highest priority first
- * @returns {string} Section body, or empty string when nothing is available
+ * @returns {string} File contents, trimmed; empty string when nothing is available
  */
 function readCompactInstructions(sourcePaths = SOURCE_PATHS) {
   for (const sourcePath of sourcePaths) {
     try {
-      return extractCompactInstructions(fs.readFileSync(sourcePath, "utf8"));
+      const contents = fs.readFileSync(sourcePath, "utf8").trim();
+      if (contents) return contents;
     } catch {
       // Missing or unreadable candidate — fall through to the next one.
     }
@@ -74,7 +57,7 @@ function main() {
   process.exit(0);
 }
 
-module.exports = { extractCompactInstructions, readCompactInstructions };
+module.exports = { readCompactInstructions };
 if (require.main === module) {
   try {
     main();

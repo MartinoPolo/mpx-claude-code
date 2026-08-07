@@ -212,7 +212,7 @@ Configured via `settings.json`; auto-detect the project toolchain (`vite-plus` |
 | `fallow-gate.js`             | PreToolUse (Bash)        | Blocks commit/push when the fallow audit verdict is fail           |
 | `format-lint-file.js`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files                                |
 | `post-bash-context.js`       | PostToolUse (Bash)       | Enriches context after bash commands                               |
-| `compact-instructions.js`    | PreCompact (*)           | Appends the `## Compact instructions` section of `instructions/AGENTS.md` to the compaction prompt |
+| `compact-instructions.js`    | PreCompact (*)           | Appends `instructions/COMPACT.md` to the compaction prompt (pi consumes the same file via `mpx-pi/extensions/compact-instructions.ts`) |
 | `notify-flash-beep.ps1`      | Stop                     | Flashes taskbar + notification sound (custom: `~/.claude/sounds/notify.wav`) |
 | `herdr-agent-state.ps1`      | SessionStart (*)         | Reports session state to herdr (no-op unless `HERDR_ENV=1`)        |
 | `machine-paths.js`           | SessionStart (*)         | Surfaces the machine-root `MPX_*` environment variables into session context |
@@ -290,7 +290,7 @@ Markdown does not interpolate env vars, so sub-agents resolve them at runtime wi
 
 ## Global Instructions
 
-[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences, compaction rules. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see AGENTS.md, so the file is injected at compaction time instead — by the `compact-instructions.js` PreCompact hook here and by `mpx-pi/extensions/compact-instructions.ts` in pi — and costs no per-turn context. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
 
 ## Settings
 
