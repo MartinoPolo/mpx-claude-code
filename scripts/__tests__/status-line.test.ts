@@ -349,28 +349,28 @@ describe("SEPARATOR", () => {
 });
 
 describe("buildSessionLine", () => {
-    it("leads with the account, then the title, then the short id", () => {
-        expect(buildSessionLine("Personal", ADD, "my-session", "0123abcd", "")).toBe(
-            `${ADD}Personal${RESET}${SEPARATOR}${SESSION}my-session${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
+    it("leads with the title, then the short id", () => {
+        expect(buildSessionLine("my-session", "0123abcd", "")).toBe(
+            `${SESSION}my-session${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
         );
     });
 
     it("links the short id to the transcript file when its URL is known", () => {
-        expect(buildSessionLine("Personal", ADD, "", "0123abcd", "file:///c/t.jsonl")).toBe(
-            `${ADD}Personal${RESET}${SEPARATOR}${GRAY}${hyperlink("file:///c/t.jsonl", "#0123abcd")}${RESET}`
+        expect(buildSessionLine("", "0123abcd", "file:///c/t.jsonl")).toBe(
+            `${GRAY}${hyperlink("file:///c/t.jsonl", "#0123abcd")}${RESET}`
         );
     });
 
     it("drops the title field when the session is unnamed", () => {
-        expect(buildSessionLine("Work", LOCAL, "", "0123abcd", "")).toBe(
-            `${LOCAL}Work${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
-        );
+        expect(buildSessionLine("", "0123abcd", "")).toBe(`${GRAY}#0123abcd${RESET}`);
     });
 
     it("drops the id field when there is no session id", () => {
-        expect(buildSessionLine("Personal", ADD, "my-session", "", "file:///c/t.jsonl")).toBe(
-            `${ADD}Personal${RESET}${SEPARATOR}${SESSION}my-session${RESET}`
-        );
+        expect(buildSessionLine("my-session", "", "file:///c/t.jsonl")).toBe(`${SESSION}my-session${RESET}`);
+    });
+
+    it("returns an empty string when both title and id are absent", () => {
+        expect(buildSessionLine("", "", "")).toBe("");
     });
 });
 

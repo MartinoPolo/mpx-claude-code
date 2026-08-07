@@ -1,12 +1,12 @@
 {
     "personal": {
-        "background": "#0c2e16",
-        "cursorColor": "#7fe3b0",
+        "background": "#1e070a",
+        "cursorColor": "#f2918f",
         "tabPrefix": "[P]"
     },
     "work": {
-        "background": "#3a1f00",
-        "cursorColor": "#ffcf7a",
+        "background": "#0a1a2b",
+        "cursorColor": "#8fc3f0",
         "tabPrefix": "[W]"
     }
 }

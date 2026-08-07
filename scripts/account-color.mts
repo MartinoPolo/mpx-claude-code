@@ -26,9 +26,23 @@
 // Windows Terminal specifics (verified against the 1.24 source):
 //   OSC 11 writes color-table index 262 and repoints the DefaultBackground alias;
 //   a profile's configured `background` only seeds that value at startup, so this
-//   overrides it. `unfocusedAppearance` and `useBackgroundImageForWindow` would
-//   each undo the change on focus/paint, and neither is set on any profile here.
-//   A settings.json reload also resets it — re-running a shell restores it.
+//   overrides it. A settings.json reload also resets it — re-running a shell
+//   restores it.
+//
+// HARD CONSTRAINT — do not set `unfocusedAppearance` (or
+// `useBackgroundImageForWindow`) on any Windows Terminal profile or in
+// profiles.defaults: each focus change then re-applies the profile's color
+// scheme, silently wiping this tint. Empirically confirmed by enabling
+// `unfocusedAppearance: { colorScheme: "Campbell Dim" }` and watching the tint
+// vanish on the first focus round-trip. Pane dimming and this repaint are
+// mutually exclusive in Windows Terminal; if dimming is ever wanted again, it
+// needs a different terminal (WezTerm's inactive_pane_hsb does both).
+//
+// The launching shell must also not alias node to winpty: Git Bash login
+// shells (`bash -l` with TERM=xterm*) do exactly that in
+// /etc/profile.d/aliases.sh, and winpty's hidden console swallows OSC 11/12.
+// ~/.bashrc counters it with `unalias node` before the cc/ccw functions are
+// parsed — aliases bake into function bodies at parse time.
 
 import path from "node:path";
 import { readFileSync } from "node:fs";

@@ -113,11 +113,6 @@ const COMPACTION_STYLE: CompactionStyle = {
     reset: RESET
 };
 
-// Account colors — distinct from ACCENT and from each other, so
-// model/account/work-vs-personal all read as separate signals at a glance.
-const PERSONAL = PALETTE.personal; // green
-const WORK = PALETTE.work; // orange
-
 // Line-edit colors: green additions, red deletions.
 const ADD = PALETTE.add;
 const DEL = PALETTE.del;
@@ -1354,19 +1349,14 @@ function launcherUrl(file: string): string {
 // state moved onto its own row and renumbered everything below it once already.
 
 /**
- * Account · title · id: whose session, what it is about, how to refer to it.
- * The id links to the transcript `.jsonl` when its path is known, so the raw
- * session log is one click away from the very identifier that names it.
+ * Title · id: what the session is about, how to refer to it. The account
+ * (work vs personal) is conveyed by the pane background tint (see
+ * account-color.mts), not repeated here as text. The id links to the
+ * transcript `.jsonl` when its path is known, so the raw session log is one
+ * click away from the very identifier that names it.
  */
-export function buildSessionLine(
-    accountLabel: string,
-    accountColor: string,
-    sessionName: string,
-    shortId: string,
-    transcriptUrl: string
-): string {
+export function buildSessionLine(sessionName: string, shortId: string, transcriptUrl: string): string {
     return joinSegments([
-        `${accountColor}${accountLabel}${RESET}`,
         sessionName === "" ? "" : `${SESSION}${sessionName}${RESET}`,
         shortId === "" ? "" : `${GRAY}${maybeLink(transcriptUrl, `#${shortId}`)}${RESET}`
     ]);
@@ -1931,7 +1921,6 @@ function render(): string {
     const cwdTerminalUrl = fields.cwd === "" ? "" : launcherUrl(terminalTabShortcutFile(fields.cwd));
 
     const accountLabel = resolveAccountLabel(resolveConfigDir());
-    const accountColor = accountLabel === "Work" ? WORK : PERSONAL;
 
     const git = readGitStatus(fields.cwd);
     const branch = git?.branch ?? "";
@@ -2117,7 +2106,7 @@ function render(): string {
 
     const transcriptUrl = fields.transcriptPath === "" ? "" : toFileUrl(fields.transcriptPath);
     const lines = [
-        buildSessionLine(accountLabel, accountColor, fields.sessionName, shortId, transcriptUrl),
+        buildSessionLine(fields.sessionName, shortId, transcriptUrl),
         buildModelLine(fields.model, fields.effortLevel),
         buildLocationLine({
             projectName: location.projectName,

@@ -1,129 +1,97 @@
 # Status Lines — Design & Implementation
 
-Deep-dive for [`scripts/status-line.mts`](../scripts/status-line.mts) (main bar) and
-[`scripts/subagent-status-line.mts`](../scripts/subagent-status-line.mts) (tasks panel).
-The README carries only the feature overview; every design decision and mechanic lives here.
+Design decisions and mechanics behind [`scripts/status-line.mts`](../scripts/status-line.mts)
+(main bar) and [`scripts/subagent-status-line.mts`](../scripts/subagent-status-line.mts)
+(tasks panel). The README carries the feature overview; this file records *why* each thing is the
+way it is, and the constraints that are easy to trip over. Layout, colors and glyphs are chosen
+against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pair.
 
 ## Main status line — layout decisions
 
-- **One separator, at every level.** `|` is gone: it drew a wall between fields that are merely
-  adjacent. ` · ` (U+00B7, present in both Cascadia Mono and Consolas) means "next field"
-  everywhere, rather than two glyphs meaning two ranks of the same thing.
-- **Branch state has its own row** because those counts grow without bound during a working
-  session and used to push the MR reference off the right edge of the location row.
-- **The directory name is the one white field.** It answers "where am I", the question asked most
-  often and from the furthest away; every other field on that row stays grey. Emphasis by color
-  alone means no glyph or box drawing has to carry it. In a worktree the white moves to the
-  worktree half of `project/worktree`, because that is the actual location.
-- **The first line is account · title · id** — whose session, what it is about, how to refer to
-  it — so switching between a Personal and a Work terminal is answered before anything else.
-- **The account is a color on the bar and the background of the pane.** Tinting the bar's own
-  rows per account was built and then removed: the script supplies text to Claude Code, which owns
-  the frame around it, so the fill can never reach the window edges. It stops at the last character
-  of each row, leaves Claude Code's own left indent uncovered, and shares line one with the
-  right-aligned queued-command hint — a ragged block behind ragged rows reads worse than no block.
-  The pane background is a different mechanism and does work: `cc`/`ccw` emit OSC 11 before
-  launching, so the *terminal* carries the account and the bar only has to name it. See
-  "Account background" below.
-- **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance where `<high>` had to be
-  parsed; five slots for the five levels `low medium high xhigh max`, and anything unrecognized
-  falls back to the old `<level>` spelling.
-- **Dim grey is for context, not signal.** Fetch age, MR cache age, quota reset countdowns, the
-  quota cache age note, the session cost and a compaction's wall clock all render dim. They answer
-  "how much do I trust the number beside me" or "what is the running total"; coloring them coral
-  trains the eye to ignore coral everywhere else. The one exception is a quota cache old enough
-  that the percentages themselves are wrong.
-- **The session name is the only field with weight.** Bold magenta, where every other
-  rank on the bar is hue alone. It is the title of the thing you are looking at, so it is found
-  before anything else is read. It was a lavender that sat close enough to the panel's `max`
-  effort purple that neither read as a heading; it is now the scheme's own bright purple lifted
-  toward white, which keeps the separation on any scheme.
-- A row with nothing to say is dropped rather than emitted blank — outside a repo the branch
-  state has no content at all, so the rows below it move up.
+- **One separator.** ` · ` (U+00B7) means "next field" everywhere; there is no second rank of
+  separator.
+- **Branch state has its own row.** Its counts grow without bound during a session and would push
+  the MR reference off the right edge if kept on the location row.
+- **The directory name is the only white field.** It answers "where am I", asked most often and
+  from furthest away; every other field on that row stays grey. In a worktree the white moves to
+  the worktree half of `project/worktree`, the actual location.
+- **The first line is title · id** — what the session is about, how to refer to it. The account is
+  *not* named here: the pane background already answers "which account is this" (see
+  [Account background](#account-background)).
+- **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance; five slots for the five
+  levels `low medium high xhigh max`, anything unrecognized falls back to `<level>` text.
+- **Dim grey is for context, not signal.** Fetch age, cache ages, quota countdowns, session cost
+  and a compaction's clock all render dim — they qualify the number beside them rather than
+  demanding attention. The one exception is a quota cache old enough that its percentages are
+  wrong, which goes coral.
+- **The session name is the only field with weight** — bold, the scheme's bright purple lifted
+  toward white. It is the title of the thing you are looking at, found before anything else.
+- **An empty row is dropped, not emitted blank** — outside a repo the branch-state row has no
+  content, so the rows below move up.
 
 ## Data sources
 
-All values come straight from Claude Code's stdin JSON — model, session name/id, effort, context
-(`context_window.used_percentage` + `total_input_tokens`), cost, and quota (`rate_limits`).
-Lines added/removed (`cost.total_lines_*`) used to close the usage row as `+120 -34` and was
-dropped as noise — a session-wide edit total never changed a decision. `buildUsageLine` carries a
-comment saying how to restore it.
+Most values come straight from Claude Code's stdin JSON: model, session name/id, effort, context
+(`context_window.used_percentage` + `total_input_tokens`), cost, and quota (`rate_limits`). Two
+values are not in the payload and are read from files it points at or names by convention —
+compaction history (from `transcript_path`, see [Compaction history](#compaction-history)) and
+sub-agent history (see [Sub-agent history on the main bar](#sub-agent-history-on-the-main-bar)).
 
-Compaction history is the one value not in the payload — it is read from the transcript at
-`transcript_path`, which the payload does carry. See [Compaction history](#compaction-history).
-
-Sub-agent history is the other, and it comes from two files the payload never mentions. See
-[Sub-agent history on the main bar](#sub-agent-history-on-the-main-bar).
-
-Quota reads from stdin `rate_limits` (no network call) with a cached last-known value, plus a
-background `/api/oauth/usage` fallback only for session cold-start — so the endpoint's aggressive
-rate limit is never hit during normal use. Cached readings older than 15m show a muted age note;
-older than 30m are flagged coral.
+Quota reads `rate_limits` with no network call, keeping a cached last-known value; a background
+`/api/oauth/usage` fallback runs only at session cold-start so the endpoint's rate limit is never
+hit in normal use. A stale cache shows a muted age note, and a very old one is flagged coral
+because the percentages themselves can no longer be trusted.
 
 ## Compaction history
 
-Claude Code writes one line into a session's transcript every time that session compacts:
+Claude Code writes one `compact_boundary` line into a session's transcript on every compaction:
 
 ```json
-{ "type": "system", "subtype": "compact_boundary", "timestamp": "2026-07-16T06:26:17.738Z",
+{ "type": "system", "subtype": "compact_boundary", "timestamp": "…",
   "compactMetadata": { "trigger": "auto", "preTokens": 227148, "postTokens": 11300,
                        "cumulativeDroppedTokens": 215848, "durationMs": 87407 } }
 ```
 
-Only `trigger` and `preTokens` are documented; the rest are real but undocumented, and
-`docs/sessions` warns the transcript format changes between versions. `parseCompactionEvent`
-therefore defaults every field it cannot read rather than dropping the event.
+Only `trigger` and `preTokens` are documented; `parseCompactionEvent` defaults every field it
+cannot read rather than dropping the event, because the transcript format changes between versions.
 
-**Sub-agents compact independently** and each writes its own transcript at
-`<session>/subagents/agent-<id>.jsonl`, where `<id>` is the panel payload's `task.id`. That
-identity is what lets a row show its own history. Confirmed against a captured payload —
-`task.id` `a77f7ecdb4b8f2a5c` names `agent-a77f7ecdb4b8f2a5c.jsonl`.
+**Sub-agents compact independently**, each writing its own transcript at
+`<session>/subagents/agent-<id>.jsonl` keyed by the panel payload's `task.id` — which is what lets
+a panel row show its own history.
 
-**The read is incremental.** A transcript reaches tens of megabytes and both renderers run on
-every tick, so `$TMPDIR/claude-compact-<key>.tsv` holds the byte offset already scanned plus the
-events found so far; each tick parses only the bytes appended since. A cold start on a 16 MB
-transcript is one pass (~36 ms measured); every tick after it is the few hundred bytes a turn
-adds. Three details carry that:
+**The read is incremental.** Transcripts reach tens of megabytes and both renderers run every
+tick, so `$TMPDIR/claude-compact-<key>.tsv` holds the byte offset already scanned plus the events
+found; each tick parses only the appended bytes. Three details make that correct:
 
-- The offset is **bytes**, not characters — one emoji in a tool result would otherwise drift it
-  permanently.
-- A tick can land midway through a line Claude Code is still writing, so the trailing partial is
-  left unconsumed and re-read next time instead of being parsed and lost.
-- A cache offset *ahead* of the file means the transcript was replaced or truncated (a resumed
-  session forks a new file), which restarts the scan from zero.
+- The offset is **bytes**, not characters, so one emoji in a tool result cannot drift it.
+- A tick can land mid-line while Claude Code is still writing, so a trailing partial line is left
+  unconsumed and re-read next time instead of being parsed and lost.
+- An offset *ahead* of the file means the transcript was replaced or truncated (a resumed session
+  forks a new file), which restarts the scan from zero.
 
-Unlike the MR block this spawns nothing and touches no network — the file is already on disk.
-
-**Layout.** One indented row per event, oldest first, directly under the context line that owns
-them; the tasks panel indents two spaces deeper so its rows nest under an agent rather than the
-tally. Only the last `COMPACTION_ROWS` (3) are spelled out and the rest collapse into
-`N earlier` — the recent ones are what tell you whether the session you came back to is still the
-session you left. `auto` is the only field with a color of its own (amber, the same hue the panel
-uses to qualify an inherited effort level) because it is the only thing on the row you did not
-decide; `manual`, the token change and the tree glyphs stay at reading weight, and the clock is
-dim.
+**Layout.** One indented row per event, oldest first, under the context line that owns them (the
+tasks panel indents two spaces deeper so its rows nest under an agent). Only the last
+`COMPACTION_ROWS` are spelled out; the rest collapse into `N earlier`. `auto` is amber (the only
+field on the row you did not decide), `manual` and the token change stay at reading weight, the
+clock is dim.
 
 ## The context bar and `autoCompactWindow`
 
-The bar fills toward the **auto-compaction limit**, not the model window. A bar creeping toward
-1M said nothing, because nothing happens at 1M — which is why the bar was dropped from this row
-in the first place. A full bar now means compaction is about to fire, the only threshold on the
-line anyone acts on.
+The bar fills toward the **auto-compaction limit**, not the model window — a full bar means
+compaction is about to fire, the only threshold on the line anyone acts on.
 
-The limit is `min(context_window_size, autoCompactWindow) - 33000`. That reserve is
-`min(maxOutputTokens, 20000) + 13000`, read off the 2.1.220 bundle and confirmed against a real
-boundary: a 213,000 window tripped at `preTokens: 181,106`. **It is an offset, not a fraction** —
-moving the trigger by 20k means moving `autoCompactWindow` by 20k, not scaling it. `settings.json`
-carries `autoCompactWindow: 233000`, which puts the trigger at 200,000.
+The limit is `min(context_window_size, autoCompactWindow) - reserve`, where the reserve is
+`min(maxOutputTokens, 20000) + 13000` read off the bundle. **It is an offset, not a fraction** —
+moving the trigger means moving `autoCompactWindow`, not scaling it. `settings.json` sets
+`autoCompactWindow`.
 
-Context escalation is now a fraction of that limit (50% / 70% / 90%) rather than the old absolute
-100k/140k/180k. At a 200,000 limit the cut-offs land on exactly those numbers, so nothing moved on
-screen — but they follow `autoCompactWindow` instead of silently meaning less every time it is
-raised. The bar takes the same escalating color, so bar and token count can never disagree.
+Context escalation is a fraction of that limit (50% / 70% / 90%), so the cut-offs follow
+`autoCompactWindow` instead of silently meaning less each time it is raised. The bar takes the same
+escalating color, so bar and token count cannot disagree.
 
-The percentage in `118k (11%)` still reads against the **model window**, deliberately: the bar
-answers "how close am I to losing history", the percentage answers "how much of the window am I
-using". Two questions, two denominators.
+The percentage in `118k (11%)` reads against the **model window**, deliberately: the bar answers
+"how close am I to losing history", the percentage answers "how much of the window am I using".
+Two questions, two denominators.
 
 ## Click targets
 
@@ -132,167 +100,114 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 | Click | Opens |
 | --- | --- |
 | project / worktree name | Explorer in that folder |
-| VS Code glyph (U+F0A1E) beside a name | VS Code in that folder |
-| terminal glyph (U+F018D) beside a name | a new Windows Terminal tab in that folder, same profile |
-| branch name | the branch on its remote host (`.../tree/<branch>`, GitLab `/-/tree/`) |
-| `↑3` / `↑3↓2` unpushed count | the compare view of the default branch against this one |
-| `:8100` port | `localhost:8100` in the browser, over the scheme the probe saw it speak |
-| pencil glyph (U+F03EB) after the ports | `statusline-projects.json`, where the ports live |
-| `#01b054bb` session id | the session's transcript `.jsonl` |
-| `5h` / `7d` quota labels | <https://claude.ai/settings/usage> |
+| VS Code glyph beside a name | VS Code in that folder |
+| terminal glyph beside a name | a new Windows Terminal tab in that folder, same profile |
+| branch name | the branch on its remote (`.../tree/<branch>`, GitLab `/-/tree/`) |
+| `↑3` unpushed count | the compare view of the default branch against this one |
+| `:8100` port | `localhost:8100` over the scheme the probe saw it speak |
+| pencil glyph after the ports | `statusline-projects.json`, where the ports live |
+| session id | the session's transcript `.jsonl` |
+| `5h` / `7d` quota labels | the claude.ai usage dashboard |
 
-The branch URL comes from `git remote get-url origin` (one more fast git call per render),
-normalised from any of the three remote spellings — scp-like `git@host:owner/repo.git`,
-`ssh://`, plain `https://` — with `.git` stripped and the tree-path style picked by host:
-GitLab nests it under `/-/`, GitHub and everything else serve `/tree/<branch>` directly. No
-parseable remote, no link — the branch renders as plain text.
+**The branch URL** comes from `git remote get-url origin`, normalised from any of the three remote
+spellings (scp-like, `ssh://`, `https://`) with `.git` stripped and the tree path picked by host
+(GitLab nests under `/-/`). No parseable remote → plain text, no link.
 
-**The unpushed count links to the compare view** — `.../compare/<default>...<branch>`, GitLab
-`/-/compare/` — the page that lists what the branch carries on top of the default branch and
-offers to open a PR/MR from it. The base comes from `git for-each-ref` over
-`refs/remotes/origin/{HEAD,main,master}`, reading refs only: resolving the default branch over
-the network is exactly the kind of wait a status line cannot afford. `origin/HEAD` wins when the
-clone recorded one, the usual names are the fallback. The extra ref read happens only when
-something is actually ahead, so the in-sync case costs nothing.
+**The unpushed count links to the compare view** (`.../compare/<default>...<branch>`), the page
+that offers to open a PR/MR. The base branch is resolved from `git for-each-ref` over
+`refs/remotes/origin/{HEAD,main,master}` — refs only, because resolving it over the network is the
+kind of wait a status line cannot afford. The ref read happens only when something is ahead.
 
-**Worktrees are split into two click targets.** `git rev-parse --path-format=absolute
---git-common-dir --show-toplevel` (one extra ~10ms call, made only when the cwd is already known
-to be a repo) reveals a linked worktree: the shared `.git` lives under the *main* checkout, so
-when `dirname(--git-common-dir)` differs from `--show-toplevel` the line renders
-`project/worktree` — project gray linking the original folder, worktree white linking the
-worktree, because the worktree is what answers "where am I". Each half carries its own VS Code
-glyph — the project's opens the original checkout, the worktree's opens the worktree — so both
-editors are one click away. In the main checkout the line is just the cwd name with a single
-glyph, as before.
+**Worktrees split into two click targets.** `git rev-parse --path-format=absolute
+--git-common-dir --show-toplevel` reveals a linked worktree (the shared `.git` lives under the
+main checkout, so `dirname(--git-common-dir)` differs from `--show-toplevel`). The line then
+renders `project/worktree` — project grey linking the original folder, worktree white linking the
+worktree — and each half carries its own VS Code glyph opening its own checkout.
 
-**Dev-server ports** follow the branch segment: `statusline-projects.json` at the repo root maps a
-main project folder name to its localhost ports (worktrees inherit their project's entry, since
-the config is keyed by the resolved main project). Each port renders as `:8100` hyperlinked into
-the browser — Windows Terminal opens http and https links in the default browser — green while
-something is listening, DIM while nothing is. Liveness comes from a cache written by a detached
-`--warm-ports` child (same pattern as the quota/FX warmers) that probes each port with a
-400ms timeout, at most every 15s; the render itself never opens a socket. Which process belongs
-to which project is *not* auto-detected — a dev server is usually a `node` grandchild whose
-working directory Windows will not cheaply reveal — hence the one-time config.
+**Dev-server ports** follow the branch segment, declared per project in `statusline-projects.json`
+at the repo root (worktrees inherit their project's entry). Each renders as `:8100` hyperlinked
+into the browser, green while something listens and dim while nothing does. Liveness comes from a
+cache written by a detached `--warm-ports` child that probes each port with a short timeout; the
+render never opens a socket. Which process belongs to which project is not auto-detected — a dev
+server is usually a `node` grandchild whose working directory Windows will not cheaply reveal —
+hence the config.
 
-The probe decides the **scheme** as well as the state, and both halves are load-bearing:
+The probe decides the **scheme** as well as the state, both load-bearing:
 
-- It dials `localhost`, not `127.0.0.1`, so Node's happy-eyeballs (`autoSelectFamily`, on by
-  default since Node 20) tries both address families. A dev server bound to `::1` only — which
-  Vite does routinely — otherwise probes as down while serving perfectly well.
-- Once connected it attempts a TLS handshake over the same socket: completed means the port is
-  recorded `https`, rejected or ignored means `http`. The link then carries the scheme the server
-  actually speaks. Getting this wrong is not a graceful failure — an `http://` request to a TLS
-  listener is answered with zero bytes, and the browser reports `ERR_EMPTY_RESPONSE`, which looks
-  like a broken dev server rather than a wrong URL. A port that is down has no known scheme and
-  falls back to `http`.
+- It dials `localhost`, not `127.0.0.1`, so Node's happy-eyeballs tries both address families. A
+  server bound to `::1` only (which Vite does routinely) otherwise probes as down.
+- Once connected it attempts a TLS handshake: completed → `https`, rejected → `http`. Getting this
+  wrong is not graceful — an `http://` request to a TLS listener returns zero bytes and the browser
+  reports `ERR_EMPTY_RESPONSE`, which looks like a broken server rather than a wrong URL. A down
+  port has no known scheme and falls back to `http`.
 
-A dim pencil (U+F03EB) linking to that config closes the port list, so a wrong or new port is
-one click from its declaration; a project with no entry at all renders a dim `pencil ports`
-hint in the same place instead, which is also how a fresh project discovers the feature.
+A project with no entry renders a dim `pencil ports` hint in the same place, which is how a fresh
+project discovers the feature.
 
-Both are `file:` URLs, because Windows Terminal opens a hyperlink only when its scheme is `http`,
-`https` or `file` (`TerminalPage::_IsUriSupported`) — anything else raises an error dialog
-instead of reaching the registered handler, so `vscode://file/...` cannot be emitted directly.
-The workaround is a generated `$TMPDIR/claude-open-<key>.url` shortcut holding that `vscode:`
-URL: `.url` is bound to `InternetShortcut` on every Windows install, and opening one hands its
-URL back to the shell, which dispatches `vscode:` to `Code.exe --open-url`. The file is inert
-data — no script runs on click — and is rewritten every render, so a change of format cannot be
-shadowed by a stale file left in the temp directory.
+**Editor and terminal links are indirect, because Windows Terminal opens a hyperlink only when its
+scheme is `http`, `https` or `file`.** `vscode://` cannot be emitted directly, so the VS Code glyph
+links to a generated `$TMPDIR/claude-open-<key>.url` shortcut holding the `vscode:` URL — opening a
+`.url` hands its URL to the shell, which dispatches `vscode:` to VS Code. The file is inert data and
+is rewritten every render so a format change cannot be shadowed by a stale file. The terminal glyph
+has no URI scheme at all, so it links to a generated `$TMPDIR/claude-newtab-<key>.cmd` running
+`start "" wt.exe -w 0 nt -p "<profile>" -d "<folder>"`:
 
-A `.code-workspace` shim was tried first and silently opened whatever folder VS Code had open
-last: its ProgID is registered but no extension is bound to it, so the click had no handler at
-all.
+- `-w 0` addresses the **most recently used** window, so the tab lands beside the session that drew
+  the icon.
+- `-p` carries `WT_PROFILE_ID` (inherited down to the renderer); without it the tab opens under the
+  default profile. Outside Windows Terminal the variable is unset and the flag is dropped.
+- A `%` in the path is doubled, or `cmd` reads it as a variable reference and swallows it.
 
-**The terminal glyph (U+F018D) duplicates the tab** — a new Windows Terminal tab in the same
-folder, one per name on the line, sitting right after that name's VS Code glyph. There is no
-`wt:` URI scheme to park in a `.url`, so this one is a generated
-`$TMPDIR/claude-newtab-<key>.cmd` running `start "" wt.exe -w 0 nt -p "<profile>" -d "<folder>"`:
-
-- `-w 0` addresses the **most recently used** window, which is the one the click came from, so
-  the tab lands beside the session that drew the icon rather than in a window of its own.
-- `-p` carries `WT_PROFILE_ID`, which Windows Terminal exports into every session it starts and
-  which is inherited all the way down to this renderer. Without it the tab opens under the
-  *default* profile — a copy of the wrong thing. Outside Windows Terminal the variable is unset,
-  the flag is dropped, and `-w 0` opens a window from scratch.
-- A `%` in the path is doubled, because `cmd` would otherwise read it as the start of a variable
-  reference and swallow it.
-
-A `.lnk` would launch `wt` with no console in the way, but writing one means driving COM through
-PowerShell — a process spawn on a line that renders on every keystroke. The `.cmd` costs a brief
-`cmd.exe` flash instead; `start ""` keeps it to the shortest possible, since cmd hands off and
-exits without waiting for the terminal.
-
-The links terminate with `BEL` rather than the usual `ESC \`. Every line is emitted through
-`expandBackslashEscapes`, which would pair that trailing backslash with the first character of
-the label — a directory named `trace` would render as a tab followed by `race`, and one named
-`code` would truncate the whole line at `\c`.
+**Links terminate with `BEL`, not `ESC \`.** Every line passes through `expandBackslashEscapes`,
+which would pair a trailing backslash with the first character of the label (a folder named `code`
+would truncate the line at `\c`).
 
 ## Branch signs and MR/PR block
 
 ```
-mpx-claude-code <VS Code glyph> <terminal glyph> ·  main
+mpx-claude-code <VS Code> <terminal> ·  main
     ≡ · +2 · !28 · ?9 · 2h ago
 
-yoursafe-components <VS Code glyph> <terminal glyph> ·  martas/agentic-setup · :8100 · :8101 · !252 draft · ci run · 💬 3
+yoursafe-components <VS Code> <terminal> ·  martas/agentic-setup · :8100 · !252 draft · ci run · 💬 3
     ↑3 · +2 · 16m ago
 ```
 
-Upstream relation (one state, mutually exclusive): `local` no upstream · `≡` in sync · `↑3`
-ahead · `↓2` behind · `↑3↓2` diverged · `remote deleted` for an upstream that is configured but
-whose remote branch is gone. Then one compact segment per non-zero count — `+n` staged, `!n`
-modified, `?n` untracked, `~n` conflicted — and the age since the last fetch, hidden under 10m.
+Upstream relation (one state, mutually exclusive): `local` no upstream · `≡` in sync · `↑3` ahead ·
+`↓2` behind · `↑3↓2` diverged · `remote deleted`. Then one segment per non-zero count — `+n` staged,
+`!n` modified, `?n` untracked, `~n` conflicted (powerlevel10k vocabulary) — and fetch age, hidden
+under 10m.
 
-**The whole row is quiet by design**: indented four columns under the location line (a detail *of*
-it, the way compaction rows nest under the usage line) and DIM throughout, because it restates
-work you already know about — you made those edits. Color survives only where git is telling you
-something you might not: WARN for diverged/conflicts/deleted remote, green/red for an
-unpushed/unpulled count, sand for a branch that never left the machine. The symbols follow the
-powerlevel10k vocabulary (`+` staged, `!` modified, `?` untracked, `~` conflicted), so they read
-as git shorthand rather than a private code.
+**The whole row is quiet by design**: indented under the location line and dim throughout, because
+it restates work you already know about. Color survives only where git tells you something you might
+not: WARN for diverged/conflicts/deleted remote, green/red for an unpushed/unpulled count, sand for
+a branch that never left the machine.
 
-**Untracked files are counted.** `git status` runs with `--untracked-files=normal` rather than
-the index-only `=no`, which walks the working tree: measured at 98ms against 92ms on this repo,
-for the one class of uncommitted change the line could not otherwise show. `normal` (not `all`)
-collapses an untracked directory to a single entry, so the count matches what `git status` shows
-a human and a large unignored tree cannot inflate it.
+**Untracked files are counted** — `git status --untracked-files=normal` walks the working tree.
+`normal` (not `all`) collapses an untracked directory to one entry, so the count matches what a
+human sees and a large unignored tree cannot inflate it.
 
-MR/PR: `!N` (GitLab) or `#N` (GitHub), an OSC-8 hyperlink to the web URL, followed by one status
-token — `draft`, `conflicts`, `changes-req`, `approved`, `left/req approvals` outstanding,
-`mergeable`, or the raw merge status lowercased — then the pipeline state spelled out (`ci ok`,
-`ci fail`, `ci run`, `ci skip`) and colored, `💬 N` comments, and a dim `Nm ago` when the cached
-data is over 10m old.
+**MR/PR**: `!N` (GitLab) or `#N` (GitHub) linking to the web URL, then one status token (`draft`,
+`conflicts`, `changes-req`, `approved`, `N left/req approvals`, `mergeable`, or the raw merge
+status), the pipeline state spelled out and colored (`ci ok/fail/run/skip`), `💬 N` comments, and a
+dim age note when the cache is stale. The status token binds to the reference with a space
+(`!252 draft` names one thing); everything after it is a separate fact fenced off by `·`. CI links
+to the provider's list of runs (`<url>/checks` or `/pipelines`) — the tab is valid while a run is
+still queued and shows earlier attempts.
 
-**The status token binds to the reference, everything after it takes a separator.** `!252 draft`
-names one thing the way `📁 repo` does, so a space holds it together; CI, comments and the age
-note are separate facts about the branch and are fenced off by `·` like any other field.
+The render path is **network-free**: it reads a `$TMPDIR` cache and, when stale, spawns
+[`scripts/status-line-mr-refresh.sh`](../scripts/status-line-mr-refresh.sh) detached for one
+`glab api graphql` (GitLab) or `gh pr list` (GitHub) call. Rate limits are a non-issue at this
+call volume.
 
-**CI links to the provider's list of runs** — `<mr-url>/checks` on GitHub, `<mr-url>/pipelines`
-on GitLab. Both are paths under the MR/PR URL already in the cache, so the link costs no extra
-field and no extra API call. It targets the tab rather than the newest run: the tab is a valid
-destination while the run is still queued, and it shows the earlier attempts, which is what
-"why did this break" needs.
-
-The render path is network-free: it reads a `$TMPDIR` cache and, when that cache is stale,
-spawns `scripts/status-line-mr-refresh.sh` detached to make one `glab api graphql` (GitLab) or
-`gh pr list` (GitHub) call. TTL 90s with a 30s floor between attempts. Measured: cache read
-~0.5ms, the single `git status --porcelain=v2 --branch --untracked-files=normal` call ~98ms, the
-background API call ~0.7s. Rate limits are a non-issue — GitLab.com allows 2000 req/min and
-GitHub 5000 req/hour, against ~40 calls/hour/repo.
-
-`in sync` is about *commits*, not files: it is porcelain-v2's `# branch.ab +0 -0`, meaning the
-branch's committed history matches its upstream tracking ref. Uncommitted work is reported
-separately by the counts beside it, so `in sync · 28 modified` is a normal, consistent reading.
-
-Caveat: ahead/behind is measured against the *local* copy of the remote ref, so `in sync` stays
-true-looking until something fetches — which is exactly why the fetch age sits beside it.
+`in sync` is about *commits*, not files — porcelain-v2's `# branch.ab +0 -0`. Uncommitted work is
+reported by the counts beside it, so `in sync · 28 modified` is consistent. Ahead/behind is measured
+against the *local* copy of the remote ref, which is why the fetch age sits beside it.
 
 ## Sub-agent status line
 
-`scripts/subagent-status-line.mts` (settings key `subagentStatusLine`) renders one row per
-sub-agent in the tasks panel — toggled with **Ctrl+T** — plus a session-wide tally. It answers
-"who is running right now, on what model, at what effort, for how long", which the main status
-line cannot show.
+[`scripts/subagent-status-line.mts`](../scripts/subagent-status-line.mts) (settings key
+`subagentStatusLine`, toggled with **Ctrl+T**) renders one row per sub-agent plus a session-wide
+tally. It answers "who is running now, on what model, at what effort, for how long".
 
 ```
 ●  haiku               0s 812 (0%)      haiku, inherited
@@ -301,466 +216,283 @@ line cannot show.
 ●  opus   !◆◆◆◆◆       0s 152.0k (76%)  opus, declared max
     ^ effort above the high ceiling
 ●  opus    120.0k      0s 40.0k (20%)   opus, numeric budget
-×  fable  !◆◆◆◆◆       0s 3.0k (1%)     fable, declared max
-    ^ effort above the high ceiling
 ```
 
 Columns: **status** (`●` running cyan, `✓` completed green, `×` failed/killed red) — **model** —
 **effort** — **elapsed** — **context** — label. There is no marker column: a marker prefixes and
-recolors the exact cell it accuses, which is why a `fable` row can carry two of them. Hanging a
-bare `?` or `!` off the end put every mark as far from its value as the layout allowed, and
-reading it as noise about the task label was the usual result; prefixing also hands those three
-columns back to the description.
+recolors the exact cell it accuses, so a row can carry one on the model *and* one on the effort cell.
 
-The **effort** cell draws the main bar's five-slot gauge (`high` → `◆◆◆◇◇`), not the level's
-name. Down a column of rows the filled slots compare at a glance, where the words had to be read
-one at a time; the six-column cell fits the gauge plus a marker. The state file still records the
-**word**, because the `Σ` tally groups by level and a count needs a name (`2×High`, not
-`2×◆◆◆◇◇`). A numeric token budget maps to no rank, so it stays the number it is.
+- **Effort** draws the main bar's five-slot gauge, not the level's name, so filled slots compare
+  down the column. A numeric token budget maps to no rank and stays the number.
+- **Colors:** model — opus blue, sonnet yellow, haiku pink, fable orange. Effort — low green,
+  medium yellow, high orange, xhigh red, max purple, cyan for a numeric budget. Context escalates
+  yellow ≥50%, orange ≥70%, red ≥90% against *each row's own* `contextWindowSize`.
+- **Label** is the agent's live progress summary, falling back to `description` — so the column
+  tracks what the agent is doing now, not the static task title.
 
-Colors: **model** — opus blue, sonnet yellow, haiku pink, fable orange. **Effort** — low green,
-medium yellow, high orange, xhigh red, max purple, and cyan for a numeric token budget.
-**Context** — escalates yellow ≥50%, orange ≥70%, red ≥90%, using each row's own
-`contextWindowSize` (the main bar's absolute token cut-offs would mean different things on rows
-with different windows).
+**No per-agent identity in the payload.** `.type` is always `"local_agent"` and `.name` is `null`
+for Task-tool sub-agents (it is the `agentNameRegistry` entry, rendered when present). The real
+`agentType` is recoverable off the payload — Claude Code writes
+`<project>/<session>/subagents/agent-<id>.meta.json` at spawn, keyed by the same `task.id` — but
+the panel does not read it, because its rows already have the label. The main bar does (below).
 
-The **label** is the agent's live progress summary when it has one, falling back to
-`description` — so the column tracks what the agent is doing now, not the static task title it
-was spawned with.
+**Finished agents.** Terminal rows stay in the payload briefly and then vanish. To outlive that,
+every task seen is accumulated into `~/.claude/subagent-statusline-state/<session_id>.tsv`, and the
+`Σ` line reports the whole session: agent count, breakdown by model tier and effort level, total
+tokens, and how many still run. A task's tokens and elapsed time freeze the first tick it is seen
+terminal. Because the panel only renders rows for ids in the current payload, the `Σ` line hangs off
+the last row and disappears with it. A row's `content` may hold newlines, which is what lets the
+`Σ` line and the per-agent compaction rows sit under the right row.
 
-`tokenSamples` (a rolling history of `tokenCount`, one entry per refresh tick, capped at 16) is
-**deliberately not rendered.** A sparkline of it has to be normalized against the row's own
-min/max, because against a 1M context window every real sub-agent flatlines at the bottom — and
-that normalization destroys scale, so `+200` tokens and `+200k` draw identically. Its real
-information content is close to binary (moving vs. flat), which is not worth ten columns that
-the label uses better.
-
-**Finished agents.** Terminal rows stay in the payload for 30s (the bundle's eviction delay) and
-then vanish. To outlive that, every task seen is accumulated into
-`~/.claude/subagent-statusline-state/<session_id>.tsv`, and the `Σ` line reports the whole
-session: agent count, breakdown by model tier and effort level, total tokens, and how many are
-still running. A task's tokens and elapsed time freeze the first tick it is seen terminal, so a
-finished agent stops accruing time. State files are pruned after 7 days, on the first tick of a
-new session. Because the panel only renders rows for ids present in the current payload, the `Σ`
-line has nowhere of its own to live and hangs off the last row — so it disappears with the last
-row, 30s after the final agent. A row's `content` may hold newlines, which is what makes that
-trick work and what the per-agent compaction rows reuse; they are appended to the agent's own row
-so that *which* agent lost its history is what the panel says, and the `Σ` line stays last.
-
-**Compaction rows are usually absent, correctly so.** Across 806 sub-agent transcripts on this
-machine, zero contained a `compact_boundary` — no sub-agent had ever hit the limit. The largest
-observed peaked at 320,628 tokens on 16 July, eleven days before `autoCompactWindow` was set at
-all. The display is therefore correct by construction but unexercised by real data; the synthetic
-fixture in `scripts/__tests__/compaction.test.ts` is what covers it.
-
-**No per-agent identity in the payload.** `.type` is always the literal
-string `"local_agent"`, and `.name` is always `null` for Task-tool sub-agents (it is the
-`agentNameRegistry` entry, which only teammates and named background agents get; it is rendered
-when present). Both verified by capturing raw stdin payloads. The task object carries a real
-`agentType` internally — the bundle filters on `agentType !== "main-session"` — but it is
-deliberately not copied into this payload, and OTEL doesn't fill the gap either: its
-`gen_ai.turn.subagent_type` attribute is defined but never populated
-([anthropics/claude-code#14784](https://github.com/anthropics/claude-code/issues/14784)), and
-OTEL is push-based batch export to an external collector regardless, unusable inside a
-synchronous 5s tick. So *declared-vs-actual model drift* stays uncheckable here; only the
-tier/effort rules that need no identity run.
-
-It is recoverable **off the payload**, though — Claude Code writes
-`<project>/<session>/subagents/agent-<id>.meta.json` at spawn, carrying `agentType`,
-`description`, `toolUseId` and `spawnDepth`, and the filename's id is the same `task.id` the
-panel already keys on. The main bar's history row reads exactly that (below); the panel does not,
-because its rows already have the label to say what an agent is doing and no column to spare.
-Reading it here would also make declared-vs-actual model drift checkable for the first time —
-`agentType` names the frontmatter file whose declared model the row could be compared against.
-
-To inspect the raw payload yourself, `touch ~/.claude/subagent-statusline-debug` — every tick is
-then appended to `~/.claude/subagent-statusline-debug.jsonl`. Delete the marker file to stop.
-The gate is a file rather than an env var because the panel runs the script from inside Claude
-Code, where there is no shell in which to export one.
-
-Output is JSONL, one `{"id","content"}` object per line, within a 5s timeout; ids left unemitted
-keep the built-in `name · description · tokens` row. For history that survives the session
-entirely, use `scripts/analyze-subagent-models.py`, which reads the same data from
-`~/.claude/projects/**/*.jsonl` after the fact.
+To inspect the raw payload, `touch ~/.claude/subagent-statusline-debug` — every tick is then
+appended to `~/.claude/subagent-statusline-debug.jsonl`; delete the marker to stop. (A file gate,
+not an env var, because the panel runs from inside Claude Code where there is no shell to export
+one.) Output is JSONL, one `{"id","content"}` per line, within a 5s timeout; ids left unemitted keep
+the built-in row.
 
 ## Sub-agent history on the main bar
 
-The tasks panel is a **live view**, never a ledger: it renders only agents Claude Code still has
-in its payload, and evicts a terminal task 30s after it ends. Until this row existed, a finished
-agent left no trace anywhere on screen — the panel's own `Σ` line went with the last row it hung
-off. The main bar carries the ledger instead: a tally row, then one row per agent for the handful
-worth spelling out.
+The tasks panel is a **live view**, never a ledger — it renders only agents still in the payload and
+evicts a terminal task shortly after it ends. The main bar carries the ledger: a tally row, then one
+row per agent for the handful worth spelling out.
 
 ```
 Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
 ⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
-⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02k  231.4k  2×auto
-⠀ ✓ mp-executor     opus   ◆◆◇◇◇  3m30s  198.7k  1×manual
+⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02s  231.4k  2×auto
 ⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
-⠀ ✓ mp-executor     opus   ◆◆◇◇◇  1m44s   88.1k
 ⠀ +3 more
 ```
 
-Tally columns: **count** — **tier tally, each with its own tokens** — **agent types**. Everything
-is DIM except the tier counts, which keep the panel's palette (opus blue, sonnet yellow, haiku
-pink, fable orange) because tier mix is the one comparison worth making at a glance. Tokens are
-charged per tier rather than summed into one figure: what a session spent only means something
-next to what it spent it on, and the total is still the sum of what is on screen. The whole block
-is dropped until at least one agent has finished.
+- **Tally columns**: count — tier tally each with its own tokens — agent types. Everything is dim
+  except the tier counts, which keep the panel's palette because tier mix is the one comparison
+  worth making at a glance. Tokens are charged per tier, not summed.
+- **Row columns**: status — agent type — tier — effort gauge — elapsed — tokens — compaction counts.
+  The name and tier columns size to the widest value on screen; the gauges start at one column so
+  they compare down the block.
+- **Rendered last**, below the quota bars, so ledger and live view read as one block.
+- **Which agents get a row.** `AGENT_DETAIL_ROWS`, plus *every* failure — a failed or killed agent
+  is always spelled out and always first, however many there are. Within the cap, agents keep spawn
+  order if they all fit, otherwise rank by tokens (largest first). The remainder become `+N more`.
+- **Compactions are counted, not listed** (`2×auto` amber, `1×manual` grey; silent when it never
+  compacted). Only agents with a row of their own are scanned.
+- **Only finished agents.** A running agent is already on the panel with more detail, so the two
+  renderers split cleanly: **panel = running, main bar = finished.**
+- **`N×Name`, one idiom everywhere** — `2×Explore`, `1×Opus`, `2×High`, same meaning on both
+  renderers. A type that ran once drops the `1×`. `×` is U+00D7.
 
-Row columns: **status** — **agent type** — **tier** — **effort gauge** — **elapsed** —
-**tokens** — **compaction counts**. The name and tier columns size themselves to the widest value
-actually on screen, so an all-`Explore` session is not indented for the width of
-`mp-reviewer-security` while the gauges still start at one column and compare down the block.
-
-**Rendered last**, below the quota bars, so it sits directly above the tasks panel — the ledger
-and the live view read as one block, and the rows extend into empty terminal instead of shifting
-every row beneath them.
-
-**Which agents get a row.** Five (`AGENT_DETAIL_ROWS`), plus every failure. A failed or killed
-agent is always spelled out and always first, however many there are: a run that broke is the one
-thing in this history you might still act on, so no cap may hide it. Below them the ordering
-depends on whether everything fits — up to five agents all do, so they keep spawn order and the
-block reads as the session's chronology; past five the block has to choose, and it ranks by
-tokens, largest first. Whatever is left over is counted in a trailing `+N more`.
-
-**Compactions are counted, not listed.** The tasks panel draws each agent's full compaction
-history under its row; there is no room for that here and, after the fact, less reason: `2×auto`
-says the agent was handed more than it could hold, and which tokens it shed at 14:02 no longer
-changes anything. Auto keeps the panel's amber, manual its gray, and an agent that never compacted
-says nothing at all. Only the agents with a row of their own are scanned, so a session with forty
-finished agents still costs at most five reads — each the same cached, incremental scan described
-in [Compaction history](#compaction-history).
-
-**Only finished agents.** The panel renders directly beneath this bar for exactly as long as any
-agent is alive, so a running agent is already on screen with far more detail than a ledger row
-could carry. Including it would say the same thing twice while it ran and nothing at all
-afterwards. The two renderers therefore split cleanly: **panel = running, main bar = finished.**
-
-**`N×Name`, one idiom everywhere.** `2×Explore`, `1×Opus`, `2×High` — a number in front of a name
-means the same thing on both renderers, for tiers, effort levels and agent types alike. `×` is
-U+00D7, already proven in the Cascadia Mono cmap as the panel's `failed` glyph. A type that ran
-once drops the redundant `1×`. Types sort by count, heaviest first, ties keeping spawn order;
-past the sixth the rest collapse into `+N`.
-
-**Two files, neither in the payload.**
+**Three files, none in the payload:**
 
 | File | Supplies |
 | --- | --- |
-| `~/.claude/subagent-statusline-state/<session_id>.tsv` | tier, effort, tokens, elapsed, **status** — written by the panel, frozen on terminal |
-| `<project>/<session>/subagents/agent-<id>.meta.json` | **`agentType`** — written by Claude Code at spawn |
-| `<session>/subagents/agent-<id>.jsonl` | the run's own compaction boundaries, for the rows that show counts |
+| `~/.claude/subagent-statusline-state/<session_id>.tsv` | tier, effort, tokens, elapsed, status — written by the panel, frozen on terminal |
+| `<project>/<session>/subagents/agent-<id>.meta.json` | `agentType` — written by Claude Code at spawn |
+| `<session>/subagents/agent-<id>.jsonl` | the run's compaction boundaries |
 
-The TSV is the spine: it is the only source that knows an agent's status, and it is complete,
-because the panel ticks continuously for as long as any agent runs. The sidecars are read by id
-rather than by scanning the directory — the TSV already names every agent worth drawing — and
-they are read fresh rather than cached, being small, immutable once written, and cheaper in
-total than the one `git` call the bar already makes every tick. An agent whose sidecar cannot be
-read still counts toward the tally and its tier's tokens; only its name goes `unknown`, because
-dropping it would make the count disagree with the panel's.
+The TSV is the spine — the only source that knows an agent's status, and complete because the panel
+ticks continuously while any agent runs. The sidecars are read by id (the TSV already names every
+agent) and read fresh, being small and immutable. An agent whose sidecar cannot be read still counts
+toward the tally; only its name goes `unknown`, so the count never disagrees with the panel.
 
-**The `!` marker outlives the panel that raised it.** A type on the tally is marked red when any
-of its agents ran on a banned tier (`!fork` = the fork ran on fable) — the tier tally beside it
-already says a banned model ran, and this says *which agent* ran on it, which is the pairing that
-used to vanish with the panel. On a spelled-out row the marker sits on the tier cell itself
-(`!fable`), exactly as the panel prefixes it. Only the tier rule is reachable: the state file
-records the *resolved* effort, not whether the agent declared it, and flagging an inherited level
-would accuse an agent of a choice it never made. Those effort rules stay with the panel, which
-knows the difference. The amber `?` has no place here for the same reason — it qualifies a
-declared-vs-inherited distinction this block does not carry.
+**The `!` marker outlives the panel.** A type on the tally is marked red when any of its agents ran
+on a banned tier (`!fork` = the fork ran on fable); on a spelled-out row the marker sits on the tier
+cell (`!fable`). Only the tier rule is reachable here — the state file records the *resolved* effort,
+not whether it was declared, so flagging an inherited level would accuse an agent of a choice it
+never made. Those effort rules stay with the panel, which knows the difference.
 
-**Two links, because a name and a run are two different questions.**
+**Two links:** an agent **type** (on the tally or at a row head) opens `.claude/agents/<type>.md`,
+the file that defines it (project-level over user-level; a built-in nobody overrode has no file and
+no link); a row's **status glyph** opens that run's own transcript, because that cell belongs to one
+run while a type name shared by four agents has four transcripts and no honest target.
 
-| Click | Opens |
-| --- | --- |
-| an agent **type** — on the tally, or at the head of a row | `.claude/agents/<type>.md`, the file that *defines* it |
-| a row's **status glyph** (`✓` / `×`) | `<session>/subagents/agent-<id>.jsonl`, that run's own transcript |
-
-A type name is a thing you edit: its frontmatter sets the model and effort, so the definition is
-where a surprise on this bar actually gets fixed. Project-level `.claude/agents/` wins over
-user-level, the order Claude Code resolves a `subagent_type` in; a built-in type nobody has
-overridden (`general-purpose`, `Plan`) has no file and so gets no link. The transcript link hangs
-off the status glyph because that cell belongs to one run alone — a type name shared by four
-agents has four transcripts and no honest target.
-
-Shared code lives in [`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) —
-tier colors, the status glyphs, the `N×` idiom, `formatDuration`, the state-file row format, the
-drift rule — so the two renderers cannot drift into two dialects of the same vocabulary.
+Shared vocabulary — tier colors, status glyphs, the `N×` idiom, `formatDuration`, the state-file row
+format, the drift rule — lives in
+[`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) so the two renderers cannot
+drift into two dialects.
 
 ## Sub-agent effort markers
 
-The `effort` field in the `subagentStatusLine` payload is **present only when the agent's
-frontmatter declares one** — via the per-task `effort` field added in Claude Code **2.1.214**.
-The Agent tool has no per-spawn `effort` parameter (unlike `model`), so frontmatter is the only
-source; an absent field means the agent inherits the session `effortLevel`, and the renderer
-substitutes it and marks the value `?`. A numeric budget renders as `120.0k`, having no rank a
-gauge could draw.
+The `effort` field in the `subagentStatusLine` payload is **present only when the agent's frontmatter
+declares one** (via the per-task `effort` field). The Agent tool has no per-spawn `effort` parameter,
+so an absent field means the agent inherits the session `effortLevel`; the renderer substitutes it
+and marks the value `?`. A numeric budget renders as `120.0k`, having no rank a gauge could draw.
 
-Markers prefix and recolor the cell they accuse — there is no separate marker column, and a row
-can carry one on each cell independently (`!fable` plus `?◆◆◆◇◇` on the same row, which the
-old single-slot design could not show because `!` outranked `?`).
-
-Both marked cells **reserve the marker slot on every row**, blank where there is no marker, so a
-mark never shifts the value it is about. Without it the gauges start a character further right
-the moment a row is marked, and comparing filled slots down the column — the reason for drawing
-a gauge at all — stops working.
+Both marked cells **reserve the marker slot on every row**, blank where there is no marker, so a mark
+never shifts the value it is about — otherwise the gauges shift a column the moment a row is marked
+and stop comparing.
 
 | Marker | Cell | Meaning |
 | --- | --- | --- |
-| `!` red (fg 196) | model | a model-class violation identified by the caller. Carries a `^ reason` line. |
-| `!` red (fg 196) | effort | a *declared* value violates a rule — above the `high` ceiling, or declared on haiku. Carries a `^ reason` line. |
-| `?` amber (fg 214) | effort | the value was substituted from the session `effortLevel` because the agent declared none. No reason line: inheriting is routine for `general-purpose`, `claude`, `Plan` and `fork`, and one per row would bury the real `!` rows. |
+| `!` red | model | a model-class violation identified by the caller. Carries a `^ reason` line. |
+| `!` red | effort | a *declared* value violates a rule — above the `high` ceiling, or declared on haiku. Carries a `^ reason` line. |
+| `?` amber | effort | the value was substituted from the session `effortLevel` because the agent declared none. No reason line — inheriting is routine. |
 | unmarked | either | a declared value, no violation. |
 
-Haiku with no declared effort renders a **blank** effort cell:
-[the model-config table](https://code.claude.com/docs/en/model-config) lists effort levels per
-model and states that models not listed do not support effort — no Haiku appears, so
-substituting one would be fiction, and the blank is excluded from the session tally's effort
-grouping. Haiku that *declares* an effort renders it as `!◆◇◇◇◇`: blanking would hide the very
-thing being flagged, and it counts toward the `Σ` tally like any other declared value.
+**Haiku with no declared effort renders a blank effort cell** — the model-config docs list no effort
+levels for haiku, so substituting one would be fiction, and the blank is excluded from the tally's
+effort grouping. Haiku that *declares* an effort renders it as `!◆◇◇◇◇`, since blanking would hide
+the very thing being flagged.
 
-Effort drift checks only ever judge *declared* values. Flagging a substituted one blames an
-agent for a setting it never made, which is how every `general-purpose` row used to acquire a
-violation it had no way to cause. A resolved model tier alone does not prove that a frontier
-selection violated policy, because the task payload has no record of whether it was deliberately
-selected for exceptional manual orchestration.
+Effort drift checks only ever judge *declared* values; flagging a substituted one blames an agent for
+a setting it never made. A resolved Fable tier is not independently a violation — the payload has no
+record of whether a frontier selection was a deliberate manual escalation.
 
 ## Implementation
 
-Both renderers are zero-dependency ESM TypeScript (`.mts`), run by Node's native type
-stripping — no build step, no bundler, no `dist/`. `settings.json` invokes them as
-`node "$HOME/.claude/scripts/<name>.mts"`. Requires Node ≥ 22.18; type stripping means
-**erasable syntax only** (no `enum`, no `namespace`, no constructor parameter properties).
+Both renderers are zero-dependency ESM TypeScript (`.mts`), run by Node's native type stripping — no
+build step, no bundler. `settings.json` invokes them as `node "$HOME/.claude/scripts/<name>.mts"`.
+Requires Node ≥ 22.18; type stripping means **erasable syntax only** (no `enum`, `namespace`, or
+constructor parameter properties). A repo whose `.nvmrc` pins a pre-22.18 Node renders a *blank*
+status line — Node exits with `ERR_UNKNOWN_FILE_EXTENSION` and Claude Code sees empty stdout. Raise
+the pin.
 
-That `node` resolves per-directory under a version manager, so a repo whose `.nvmrc` pins a
-pre-22.18 version renders a blank status line: Node exits with `ERR_UNKNOWN_FILE_EXTENSION:
-Unknown file extension ".mts"` and Claude Code sees empty stdout. Raise the project's pin.
+Shared libraries keep the two renderers from drifting:
 
-They were bash until the process-spawn cost stopped being tolerable. Under Windows Git Bash
-every `jq`, `awk`, `date`, `stat`, `git` and subshell is a full fork emulation, and both scripts
-run on every render tick:
+- [`scripts/lib/statusline-ansi.mts`](../scripts/lib/statusline-ansi.mts) — `RESET`, `BOLD`, the
+  five-slot effort gauge, stdin reading, cache reads, the cache-key sanitizer, and the integer guard
+  that rejects negatives, decimals, empty strings and `"null"` (nearly every numeric field is gated
+  on it).
+- [`scripts/lib/compaction.mts`](../scripts/lib/compaction.mts) — the incremental transcript reader,
+  the limit math, and the row renderer; each renderer passes its own `CompactionStyle`.
+- [`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) — everything both
+  renderers say *about* a sub-agent. Rendering is **not** shared: the panel draws padded columns and
+  the main bar draws a sentence.
 
-| Renderer | bash | TypeScript |
-| --- | --- | --- |
-| `status-line` | ~697 ms/render | ~198 ms/render |
-| `subagent-status-line` | ~545 ms/render | ~144 ms/render |
+**Background fills inside the payload do not work — don't try again.** `RESET` clears background as
+well as foreground and every field closes with one; reaching the right margin needs `\x1b[K`, which
+Claude Code strips before the row reaches the terminal (colors survive, other CSI sequences do not).
+Foreground color is the only lever this script has. Painting the whole *window* background does work,
+but only from the launch site — see [Account background](#account-background).
 
-The port also deleted a layer of workarounds that only existed to survive bash: packing 15
-fields through one `jq` call with an ASCII Unit Separator so `read` would not collapse empty
-ones, `awk` for float formatting, `stat -c %Y` for cache mtimes, and manual `curl -i`
-header/body splitting. The `0x1F` separator survives in the *on-disk cache formats* only,
-because existing caches use it.
+Two bash behaviors are reproduced deliberately, because on-disk cache formats and the numbers users
+are used to depend on them: `basename` treating a Windows `\` as a separator, and `printf '%.0f'`
+rounding half **to even** (`0.5`→`0`, `2.5`→`2`). `printf '%b'` escape expansion is also reproduced,
+including `\c` truncating output — reachable from any branch or session name with a backslash. The
+`0x1F` Unit Separator survives in the on-disk cache formats only.
 
-**Background fills inside the payload do not work — don't try again.** Two separate walls. First,
-`RESET` clears background as well as foreground, and every field on these rows closes itself with
-one, so a background armed at the start of a row dies at the first colored field; rewriting each
-`RESET` as `RESET + background` fixes that much. Second, and fatal: reaching the right margin needs
-`\x1b[K`, the payload carries no terminal width to pad against instead, and Claude Code strips the
-erase before the row reaches the terminal — colors survive that pass, other CSI sequences do not.
-Even a working fill would be inset, because Claude Code indents the bar and right-aligns its own
-hints on line one. Foreground color is the only lever *this script* has.
-
-That limit is about the status-line payload, not about the pane. Painting the whole window
-background does work — it just has to be done from the launch site instead, which is what
-"Account background" below describes.
-
-`scripts/lib/statusline-ansi.mts` holds the small shared surface: `RESET` and `BOLD`, the
-five-slot effort gauge both renderers draw, stdin reading, best-effort cache reads, the cache-key
-sanitizer, and the integer guard
-that reproduces bash's `[[ $x =~ ^[0-9]+$ ]]`. That predicate rejects negatives, decimals, empty
-strings and `"null"` — it stays because nearly every numeric field is gated on it, and a looser
-check would start rendering values the old line silently dropped.
-
-`scripts/lib/compaction.mts` holds everything about compaction: the transcript reader with its
-incremental byte-offset cache, the limit math, and the row renderer. Both renderers pass their own
-`CompactionStyle` into one `buildCompactionLines`, so a compaction row means the same thing
-wherever it appears rather than drifting into two dialects.
-
-`scripts/lib/subagent-history.mts` holds everything both renderers say *about a sub-agent*: tier
-colors, the `N×Name` count idiom, the on-disk state-file row format, the `fable` drift rule, and
-the readers for the state file and the `agent-<id>.meta.json` sidecars. The panel writes that
-state file and the main bar reads it, so the format has exactly one definition. Rendering is
-**not** shared — the panel draws padded columns and the main bar draws a sentence, and forcing
-one builder to do both would serve neither.
-
-Two bash behaviors are reproduced deliberately, because the on-disk cache formats and the
-numbers users have grown used to both depend on them: `basename` under Git Bash treats a Windows
-`\` as a path separator, and `printf '%.0f'` rounds half **to even**, so `0.5`→`0` and `2.5`→`2`
-where `toFixed` would give `1` and `3`. (`printf '%b'` escape expansion is also reproduced,
-including `\c` truncating the rest of the output — it is reachable from any branch or session
-name containing a backslash.)
-
-The bash originals live in `deprecated/scripts/` (`status-line.sh`, `subagent-status-line.sh`) —
-kept as the byte-parity reference the port was validated against, archived once the renderers
-diverged deliberately. `status-line-mr-refresh.sh` is **not** deprecated — it is still the
-detached child that refreshes MR/PR data.
+The bash originals live in `deprecated/scripts/` (`status-line.sh`, `subagent-status-line.sh`), kept
+as reference. `status-line-mr-refresh.sh` is **not** deprecated — it is still the detached child that
+refreshes MR/PR data.
 
 ## Account background
 
-Personal and work sessions run side by side in the same Windows Terminal, and the bar naming the
-account was not enough — the question "which account is this" gets asked from across the room. The
-pane background answers it.
+Personal and work sessions run side by side in one Windows Terminal, and naming the account in the
+bar was not enough — "which account is this" gets asked from across the room. The pane background
+answers it.
 
-`cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call `scripts/account-color.mts` before handing off to
-`claude`, and an `EXIT` trap calls it again with `reset` so the profile's own colors come back
-however the session ends, Ctrl-C included. The tints live in `statusline-accounts.json`: personal
-`#0c2e16` (green), work `#3a1f00` (amber).
+`cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call [`scripts/account-color.mts`](../scripts/account-color.mts)
+before handing off to `claude`, and an `EXIT` trap calls it again with `reset` so the profile's own
+colors return however the session ends. The tints live in
+[`statusline-accounts.json`](../statusline-accounts.json): personal dark red, work dark blue. Pi (the
+third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`, in a different repo.
 
-- **OSC 11 sets the background, OSC 12 the cursor**; `reset` sends OSC 111/112. Verified against
-  Windows Terminal 1.24: OSC 11 writes color-table index 262 and repoints the `DefaultBackground`
-  alias, so a profile's configured `background` only *seeds* that value at startup and this
-  overrides it. The 25 per-profile `background` keys were deleted from Windows Terminal's
-  settings.json once this worked — they now have nothing to say.
-- **`unfocusedAppearance` and `useBackgroundImageForWindow` would each undo it** on focus change
-  or repaint. Neither is set on any profile here. A settings.json reload also resets the pane;
-  starting a shell restores it.
-- **One sequence per `write`.** Emitting OSC 11 and OSC 12 as a single concatenated string makes
-  Windows Terminal drop the background sequence — the cursor still changes, so the failure looks
-  like OSC 11 being unsupported rather than a framing problem. Split into two `process.stdout.write`
-  calls, both are honored. Measured, not inferred: screenshots of the pane after each writer put the
-  background at `#0c0c0c` for the concatenated form and `#0c2e16` for the split one, 95% of pixels.
-  This cost a long debugging session, because the symptom is indistinguishable from the terminal
-  ignoring the sequence outright.
-- **Node writes it, not `printf`.** Git Bash's MSYS2 layer runs its own console translation and
-  silently drops the OSC sequences it does not recognise — OSC 0 (window title) survives, OSC 11
-  does not. Confirmed by having bash, node and PowerShell write the same sequence to the same
-  pane: only bash's was swallowed. A native-Windows writer bypasses that layer.
-- **Not a Claude Code hook.** `SessionStart` hook stdout is captured and fed to the model as
-  context, so it never reaches the terminal. The launch site is the only place that both knows the
-  account and owns the tty.
-- **Tab color stays free.** 14 profiles set `tabColor`, which beats VT, so the tab keeps meaning
-  *project* while the background means *account* — two identities, no collision.
-- **Failures are loud, success is silent.** A tint that cannot be applied must never stop Claude
-  Code from starting, so nothing here throws — but an unreadable accounts file or an unknown
-  account name prints to stderr. An earlier blanket `catch` made those cases look identical to a
-  terminal ignoring the sequence. `--verbose` reports the colors sent and whether stdout is a tty.
+- **OSC 11 sets the background, OSC 12 the cursor**; `reset` sends OSC 111/112. OSC 11 repoints the
+  `DefaultBackground` alias, so a profile's configured `background` only *seeds* the value at startup
+  and this overrides it.
+- **Never set `unfocusedAppearance` or `useBackgroundImageForWindow`** on any profile or in
+  `profiles.defaults`: each focus change then re-applies the profile's color scheme and wipes the
+  tint. Pane dimming and this repaint are mutually exclusive in Windows Terminal — dimming would need
+  a different terminal (WezTerm does both).
+- **One OSC sequence per `write`.** Concatenating OSC 11 and OSC 12 into one string makes Windows
+  Terminal drop the background sequence (the cursor still changes, so it looks like OSC 11 being
+  unsupported). Split into two `process.stdout.write` calls, both are honored.
+- **Node writes it, not `printf`, and node must not be aliased to `winpty`.** Git Bash's MSYS2 layer
+  and winpty's hidden console both silently swallow OSC 11/12. `~/.bashrc` runs `unalias node` before
+  the `cc`/`ccw` functions are parsed (aliases bake into function bodies at parse time). A native
+  Windows writer bypasses the translation layer.
+- **Not a Claude Code hook.** `SessionStart` hook stdout is captured as model context and never
+  reaches the terminal. The launch site is the only place that knows the account *and* owns the tty.
+- **Tab color stays free.** Profiles set `tabColor`, which beats VT, so the tab means *project* while
+  the background means *account* — two identities, no collision.
+- **Failures are loud, success is silent.** A tint that cannot be applied must never stop Claude Code
+  from starting, so nothing throws — but an unreadable accounts file or unknown account name prints
+  to stderr. `--verbose` reports the colors sent and whether stdout is a tty.
 
 ## The derived palette
 
-Palette indices 16–255 are constants: a color scheme only remaps 0–15, so a bar painted in
-`fg(74)`/`fg(245)`/`fg(240)` rendered identically whichever scheme Windows Terminal was set to,
-and rendered wrong on a light one because those greys were picked by eye against a dark
-background. `scripts/lib/terminal-theme.mts` reads the scheme and emits 24-bit color instead, so
-all 24 tones are *derived* from that scheme's own colors.
+Palette indices 16–255 are constants a color scheme never remaps, so a bar painted in fixed indices
+rendered identically on every scheme and *wrong* on a light one. [`scripts/lib/terminal-theme.mts`](../scripts/lib/terminal-theme.mts)
+reads the scheme and emits 24-bit color instead, so all tones are *derived* from that scheme's own
+colors.
 
-- **Which background it derives against** is whatever is actually on screen. The launchers export
-  `CLAUDE_PANE_ACCOUNT`, which is the only evidence an OSC 11 was emitted at all; with it the
-  account tint is the reference, without it (a bare `claude`) the scheme's own background is.
-  Guessing the tint unconditionally would derive the whole palette against a background the pane
-  is not showing.
-- **The scheme is resolved** from `WT_PROFILE_ID` → that profile's `colorScheme` →
-  `profiles.defaults.colorScheme` → `Campbell`. Windows Terminal's settings.json is JSONC — it
-  writes `//` comments and leaves trailing commas behind — so it is parsed by a string-aware
-  stripper rather than `JSON.parse`, because a `//` inside a `startingDirectory` is data.
+- **The background it derives against** is whatever is actually on screen. The launchers export
+  `CLAUDE_PANE_ACCOUNT`, the only evidence an OSC 11 was emitted; with it the account tint is the
+  reference, without it (a bare `claude`) the scheme's background is.
+- **The scheme is resolved** `WT_PROFILE_ID` → that profile's `colorScheme` →
+  `profiles.defaults.colorScheme` → `Campbell`. Windows Terminal's settings.json is JSONC, so it is
+  parsed by a string-aware stripper (a `//` inside a `startingDirectory` is data, not a comment).
 - **The built-in schemes are vendored** into `statusline-schemes.json` rather than read from the
-  installed `defaults.json`: that file sits under a version-stamped WindowsApps directory whose
-  parent cannot be listed, and locating it costs a PowerShell process on every render tick.
-  User-defined schemes in settings.json still win, matching Windows Terminal's own precedence.
-- **The neutrals are blends, not literals.** `gray`/`dim`/`barEmpty` mix the scheme's foreground
-  toward the background at 0.35/0.62/0.72 — factors pinned to reproduce the old fixed indices on
-  Campbell, so nothing about the default look changed while every other scheme now gets the same
-  *relationships* instead of those literal greys.
-- **A contrast floor keeps scheme colors legible** on a background the scheme did not choose.
-  Campbell's red `#C50F1F` is the worked example: fine on its near-black default, 2.4:1 against
-  the account tints. Anything under 4.5:1 is walked toward a lift color by binary search; the lift
-  follows the background, which is also what inverts the palette on a light scheme. `white` is
-  held to 7:1 so it stays visibly ahead of `gray` — on a light scheme both would otherwise clamp
-  to 4.5 and land on the same color. `dim` and `barEmpty` are exempt: they are meant to recede.
+  installed `defaults.json`, which sits under a version-stamped WindowsApps directory that cannot be
+  cheaply located. User-defined schemes in settings.json still win, matching Windows Terminal's
+  precedence.
+- **Neutrals are blends, not literals** — `gray`/`dim`/`barEmpty` mix the scheme's foreground toward
+  the background, so every scheme gets the same *relationships* rather than fixed greys.
+- **A contrast floor keeps scheme colors legible** on a background the scheme did not choose: anything
+  under 4.5:1 is walked toward a lift color by binary search (the lift follows the background, which
+  also inverts the palette on a light scheme). `white` is held to 7:1 so it stays ahead of `gray`;
+  `dim` and `barEmpty` are exempt because they are meant to recede.
 - **Two colors are mixed, not taken.** No scheme ships a true orange, so the context ramp's middle
-  step is `mix(yellow, red, 0.5)` — built on plain `yellow`, because several schemes (Campbell
-  included) make `brightYellow` a pale cream and mixing cream toward red gives salmon, which reads
-  softer than the yellow before it rather than harsher. `warn` and the ramp's top are both red and
-  are separated by lightness off `brightRed`; deriving both from `red` puts the floor to work on
-  each and lands them on the same washed pink.
+  step is `mix(yellow, red, 0.5)`. `warn` and the ramp's top are both red, separated by lightness.
 
-Resolution costs **~1.6 ms** and is memoized per process, which is safe because the process is torn
-down every render tick — a scheme change shows up on the very next one.
+Resolution is memoized per process, which is safe because the process is torn down every tick — a
+scheme change shows on the next render.
 
 ## Glyph vocabulary
 
-The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (set via
-`profiles.defaults.font.face` in Windows Terminal's settings.json; WT walks the comma list
-per glyph). Text comes from the bundled Cascadia Mono; every Private Use Area glyph falls
-through to Symbols Nerd Font (the symbols-only nerd-fonts build, installed per-user
-2026-07-30), which licenses the pictograms on the location line: the git-branch glyph U+E725
-(devicons), the VS Code logo U+F0A1E, the console U+F018D and the pencil U+F03EB (all three
-Material Design set).
+The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (`profiles.defaults.font.face`;
+WT walks the comma list per glyph). Text comes from Cascadia Mono; the Private Use Area pictograms
+fall through to Symbols Nerd Font — the git-branch glyph U+E725, VS Code U+F0A1E, console U+F018D and
+pencil U+F03EB. The non-"Mono" Symbols Nerd Font is used deliberately: it keeps the icons' native
+double-cell proportions (a terminal can only render a glyph bigger if the font draws it into more of
+the cell), and the overflow paints into a space the layout guarantees to its right.
 
-That pair is the third iteration, each driven by a live look. Cascadia Mono NF (Microsoft's
-official NF build, still installed) came first, but it scales every symbol down into a single
-cell — the VS Code devicon U+E70C read as a speck, and the powerline branch U+E0A0 as a
-full-height hairline. Swapping codepoints (U+E725, U+F0A1E) helped but stayed capped at one
-cell. The non-"Mono" Symbols Nerd Font keeps the icons' native double-cell proportions, which
-is the only way a terminal ever renders a glyph bigger — the renderer cannot scale one glyph,
-only the font can draw it into more of the cell. The double-width overflow paints into the
-cell to the icon's right, so the layout guarantees a plain space there.
-
-Everything else stays within the set verified against **plain** Cascadia Mono's cmap (parsed
-directly from the TTF), so a fallback to the non-NF font degrades exactly two icons and nothing
-else: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░ ↑ ↓ ±` are present; `✗ ✔ ✖ ⚙ ⚡ ⏺ ✦` are **absent** and must not
-be used. A character the font lacks falls back to Segoe UI Emoji, which draws double-width into
-the single cell the terminal reserved and smears over the text beside it — that fallback is why
-`✎ ⟳ ⊘ ⇅ ✗` were purged from the original design, and why any new glyph gets checked against the
-cmap before use. Real emoji (`💬 ⚠`) come from the emoji font by design and are fine once
-spaced; the once-load-bearing `📁 🔀 🔥` were dropped in the 2026-07 redesign as the loudest
-things on their rows.
-
-Current symbol assignments:
+Everything else stays within **plain** Cascadia Mono's cmap (parsed from the TTF), so a fallback to
+the non-NF font degrades exactly those pictograms and nothing else. Present: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░
+↑ ↓ ±`. **Absent, must not be used**: `✗ ✔ ✖ ⚙ ⚡ ⏺ ✦` — a missing glyph falls back to Segoe UI Emoji,
+which draws double-width into the single reserved cell and smears over neighboring text. Any new glyph
+gets checked against the cmap first. Real emoji (`💬 ⚠`) come from the emoji font by design and are
+fine once spaced.
 
 | Glyph | Means |
 | --- | --- |
 | `◆◇` (five slots) | effort gauge: low `◆◇◇◇◇` → max `◆◆◆◆◆` |
 | U+E725 branch | precedes the branch name |
-| U+F0A1E VS Code | after each folder name; opens the editor there (was the word `IDE`) |
-| U+F018D console | after each folder name's VS Code glyph; opens a terminal tab there |
+| U+F0A1E VS Code | after each folder name; opens the editor there |
+| U+F018D console | after the VS Code glyph; opens a terminal tab there |
 | U+F03EB pencil | after the dev-server ports; opens `statusline-projects.json` |
-| U+2800 braille blank | first character of every indented row (branch state, compaction) |
+| U+2800 braille blank | first character of every indented row |
 | `≡` | branch in sync with upstream |
-| `+n !n ?n ~n` | staged / modified / untracked / conflicted (powerlevel10k vocabulary) |
+| `+n !n ?n ~n` | staged / modified / untracked / conflicted |
 | `█ ░` | every bar: quota and context |
 
-**The indent guard.** Claude Code trims whitespace off each status-line row before rendering
-it, so an indent made of plain spaces silently disappears. Every nested row therefore leads
-with U+2800 — a braille pattern with no dots raised, which draws as an empty cell but is not
-whitespace to any trim — and hides its ordinary spaces behind it. It lives in base Cascadia
-Mono, so no fallback is involved.
-
-The sub-agent status column keeps `✓`/`×` because it is one cell wide and has no room for words.
+**The indent guard.** Claude Code trims whitespace off each row before rendering, so a plain-space
+indent disappears. Every nested row leads with U+2800 — a braille pattern with no dots raised, which
+draws as an empty cell but is not whitespace to any trim — and hides its ordinary spaces behind it.
+The sub-agent status column keeps `✓`/`×` because it is one cell wide with no room for words.
 
 ## Verifying a change
 
 ```bash
 node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # 313 unit tests over the pure helpers
+npx vitest run scripts/__tests__     # unit tests over the pure helpers
 ```
 
-The harness began as a byte-parity golden diff against the bash originals, which is how the port
-was validated. That contract ended deliberately once the renderers started spelling states as
-words and gating effort drift on declared values — the originals moved to `deprecated/scripts/`
-and the diff went with them. What remains is what unit tests structurally cannot reach: each
-fixture runs through the real executable in a throwaway sandbox (`TMPDIR` +
-`CLAUDE_CONFIG_DIR`), asserting a clean exit, valid JSONL with a row per task, no
-`undefined`/`NaN` leaking into a rendered line, and **no fallback-prone glyph** — that last
-guard caught `✗` still sitting in the sub-agent status column. A fixture may also assert
-`expect`/`reject` substrings, which is how the sub-agent history block is covered: it is assembled
-from files nothing in the payload mentions, so only a fixture that seeds a state file and its
-meta sidecars proves it renders — that the running agent in that fixture stays out of it, and
-that a second fixture of seven agents keeps the failure, ranks the rest by tokens and counts the
-two it drops.
+The harness runs each fixture through the real executable in a throwaway sandbox (`TMPDIR` +
+`CLAUDE_CONFIG_DIR`), asserting a clean exit, valid JSONL with a row per task, no `undefined`/`NaN`
+in a rendered line, and **no fallback-prone glyph**. A fixture may also assert `expect`/`reject`
+substrings — the only way to cover the sub-agent history block, which is assembled from files nothing
+in the payload mentions, so a fixture must seed a state file and its meta sidecars for it to render.
 
-**Previewing colors is its own trap on Windows.** Running a renderer straight into a Git Bash
-terminal shows the wrong colors: `node` writing to a Windows TTY sends its escapes through
-libuv's ANSI translation, which approximates everything to the 16-color palette — `#005f5f` comes
-out bright blue, `#875f00` comes out red, and only the 232-255 grayscale ramp survives intact.
-Now that the palette is derived 24-bit color, that collapse hides nearly every distinction the
-`terminal-theme.mts` contrast work exists to create, so previewing this way is worse than useless.
-Piping to `cat` should bypass it but Git Bash wraps `node` in `winpty`, which refuses a piped
-stdout (`stdout is not a tty`). Redirect to a file and `cat` that file instead: the redirect keeps
-libuv out, and `cat` hands raw bytes to Windows Terminal, which parses them itself. Claude Code
-renders through Ink on the untranslated path, so the file is the honest preview.
+Two traps the harness exists to catch:
 
-It also smoke-tests the **installed** path, and that check earns its place: Claude Code invokes
-these through `~/.claude/scripts`, a symlink to this repo. Node resolves `import.meta.url` to
-the link target while leaving `process.argv[1]` as the link path, so an entry-point guard
-comparing the two without `realpath` renders **nothing at all** — no error, no output, just a
-blank status line. Running fixtures from the repo path cannot catch it.
+- **Previewing colors in a Git Bash terminal shows the wrong colors.** `node` writing to a Windows
+  TTY sends its escapes through libuv's ANSI translation, which approximates 24-bit color to the
+  16-color palette. Piping to `cat` should bypass it but Git Bash wraps `node` in `winpty`, which
+  refuses a piped stdout. Redirect to a file and `cat` *that*: the redirect keeps libuv out and `cat`
+  hands raw bytes to Windows Terminal. Claude Code renders on the untranslated path, so the file is
+  the honest preview.
+- **The installed path differs from the repo path.** Claude Code invokes these through
+  `~/.claude/scripts`, a symlink to this repo. Node resolves `import.meta.url` to the link target
+  while leaving `process.argv[1]` as the link path, so an entry-point guard comparing the two without
+  `realpath` renders nothing at all — no error, just a blank line. Running fixtures from the repo path
+  cannot catch it.
