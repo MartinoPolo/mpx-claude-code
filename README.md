@@ -377,3 +377,7 @@ Both include the Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rul
 **Worktrees:** `node scripts/setup-worktree.mts <name> [--base <ref>]` creates an isolated worktree — path derived from the repo location, base branch auto-detected, editor config + `.worktreeinclude` matches copied, per-worktree dev-server ports allocated, deps installed in the background; `remove-worktree.mts` releases the ports and cleans up. Harness-agnostic Node/TS hub (the `setup-worktree`/`remove-worktree` shell functions wrap it). Design, port model, and per-repo config: [`docs/WORKTREE_HUB.md`](docs/WORKTREE_HUB.md). The old bash creators live in [`scripts/deprecated/`](scripts/deprecated/).
 
 **Tests:** `npm test` (Vitest) covers hooks and status-line scripts.
+
+## License
+
+[MIT](LICENSE).
