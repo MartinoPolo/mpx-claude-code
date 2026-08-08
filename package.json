@@ -1,6 +1,9 @@
 {
   "name": "mpx-claude-code",
   "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"

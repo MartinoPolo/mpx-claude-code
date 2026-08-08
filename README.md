@@ -1,14 +1,6 @@
 # mpx — Claude Code Customization Toolkit
 
-Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with GitHub-driven project workflows, TDD execution, and general-purpose dev tools.
-
-**Why it's good:**
-
-- **Full pipeline, hands-off** — requirements → epic → GitHub issues → TDD execution → reviewed PR → CI-green auto-merge, with the main agent as a pure orchestrator (raw findings, test failures, and CI logs never enter its context).
-- **Dozens of cherry-pickable skills and agents** — git workflows, parallel code review, design pipeline, maintenance sweeps, content generators (tutorials, podcasts, video sheets).
-- **Benchmarked model/effort choices** — every agent's model and effort pin is backed by a measured benchmark, not vibes ([details](docs/SUBAGENTS.md)).
-- **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
-- **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)).
+Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with a hands-off GitHub-driven pipeline (requirements → epic → issues → TDD execution → reviewed PR → CI-green auto-merge), benchmarked sub-agent pins, guard-rail hooks, custom status lines, and dozens of cherry-pickable dev skills.
 
 ## Workflow
 
@@ -70,6 +62,7 @@ Most skills are `/`-only via `disable-model-invocation: true` and cost no contex
 | Skill              | Description                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------ |
 | `/mp-grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
+| `/mp-grill-voice`  | mp-grill over JSON round files for the mobile voice app — answer by voice on a walk  |
 | `/mp-to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
 | `/mp-to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
 | `/mp-hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |
@@ -113,7 +106,7 @@ Run after milestones/epics. Sorted by attention required; all except the last tw
 | `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code                              |
 | `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc.           |
 | `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Dedup + tighten, fully automatic                  |
-| `/mp-skill-audit`         | All skills        | Low       | 15 consistency rules, auto-fixes drift            |
+| `/mp-skill-audit`         | All skills        | Low       | Consistency rules, auto-fixes drift               |
 | `/mp-harvest-decisions`   | Last 30d sessions | Low       | Transcripts → CONTEXT.md + DECISIONS.md           |
 | `/mp-components-audit`    | Whole repo (UI)   | Medium    | Design-system drift; reports, `autofix` optional  |
 | `/mp-code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication                  |
@@ -173,7 +166,7 @@ Vendored: `/notebooklm` — third-party `notebooklm-py` CLI reference, pinned v0
 
 ### Deprecated
 
-Retired skills, agents, hooks and scripts are archived under [`deprecated/`](deprecated/) — never deleted. Includes the pre-pipeline design skill (`/mp-design-ui-3` and its 18-style catalog), the superseded grill/requirements skills, and the bash status-line originals.
+Retired skills, agents, hooks and scripts are archived under [`deprecated/`](deprecated/) — never deleted.
 
 ## Agents
 
@@ -223,43 +216,38 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 ![Status Line](assets/status-line.png)
 
-**Main bar** (`scripts/status-line.mts`):
+**Main bar** (`scripts/status-line.mts`) — every element is a clickable OSC 8 link:
 
-- Session name (bold magenta) · session id, linked to the session's transcript `.jsonl` — the account is shown by the pane background tint, not named here
-- Model (`Opus 5 (1M)`) · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
-- `project 󰨞 󰆍/worktree 󰨞 󰆍 · branch · :8100 󰏫 · MR/PR + review state · CI state` — branch, editor and terminal carry Nerd Font glyphs (`Cascadia Mono, Symbols Nerd Font` fallback pair in Windows Terminal), project and worktree names open their own folders in Explorer, the VS Code glyph beside each name opens the editor there, the console glyph next to it duplicates the tab — a new Windows Terminal tab in that folder, under the same profile — the branch name opens `…/tree/<branch>` on its remote host, dev-server ports (declared per project in `statusline-projects.json`) link to `localhost` over whichever scheme the server actually speaks (http or https) and turn green while it answers, and a dim pencil (or a `󰏫 ports` hint when nothing is configured) opens that config
-- Branch state, indented and dim: `≡` in sync (or `↑n`/`↓n`, the unpushed count linking to the `<default>...<branch>` compare view), `+n` staged, `!n` modified, `?n` untracked, `~n` conflicted · fetch age — color only for states git decides (diverged, conflicts, deleted remote)
-- Context tokens with escalating color · bar filling toward the auto-compaction limit · session cost (USD/CZK)
-- Compaction history, one indented row per event: `└─ auto · 205k → 15k · 06:50`. `auto` is amber, `manual` grey, the clock dim; the last 3 are spelled out and older ones collapse into a `N earlier` count. Absent entirely until a session compacts
-- 5-hour & 7-day quota bars with reset countdowns — from stdin `rate_limits`, no network call; the `5h`/`7d` labels link to the claude.ai usage dashboard
-- Sub-agent history, the last block so it sits directly above the panel — every sub-agent that has **finished** this session, long after the panel below has evicted it:
-  ```
-  Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
-  ⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
-  ⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02s  231.4k  2×auto
-  ⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
-  ⠀ +3 more
-  ```
-  A tally row with tokens charged per tier, then one row per agent — status · type · tier · effort gauge · elapsed · tokens · compaction counts (`2×auto` amber, `1×manual` grey; silent when it never compacted). **Five rows plus every failure**, failures always first: up to five agents keep spawn order, past five they rank by tokens, largest first, and the remainder become `+N more`. Agent types come from the `agent-<id>.meta.json` sidecars Claude Code writes at spawn; a **type name opens the `.claude/agents/<type>.md` that defines it** (project-level first, then user-level, no link for a built-in nobody overrode) while a row's **status glyph opens that run's own transcript**. A red `!` marks a banned tier. Absent until the first agent finishes
+- Session name · session id (opens the transcript `.jsonl`) · model · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
+- `project/worktree · branch · ports · MR/PR + review state · CI state` — folder names open Explorer, glyphs beside them open VS Code or duplicate the tab there, the branch opens its page on the remote host, and dev-server ports (declared in `statusline-projects.json`) link to `localhost` and turn green while the server answers
+- Branch state (`≡` in sync, `↑n`/`↓n`, staged/modified/untracked/conflicted counts, fetch age), indented and dim
+- Context tokens with escalating color · bar filling toward the auto-compaction limit · session cost — with compaction history rows (`└─ auto · 205k → 15k · 06:50`) appearing once a session compacts
+- 5-hour & 7-day quota bars with reset countdowns — read from stdin `rate_limits`, no network call
+- Sub-agent ledger: every sub-agent that has **finished** this session — a `Σ` tally of tokens per model tier, then one row per agent with status · type · tier · effort gauge · elapsed · tokens · compaction counts. Failures always listed first, overflow collapses into `+N more`; a type name opens the `.claude/agents/<type>.md` that defines it, a status glyph opens that run's transcript, a red `!` marks a banned tier
 
-**Sub-agent panel** (`scripts/subagent-status-line.mts`, visible below the main bar whenever a sub-agent is running): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (effort above `high` or effort on haiku) get a red `!` on the offending cell with a reason line; a resolved Fable tier is not independently a violation because frontier selection is contextual. The panel is the **live** view and the main bar's `Σ` row is the **ledger** — running agents appear in one, finished agents in the other, never both.
+**Sub-agent panel** (`scripts/subagent-status-line.mts`, visible below the main bar whenever a sub-agent is running): one row per **running** sub-agent — status · model · effort gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Rule violations (effort above `high`, or effort on haiku) get a red `!` on the offending cell with a reason line. The panel is the **live** view and the main bar's ledger is the **finished** view — an agent never appears in both.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
-**Account color** — `cc`/`ccw` repaint the terminal background before launching, so personal (dark red) and work (dark blue) are distinguishable at a glance without a profile per account. `scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the two tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color.
+**Account color** — `cc`/`ccw` repaint the terminal background before launching (`scripts/account-color.mts` + the tints in `statusline-accounts.json`), so personal and work accounts are distinguishable at a glance while tab color stays free to mean *project*. Both bars derive their whole palette from the Windows Terminal color scheme in `statusline-schemes.json`, with a contrast floor enforced per color — they follow scheme changes and invert correctly on a light theme.
 
-**Tab title** — left to Claude Code. It drives the title from its own status: the session summary, prefixed by an animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one signal with the session's real state behind it, so nothing here competes with it, and the account stays readable from the pane tint above. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`) and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle them, so `/rename [P] project` is the supported way to put an account prefix in the tab: it sets the text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default `true`) is what allows it.
+### Installing the status lines
 
-A custom titler was built and reverted — `[P] worktree · project`, set by `cc`/`ccw` behind `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1`, with the state glyph rebuilt from `UserPromptSubmit`/`Stop`/`SessionStart` hooks driving a console-attaching C helper. It is kept, unwired, under [`deprecated/scripts/terminal-title.mts`](deprecated/scripts/terminal-title.mts) and [`deprecated/hooks/terminal-title-state.c`](deprecated/hooks/terminal-title-state.c) for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the tab read idle while the session worked. The summary was lost outright — it lives in memory alone, in no transcript or session file. Reviving it means a state source Claude Code does not currently expose, not another hook.
+Both renderers are zero-dependency `.mts` files run by Node's native type stripping (Node ≥ 22.18, pinned in `package.json` `engines`). With the `scripts/` junction from the installation section below in place, wire them up in `settings.json`:
 
-All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a ~3.5× render speedup. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
+```json
+"statusLine":         { "type": "command", "command": "node \"$HOME/.claude/scripts/status-line.mts\"" },
+"subagentStatusLine": { "type": "command", "command": "node \"$HOME/.claude/scripts/subagent-status-line.mts\"" }
+```
+
+Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. Design decisions, data sources, tab-title notes, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
 
 ## Installation — the repo is the live config
 
 `~/.claude` doesn't hold copies of this repo — it holds **junctions and symlinks into it**. The
-directories (`agents/`, `skills/`, `hooks/`, `scripts/`, `instructions/`, `rules/`, `sounds/`,
-`templates/`) are junctions, and `CLAUDE.md`, `AGENTS.md`, `settings.json`, `settings.local.json`
-are file symlinks. Editing the repo changes live behavior in every session immediately, and git
+directories (`agents/`, `assets/`, `hooks/`, `instructions/`, `output-styles/`, `rules/`,
+`scripts/`, `skills/`, `sounds/`, `templates/`) are junctions, and `CLAUDE.md`, `AGENTS.md`,
+`settings.json`, `settings.local.json` are file symlinks. Editing the repo changes live behavior in every session immediately, and git
 tracks every config change. The work account's `~/.claude-work` mirrors the same links, so both
 accounts share one source of truth. Setup script, dual-account details, and Windows symlink
 gotchas: [WINDOWS-SETUP.md](WINDOWS-SETUP.md).
@@ -290,14 +278,14 @@ Markdown does not interpolate env vars, so sub-agents resolve them at runtime wi
 
 ## Global Instructions
 
-[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see AGENTS.md, so the file is injected at compaction time instead — by the `compact-instructions.js` PreCompact hook here and by `mpx-pi/extensions/compact-instructions.ts` in pi — and costs no per-turn context. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see AGENTS.md, so the file is injected at compaction time instead — by the `compact-instructions.js` PreCompact hook here and by `mpx-pi/extensions/compact-instructions.ts` in pi — and costs no per-turn context. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are thin `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike (the repo `AGENTS.md` adds this repo's own skill-versioning rule on top); via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
 
 ## Settings
 
 `settings.json` — env vars, MCP plugins, hooks, status line config. Installed to `~/.claude/settings.json`.
 
-- **Context budget:** `autoCompactWindow: 213000` → auto-compaction fires at **180k tokens used** on the 1M model. 200k is a hard floor (below it Claude Code silently skips auto-compaction); the fixed 33k of deductions makes 213000 the number.
-- **MCP:** Context7 (library docs), TypeScript LSP, chrome-devtools at user scope (per-agent `mcpServers:` frontmatter measured inert on 2.1.212). `ENABLE_TOOL_SEARCH: "auto:1"` keeps the cost to tool names only (~260 tokens).
+- **Context budget:** `autoCompactWindow` moves the auto-compaction trigger on the 1M model — it is an offset, not a fraction, and Claude Code silently skips auto-compaction below a hard floor. The current value lives in `settings.json`; the offset math is in [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
+- **MCP:** Context7 (library docs), TypeScript LSP, and rust-analyzer LSP enabled at user scope; the chrome-devtools plugin ships disabled in the tracked settings and is toggled on when a browser-testing session needs it. `ENABLE_TOOL_SEARCH: "auto:1"` keeps the per-session cost to tool names only.
 
 ## Templates & Scripts
 
@@ -310,4 +298,4 @@ Both include the Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rul
 
 **Worktrees:** `node scripts/setup-worktree.mts <name> [--base <ref>]` creates an isolated worktree — path derived from the repo location, base branch auto-detected, editor config + `.worktreeinclude` matches copied, per-worktree dev-server ports allocated, deps installed in the background; `remove-worktree.mts` releases the ports and cleans up. Harness-agnostic Node/TS hub (the `setup-worktree`/`remove-worktree` shell functions wrap it). Design, port model, and per-repo config: [`docs/WORKTREE_HUB.md`](docs/WORKTREE_HUB.md). The old bash creators live in [`scripts/deprecated/`](scripts/deprecated/).
 
-**Tests:** `npm test` (Vitest) covers hooks and status-line scripts.
+**Tests:** `npm test` (Vitest) covers hooks, status-line and worktree scripts, and skill test suites.

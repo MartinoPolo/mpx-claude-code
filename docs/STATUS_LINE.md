@@ -408,6 +408,28 @@ third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`, in 
   from starting, so nothing throws — but an unreadable accounts file or unknown account name prints
   to stderr. `--verbose` reports the colors sent and whether stdout is a tty.
 
+## Tab title
+
+Left to Claude Code. It drives the title from its own status: the session summary, prefixed by an
+animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one
+signal with the session's real state behind it, so nothing here competes with it, and the account
+stays readable from the pane tint above. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`)
+and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle
+them, so `/rename [P] project` is the supported way to put an account prefix in the tab: it sets the
+text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default
+`true`) is what allows it.
+
+A custom titler was built and reverted — `[P] worktree · project`, set by `cc`/`ccw` behind
+`CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1`, with the state glyph rebuilt from
+`UserPromptSubmit`/`Stop`/`SessionStart` hooks driving a console-attaching C helper. It is kept,
+unwired, under `deprecated/scripts/terminal-title.mts` and `deprecated/hooks/terminal-title-state.c`
+for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's
+state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no
+event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the
+tab read idle while the session worked. The summary was lost outright — it lives in memory alone,
+in no transcript or session file. Reviving it means a state source Claude Code does not currently
+expose, not another hook.
+
 ## The derived palette
 
 Palette indices 16–255 are constants a color scheme never remaps, so a bar painted in fixed indices
