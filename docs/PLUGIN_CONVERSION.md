@@ -42,23 +42,33 @@ rename folders and/or set `name:` accordingly, dropping the `mp-` prefix.
 | Layer | Identity | Invocation |
 | --- | --- | --- |
 | Canonical (this repo) | folder `execute`, bare | — |
-| Claude plugin | reads as-is | `/mp:execute` |
-| pi | see open decision below | `/skill:...` |
+| Claude plugin | reads as-is (plugin name `mp` supplies the prefix) | `/mp:execute` |
+| pi | same bare source, projected by a generic extension | `/mp:execute` |
 
-### OPEN DECISION — pi skill naming
+### pi `/mp:` prefix — RESOLVED (via extension)
 
-pi has no per-group prefix; it merges all skills into one flat map keyed by `name` (frontmatter
-first, folder fallback). So bare names risk colliding with third-party pi skills and lose the
-`mp` association. Two viable options:
+Goal: identical `/mp:execute` in both harnesses. Verified against pi's shipped source
+(`@earendil-works/pi-coding-agent`):
 
-- **Option A (recommended): build-step injects the prefix.** Keep canonical bare; extend the
-  existing `scripts/generate-agents.mjs` pattern into a skill-sync step that writes
-  `name: mp-<folder>` into each SKILL.md copied to `mpx-pi`. pi shows `/skill:mp-execute` —
-  collision-safe, keeps `mp` identity, one source of truth.
-- **Option B: bare in pi too.** No transform; pi shows `/skill:execute`. Simplest, but risks
-  flat-map collisions and drops the `mp` grouping.
+- pi's native skill prefix is the hardcoded literal `skill:` (built in three `dist/` files,
+  no settings/frontmatter/CLI override) — so native skills can only be `/skill:<name>`.
+- pi's **extension API registers arbitrary command names, colon included**
+  (`registerCommand(name: string, …)`; dispatch matches on exact string and is checked
+  *before* skills/templates; pi itself uses `:` as a name separator internally). This is the
+  supported, typed mechanism — not a hack.
 
-Decision is deferred and does **not** block the Claude plugin work.
+**Approach:** keep canonical skills bare-named in this repo (Claude's plugin gives `/mp:execute`
+automatically). In `mpx-pi`, add **one small generic extension** (e.g.
+`mpx-pi/extensions/mp-namespace-commands.ts`), auto-discovered from `.pi/extensions/`. On
+session start it enumerates the skills already synced into pi's `skills` setting, reads each
+`SKILL.md` frontmatter, and calls `pi.registerCommand("mp:" + name, { description, handler })`
+where the handler reproduces pi's own `_expandSkillCommand` recipe (strip frontmatter, wrap in
+a `<skill …>` block, send as the user message). Result: `/mp:execute` in pi for every synced
+skill, with no per-skill glue and zero content duplication — the extension is the only new
+artifact. Sanitize generated names for embedded whitespace only; colons are safe.
+
+This fully respects one canonical source: `mpx-claude-code/skills/<name>/` stays the sole place
+skill content lives; `mpx-pi` only gains the generic projection extension.
 
 ## Repo structure (target)
 
