@@ -4,7 +4,7 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 
 **Why it's good:**
 
-- **Full pipeline, hands-off** — requirements → PRD → GitHub issues → TDD execution → reviewed PR → CI-green auto-merge, with the main agent as a pure orchestrator (raw findings, test failures, and CI logs never enter its context).
+- **Full pipeline, hands-off** — requirements → epic → GitHub issues → TDD execution → reviewed PR → CI-green auto-merge, with the main agent as a pure orchestrator (raw findings, test failures, and CI logs never enter its context).
 - **Dozens of cherry-pickable skills and agents** — git workflows, parallel code review, design pipeline, maintenance sweeps, content generators (tutorials, podcasts, video sheets).
 - **Benchmarked model/effort choices** — every agent's model and effort pin is backed by a measured benchmark, not vibes ([details](docs/SUBAGENTS.md)).
 - **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
@@ -15,10 +15,10 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 ```mermaid
 flowchart LR
     grill["/mp-grill<br/>requirements Q&A → .mpx/ docs"]
-    prd["/mp-to-prd<br/>CONTEXT.md → PRD issue"]
+    epic["/mp-to-epic<br/>CONTEXT.md → epic issue"]
     issues["/mp-to-issues<br/>vertical-slice sub-issues<br/>HITL / AFK"]
     execute["/mp-execute<br/>TDD → PR → CI-green merge"]
-    grill --> prd --> issues --> execute
+    grill --> epic --> issues --> execute
 ```
 
 - **HITL** label = issue needs human decisions; **AFK** label = implementable autonomously. `/mp-hitl` converts the former into the latter.
@@ -58,7 +58,7 @@ TDD principles: [tests](skills/mp-execute/tests.md), [mocking](skills/mp-execute
 
 ### Planning system (hybrid)
 
-- **GitHub:** Milestones = epics, Issues = tasks (PRDs + sub-issues with blocking), Project Board = tracking.
+- **GitHub:** Milestones = versions/releases, Issues = epics (parent) + tasks (sub-issues with blocking), Project Board = tracking.
 - **`.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `skills/shared/DOCUMENTATION_STRATEGY.md`. Tracked and committed — everything in it is team-shared; gitignore only `.mpx/tmp/`, the scratch area.
 
 ## Skills Reference
@@ -70,13 +70,13 @@ Most skills are `/`-only via `disable-model-invocation: true` and cost no contex
 | Skill              | Description                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------ |
 | `/mp-grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
-| `/mp-to-prd`       | CONTEXT.md → PRD as GitHub issue                                                     |
-| `/mp-to-issues`    | Break PRD into vertical-slice sub-issues (HITL/AFK, blocking)                        |
+| `/mp-to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
+| `/mp-to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
 | `/mp-hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |
 | `/mp-vocabulary`   | Maintain canonical domain terms in `.mpx/CONTEXT.md`                                 |
 | `/mp-issue-create` | Create well-structured GitHub issues                                                 |
 | `/mp-bug-report`   | Root cause → TDD fix plan → labeled bug issue                                        |
-| `/mp-prd-review`   | PRD-end review: code quality, architecture, cleanup, docs, unresolved items          |
+| `/mp-epic-review`  | epic-end review: code quality, architecture, cleanup, docs, unresolved items         |
 
 ### Execution & code quality
 
@@ -106,7 +106,7 @@ Both it and `/mp-batch-execute`'s verify gate follow `skills/shared/PLAYWRIGHT_T
 
 ### Periodic maintenance
 
-Run after milestones/PRDs. Sorted by attention required; all except the last two auto-fix and open a PR.
+Run after milestones/epics. Sorted by attention required; all except the last two auto-fix and open a PR.
 
 | Skill                     | Scope             | Attention | Notes                                             |
 | ------------------------- | ----------------- | --------- | ------------------------------------------------- |
@@ -194,7 +194,7 @@ Retired skills, agents, hooks and scripts are archived under [`deprecated/`](dep
 | mp-pr-manager               | Sonnet | Low    | Creates or updates GitHub PRs with conventional title/body format           |
 | mp-unresolved-issue-tracker | Sonnet | Low    | Routes unresolved implementation items to sibling issues or tracking issue  |
 | mp-reviewer-* (7 agents)    | Sonnet | Medium | Best-practices, code-quality, error-handling, performance, security, spec-alignment, test-quality reviewers |
-| mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for PRD-end review                         |
+| mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for epic-end review                        |
 
 - Model and effort pins come from a July 2026 benchmark (80 sub-agents); the `Explore` agent overrides Claude Code's built-in to keep automatic explorations off Opus — rationale, findings, and gotchas in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
 - Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md); the raw benchmark tables behind the `TESTED` verdicts live in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).

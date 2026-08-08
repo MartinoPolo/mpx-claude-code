@@ -8,7 +8,7 @@ mandatory unless marked optional.
 
 [One paragraph: what it does, why it matters to the user, what problem it solves.]
 
-**Source**: [PRD #, issue #, or feature area]
+**Source**: [epic #, issue #, or feature area]
 
 ---
 
@@ -148,7 +148,7 @@ From `designs/tokens.css` (or the project's global stylesheet when no tokens fil
 
 ## 11. Not Included (scope exclusions)
 
-- [Feature X — belongs to PRD #Y]
+- [Feature X — belongs to epic #Y]
 - [Interaction Z — future iteration]
 ```
 

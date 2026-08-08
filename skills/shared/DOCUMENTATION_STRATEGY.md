@@ -14,7 +14,7 @@ Contains:
 - **Domain Language** — One-line definitions using definition-list format (not tables)
 - **Relationships** — Entity cardinalities (1:N, N:1)
 - **Flagged Ambiguities** — Resolved term conflicts with rationale
-- **Core Features** — Index only: feature name + status + PRD# + design file pointer. Detail lives in PRD issues
+- **Core Features** — Index only: feature name + status + epic# + design file pointer. Detail lives in epic issues
 - **Key Constraints** — Settled facts about the system (SPA mode, single_instance, etc.)
 
 Does NOT contain: implementation details, module maps, mermaid diagrams, tech stack minutiae, pixel specs.
@@ -84,8 +84,8 @@ Rules:
 | ------------------------ | ---------------------------- | --------------------------------- |
 | `mp-grill`               | CONTEXT.md, DECISIONS.md     | Both (after user confirmation)    |
 | `mp-vocabulary`          | CONTEXT.md                   | CONTEXT.md § Domain Language      |
-| `mp-to-prd`              | CONTEXT.md, DECISIONS.md     | —                                 |
-| `mp-prd-review`          | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)       |
+| `mp-to-epic`             | CONTEXT.md, DECISIONS.md     | —                                 |
+| `mp-epic-review`         | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)       |
 | `mp-consolidate-context` | CONTEXT.md                   | CONTEXT.md (cleanup)              |
 | `mp-harvest-decisions`   | Session JSONL files          | CONTEXT.md, DECISIONS.md          |
 | `mp-init-repo`           | —                            | Creates CONTEXT.md + DECISIONS.md |

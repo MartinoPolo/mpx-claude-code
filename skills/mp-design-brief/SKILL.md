@@ -33,7 +33,7 @@ Before writing anything:
 
 1. **GitHub** — `gh issue list --search "<keywords>" --state all`, then `gh issue view <n>
    --json title,body,comments` on the hits. Issue comments carrying human decisions rank highest.
-2. **Project docs** — context, decisions, and PRD files, wherever the project keeps them.
+2. **Project docs** — context, decisions, and epic specs, wherever the project keeps them.
 3. **Existing implementation** — read any code for this feature. Current state vs. desired state.
 4. **Related briefs** — other folders under `designs/`.
 5. **Design language** — `designs/DESIGN_SYSTEM.md`, else infer per DESIGN_PIPELINE.md
@@ -92,7 +92,7 @@ Implementation issues that cannot proceed without this design get labelled.
 
     ```bash
     gh issue list --search "<component-name>" --state open --json number,title,labels
-    gh issue view <prd-number> --json subIssues -q '.subIssues[].number'
+    gh issue view <epic-number> --json subIssues -q '.subIssues[].number'
     ```
 
 3. Label each confirmed dependent — skim the body when uncertain, so unrelated issues stay clean:

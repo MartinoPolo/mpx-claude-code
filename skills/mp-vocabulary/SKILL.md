@@ -19,7 +19,7 @@ metadata:
 - Scan the current conversation for domain-relevant nouns, verbs, and concepts
 - If $ARGUMENTS specifies a topic, focus extraction on that area
 - Read `.mpx/CONTEXT.md` § Domain Language. If CONTEXT.md doesn't exist, report error and stop.
-- Also scan: PRD issues, README, key source files for domain terms
+- Also scan: epic issues, README, key source files for domain terms
 
 **Step 2: Identify problems**
 

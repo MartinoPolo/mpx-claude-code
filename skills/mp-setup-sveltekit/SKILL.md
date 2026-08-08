@@ -99,7 +99,7 @@ Create `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (see `skills/shared/DOCUMENTATI
 [Terms added via `/mp-grill` or `/mp-vocabulary`]
 
 ## Core Features
-[Feature index: name + status + PRD#]
+[Feature index: name + status + epic#]
 
 ## Key Constraints
 [Settled facts about the system]

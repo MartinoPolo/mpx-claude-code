@@ -14,7 +14,7 @@ Canonical issue body format for all task issues created by `mp-issue-create` and
 
 ## Requirements
 
-- REQ-1: [Imperative statement — mapped from PRD or standalone]
+- REQ-1: [Imperative statement — mapped from epic or standalone]
 - REQ-2: ...
 
 ## Acceptance Criteria
@@ -49,7 +49,7 @@ Canonical issue body format for all task issues created by `mp-issue-create` and
 ### Requirements
 
 - Each requirement is an imperative statement (e.g. "Support pagination with cursor-based navigation").
-- When linked to a PRD: map requirements from the PRD body.
+- When linked to an epic: map requirements from the epic body.
 - When standalone: define requirements directly.
 - Optional when the issue is simple enough that acceptance criteria alone suffice.
 
@@ -120,24 +120,24 @@ EOF
 )")
 ```
 
-Always assign to `@me`. Add `--milestone "Name"` when a linked PRD has a milestone.
+Always assign to `@me`. Add `--milestone "Name"` when a linked epic has a milestone.
 
-## Linking as PRD Sub-Issue
+## Linking as Epic Sub-Issue
 
-Get owner/repo and the PRD's GraphQL node ID:
+Get owner/repo and the epic's GraphQL node ID:
 
 ```bash
 OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-PRD_NODE_ID=$(gh api graphql -f query="{ repository(owner: \"${OWNER_REPO%/*}\", name: \"${OWNER_REPO#*/}\") { issue(number: $PRD_NUMBER) { id } } }" --jq '.data.repository.issue.id')
+EPIC_NODE_ID=$(gh api graphql -f query="{ repository(owner: \"${OWNER_REPO%/*}\", name: \"${OWNER_REPO#*/}\") { issue(number: $EPIC_NUMBER) { id } } }" --jq '.data.repository.issue.id')
 ```
 
-Link a created issue (using `ISSUE_URL` captured above) as a native sub-issue of the PRD:
+Link a created issue (using `ISSUE_URL` captured above) as a native sub-issue of the epic:
 
 ```bash
 gh api graphql -f query="
   mutation {
     addSubIssue(input: {
-      issueId: \"$PRD_NODE_ID\",
+      issueId: \"$EPIC_NODE_ID\",
       subIssueUrl: \"$ISSUE_URL\"
     }) {
       issue { number }

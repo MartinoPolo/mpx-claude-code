@@ -58,7 +58,7 @@ If not sure if important enough, ask user.
 **CONTEXT.md** — If new terms, features, or constraints emerged:
 
 - § Domain Language: for each candidate term, show the full proposed entry (`**Term** — One-sentence definition.`) and ask the user whether to add it. Write only confirmed terms.
-- § Core Features: update feature index (name + status + PRD#)
+- § Core Features: update feature index (name + status + epic#)
 - § Key Constraints: add newly settled constraints
 - § Flagged Ambiguities: record any resolved term conflicts
 

@@ -1,12 +1,12 @@
 ---
 name: mp-hitl
 description: "Resolves HITL-blocked issues into AFK-ready ones by grilling the human decisions out of them."
-argument-hint: "[PRD issue URL or number] [lowest|most-blocking]"
+argument-hint: "[epic issue URL or number] [lowest|most-blocking]"
 disable-model-invocation: true
 allowed-tools: Read, Bash(gh *), Agent
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: project-management
 ---
 
@@ -16,7 +16,7 @@ Grill the user on open decisions in HITL-labeled GitHub issues, then flip resolv
 
 ## Parameters
 
-- PRD issue URL or number (optional) — target PRD. If omitted, auto-detect.
+- Epic issue URL or number (optional) — target epic. If omitted, auto-detect.
 - Ordering mode (optional):
   - `lowest` → process unblocked HITL issues by lowest issue number first
   - `most-blocking` → process by transitive unblock count (highest-impact first)
@@ -25,21 +25,21 @@ Default ordering: `lowest`
 
 ## Workflow
 
-### Step 1: Identify PRD and Repo
+### Step 1: Identify Epic and Repo
 
-If a PRD issue URL or number is provided, use it directly. Otherwise auto-detect:
+If an epic issue URL or number is provided, use it directly. Otherwise auto-detect:
 
 ```bash
 gh repo view --json nameWithOwner --jq '.nameWithOwner'
-gh issue list --label "prd" --state open --json number,title
+gh issue list --label "epic" --state open --json number,title
 ```
 
-If multiple open PRDs found, show them and ask which one. If zero, report and exit.
+If multiple open epics found, show them and ask which one. If zero, report and exit.
 
-Fetch the PRD body — it provides shared context (especially `## Implementation Decisions`):
+Fetch the epic body — it provides shared context (especially `## Implementation Decisions`):
 
 ```bash
-gh issue view <PRD_NUMBER> --json title,body
+gh issue view <EPIC_NUMBER> --json title,body
 ```
 
 ### Step 2: Fetch All Sub-Issues and Build Dependency Graph
@@ -93,12 +93,12 @@ For each HITL issue, in priority order:
 #### 5a: Extract Decision Points
 
 1. Read the issue body — focus on `## Notes` for the HITL reason, `## Acceptance Criteria` for ambiguity, `## Description` for open questions
-2. Cross-reference against the PRD's `## Implementation Decisions` section — remove anything already decided
+2. Cross-reference against the epic's `## Implementation Decisions` section — remove anything already decided
 3. Spawn an `Explore` agent (breadth: medium) to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
 
 #### 5b: Grill Decision Points
 
-Group the issue's decision points into thematic batches. Present each batch as a numbered list in one round. For each question, provide a recommended answer backed by codebase evidence or PRD context.
+Group the issue's decision points into thematic batches. Present each batch as a numbered list in one round. For each question, provide a recommended answer backed by codebase evidence or epic context.
 
 Only split into a follow-up round when earlier answers would change later questions.
 

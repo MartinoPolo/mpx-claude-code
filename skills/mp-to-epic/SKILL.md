@@ -1,18 +1,18 @@
 ---
-name: mp-to-prd
-description: "Creates a PRD as a GitHub issue from the requirements passed in."
+name: mp-to-epic
+description: "Creates an epic (parent GitHub issue) from the requirements passed in; the epic's description is a spec written as user stories."
 argument-hint: "[milestone name]"
 disable-model-invocation: true
 allowed-tools: Read, Agent, Bash(gh *), AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.8"
+  version: "0.9"
   category: project-management
 ---
 
-# Write PRD
+# Write Epic
 
-Create a Product Requirements Document as a GitHub issue from passed requirements. $ARGUMENTS
+Create an epic as a GitHub issue from passed requirements. The epic's description is a **spec** — user stories, scope, acceptance criteria, and decisions. $ARGUMENTS
 
 ## Workflow
 
@@ -43,9 +43,9 @@ Ask: "Here is the proposed module breakdown. Does this match your expectations? 
 
 Incorporate feedback before proceeding to the draft.
 
-### Step 4: Draft PRD
+### Step 4: Draft the Spec
 
-Build the PRD with these sections:
+Build the epic's spec with these sections:
 
 #### Overview
 
@@ -91,32 +91,32 @@ Measurable, testable criteria for each user story. Use checkbox format:
 
 ### Step 5: Get Approval
 
-Show the full PRD draft to the user:
+Show the full spec draft to the user:
 
 ```
-Ask: "Here is the PRD draft. Approve, or describe edits?"
+Ask: "Here is the spec draft. Approve, or describe edits?"
 ```
 
 Incorporate any requested edits. Re-show if changes are substantial.
 
 ### Step 6: Create Label
 
-Ensure the `prd` label exists:
+Ensure the `epic` label exists:
 
 ```bash
-gh label create prd --description "Product Requirements Document" --color 0052CC --force
+gh label create epic --description "Epic — parent issue" --color 0052CC --force
 ```
 
 ### Step 7: Create Issue
 
 ```bash
-gh issue create --title "[title from requirements]" --label "prd" --body "$(cat <<'EOF'
-[PRD body from Step 4]
+gh issue create --title "[title from requirements]" --label "epic" --body "$(cat <<'EOF'
+[epic spec body from Step 4]
 EOF
 )"
 ```
 
-GitHub assigns the issue number automatically. This number becomes the PRD identifier (e.g., PRD #42).
+GitHub assigns the issue number automatically. This number becomes the epic identifier (e.g., Epic #42).
 
 ### Step 8: Assign Milestone
 
@@ -139,9 +139,9 @@ Display:
 
 ## Rules
 
-- Always read CONTEXT.md first — the PRD must use project domain language and respect constraints
+- Always read CONTEXT.md first — the epic's spec must use project domain language and respect constraints
 - Check DECISIONS.md for settled decisions that constrain the design
-- Show the PRD to the user before creating the issue
+- Show the spec to the user before creating the issue
 - Use `gh` CLI for all GitHub operations
-- PRD body must be well-formatted GitHub markdown
+- The spec body must be well-formatted GitHub markdown
 - Never create the issue without user approval

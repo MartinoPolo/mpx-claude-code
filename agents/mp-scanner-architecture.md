@@ -1,6 +1,6 @@
 ---
 name: mp-scanner-architecture
-description: Lightweight architecture scanner for PRD-end review. Flags structural concerns without designing solutions.
+description: Lightweight architecture scanner for epic-end review. Flags structural concerns without designing solutions.
 tools: Read, Grep, Glob, Bash
 model: sonnet
 effort: medium

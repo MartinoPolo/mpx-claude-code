@@ -35,14 +35,14 @@ Read the full file. Scan for each issue type and build a findings list:
 | **Outdated** | Struck-through items, removed parameters still referenced, resolved issue references |
 | **Inconsistencies** | Conflicting definitions or specifications |
 | **Bloated definitions** | Domain Language definitions exceeding one sentence |
-| **Misplaced content** | Architectural decisions that belong in DECISIONS.md, implementation details that belong in PRDs |
+| **Misplaced content** | Architectural decisions that belong in DECISIONS.md, implementation details that belong in epics |
 
 ### Step 2: Rewrite
 
 Apply all changes directly and automatically. Produce the consolidated file:
 
 - § Domain Language: one sentence max per definition, definition-list format (`**Term** — Definition.`)
-- § Core Features: index only (name + status + PRD#), no implementation details
+- § Core Features: index only (name + status + epic#), no implementation details
 - § Key Constraints: concise bullets
 - § Flagged Ambiguities: resolved term conflicts with rationale
 - Target 250–300 lines total

@@ -93,7 +93,7 @@ Ask user to confirm before writing. Apply edits to existing files, preserving th
 
 ## Step 8: Clean Up Memory
 
-If decisions were previously stored in memory files (`project_prd*_decisions.md`, `project_*_grilling.md`), suggest which memory files are now redundant since their content has been captured in the project docs.
+If decisions were previously stored in memory files (`project_epic*_decisions.md`, `project_*_grilling.md`), suggest which memory files are now redundant since their content has been captured in the project docs.
 
 ## Report
 

@@ -2,11 +2,11 @@
 name: mp-execute
 description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, opens a PR, and merges it once CI is green."
 when_to_use: "User asks to execute, implement, or work on an issue, milestone, or task list."
-argument-hint: '<#issue | milestone:"Epic 1" | "inline task description or checklist">'
+argument-hint: '<#issue | milestone:"Version 1" | "inline task description or checklist">'
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "2.6"
+  version: "2.7"
   category: project-management
 ---
 
@@ -26,7 +26,7 @@ Use compressed output throughout execution: drop articles, filler, pleasantries,
 
 ```
 /mp-execute #42                        # Single GitHub issue
-/mp-execute milestone:"Epic 2"        # Pick one open, unblocked issue from milestone
+/mp-execute milestone:"Version 2"        # Pick one open, unblocked issue from milestone
 /mp-execute "add dark mode toggle"    # Inline task (no GitHub issue)
 /mp-execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
 /mp-execute --full-review #42         # Full reviewer set
@@ -45,7 +45,7 @@ Use compressed output throughout execution: drop articles, filler, pleasantries,
 Detect input type from `$ARGUMENTS`:
 
 - **GitHub issue** `#42` → `gh issue view <n> --json title,body,labels,comments,state,milestone,url`. Extract goal, constraints, acceptance criteria, blocking relationships.
-- **Milestone** `milestone:"Epic 2"` → `gh issue list --milestone "Epic 2" --state open --json number,title,labels,body`. Select exactly one open, unblocked issue in milestone order; execute only that issue this run. None unblocked → report blockers, stop.
+- **Milestone** `milestone:"Version 2"` → `gh issue list --milestone "Version 2" --state open --json number,title,labels,body`. Select exactly one open, unblocked issue in milestone order; execute only that issue this run. None unblocked → report blockers, stop.
 - **Inline tasks** `"add dark mode toggle, fix header spacing"` → parse comma-separated tasks or markdown checklist items. No GitHub issue — just execute with TDD.
 - No `$ARGUMENTS` → ask user what to execute.
 
@@ -143,7 +143,7 @@ Spawn `mp-unresolved-issue-tracker` sub-agent:
 > - **<summary>**: <reasoning why unresolved> — <description>
 > - ...
 
-The agent finds the parent PRD, scans sibling issues for scope match (appends to sibling body if fits), and creates/updates an `Unresolved: [PRD title]` tracking issue (labeled `HITL`) for remaining items. See `agents/mp-unresolved-issue-tracker.md` for full logic.
+The agent finds the parent epic, scans sibling issues for scope match (appends to sibling body if fits), and creates/updates an `Unresolved: [epic title]` tracking issue (labeled `HITL`) for remaining items. See `agents/mp-unresolved-issue-tracker.md` for full logic.
 
 ## Step 7: Commit and Push
 

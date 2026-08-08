@@ -1,6 +1,6 @@
 ---
 name: mp-unresolved-issue-tracker
-description: Routes unresolved items from execution to sibling GitHub issues or a PRD-level tracking issue. Spawned by skills that discover non-blocking issues during implementation.
+description: Routes unresolved items from execution to sibling GitHub issues or a epic-level tracking issue. Spawned by skills that discover non-blocking issues during implementation.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 effort: low
@@ -22,7 +22,7 @@ You receive:
 
 ## Process
 
-### Step 1: Identify PRD and Siblings
+### Step 1: Identify Epic and Siblings
 
 ```bash
 OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
@@ -32,8 +32,8 @@ REPO=$(echo $OWNER_REPO | cut -d'/' -f2)
 # Get source issue title for later use
 SOURCE_TITLE=$(gh issue view <SOURCE_NUMBER> --json title --jq '.title')
 
-# Get parent PRD
-PRD_DATA=$(gh api graphql -f query='
+# Get parent epic
+EPIC_DATA=$(gh api graphql -f query='
   query {
     repository(owner: "'"$OWNER"'", name: "'"$REPO"'") {
       issue(number: <SOURCE_NUMBER>) {
@@ -44,9 +44,9 @@ PRD_DATA=$(gh api graphql -f query='
 ' --jq '.data.repository.issue.parentIssue')
 ```
 
-If no parent PRD found → report that items could not be triaged (no PRD context) and exit.
+If no parent epic found → report that items could not be triaged (no epic context) and exit.
 
-Extract `PRD_NUMBER`, `PRD_TITLE`, and `PRD_NODE_ID` from the response.
+Extract `EPIC_NUMBER`, `EPIC_TITLE`, and `EPIC_NODE_ID` from the response.
 
 ### Step 2: Fetch Open Sub-Issues
 
@@ -54,7 +54,7 @@ Extract `PRD_NUMBER`, `PRD_TITLE`, and `PRD_NODE_ID` from the response.
 gh api graphql -f query='
   query {
     repository(owner: "'"$OWNER"'", name: "'"$REPO"'") {
-      issue(number: '"$PRD_NUMBER"') {
+      issue(number: '"$EPIC_NUMBER"') {
         subIssues(first: 50, filter: {states: [OPEN]}) {
           nodes { number title body labels(first: 10) { nodes { name } } }
         }
@@ -107,14 +107,14 @@ If the item doesn't fit any sibling:
 ```bash
 gh label create "unresolved" --description "Tracks unresolved items from implementation" --color "D93F0B" --force
 
-MILESTONE=$(gh issue view $PRD_NUMBER --json milestone --jq '.milestone.title')
+MILESTONE=$(gh issue view $EPIC_NUMBER --json milestone --jq '.milestone.title')
 
 ISSUE_URL=$(gh issue create \
-  --title "Unresolved: $PRD_TITLE" \
+  --title "Unresolved: $EPIC_TITLE" \
   --label "task,HITL,unresolved" \
   --milestone "$MILESTONE" \
   --body "$(cat <<'BODY'
-Tracks unresolved issues discovered during implementation of PRD #<PRD_NUMBER>.
+Tracks unresolved issues discovered during implementation of Epic #<EPIC_NUMBER>.
 
 ## From #<source_issue> — <source_title>
 
@@ -125,11 +125,11 @@ Tracks unresolved issues discovered during implementation of PRD #<PRD_NUMBER>.
 BODY
 )")
 
-# Link as sub-issue of PRD
+# Link as sub-issue of epic
 gh api graphql -f query="
   mutation {
     addSubIssue(input: {
-      issueId: \"$PRD_NODE_ID\",
+      issueId: \"$EPIC_NODE_ID\",
       subIssueUrl: \"$ISSUE_URL\"
     }) {
       issue { number }
@@ -147,13 +147,13 @@ Report what was routed where:
 ## Unresolved Triage Results
 
 **Source:** #<number> — <title>
-**PRD:** #<number> — <title>
+**Epic:** #<number> — <title>
 
 ### Routed to Sibling Issues
 - **<item summary>** → #<sibling> (<sibling title>)
 
 ### Routed to Tracking Issue
-- **<item summary>** → #<tracking> (Unresolved: <PRD title>)
+- **<item summary>** → #<tracking> (Unresolved: <epic title>)
   - [created | updated]
 
 ### Could Not Route
@@ -166,4 +166,4 @@ Report what was routed where:
 - Do not create duplicate sections — check for existing `## Unresolved from #N` or `## From #N` before appending
 - Do not create tracking issue if all items were routed to siblings
 - Tracking issue always gets `HITL` label — human must decide on each item
-- One tracking issue per PRD — reuse existing, never create a second one
+- One tracking issue per epic — reuse existing, never create a second one

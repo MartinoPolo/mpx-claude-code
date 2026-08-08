@@ -41,7 +41,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
    [Terms added via `/mp-grill` or `/mp-vocabulary`]
 
    ## Core Features
-   [Feature index: name + status + PRD#]
+   [Feature index: name + status + epic#]
 
    ## Key Constraints
    [Settled facts about the system]

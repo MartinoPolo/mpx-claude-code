@@ -40,7 +40,7 @@ Apply all changes directly — do not ask for confirmation. Produce the consolid
 
 **For CONTEXT.md:**
 - § Domain Language: one sentence max per definition, definition-list format
-- § Core Features: index only (name + status + PRD#), no implementation details
+- § Core Features: index only (name + status + epic#), no implementation details
 - § Key Constraints: concise bullets
 - Target 250–300 lines total
 

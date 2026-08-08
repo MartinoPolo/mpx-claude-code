@@ -171,14 +171,14 @@ Output a summary table:
 Skill                  | Issues | Auto-fixed | Remaining
 -----------------------|--------|------------|----------
 mp-grill               |      2 |          2 |         0
-mp-to-prd              |      1 |          0 |         1
+mp-to-epic             |      1 |          0 |         1
 ...
 ```
 
 Then list remaining issues that need human attention, grouped by skill:
 
 ```
-mp-to-prd:
+mp-to-epic:
   - [Check 8] Description says "from passed requirements" but skill reads CONTEXT.md
 ```
 

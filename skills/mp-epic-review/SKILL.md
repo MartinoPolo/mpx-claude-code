@@ -1,18 +1,18 @@
 ---
-name: mp-prd-review
-description: "End-of-PRD review covering code quality, architecture, cleanup, documentation, and unresolved items; optionally executes the resulting fixes."
-argument-hint: "<PRD-number-or-URL>"
+name: mp-epic-review
+description: "End-of-epic review covering code quality, architecture, cleanup, documentation, and unresolved items; optionally executes the resulting fixes."
+argument-hint: "<epic-number-or-URL>"
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.7"
+  version: "1.8"
   category: project-management
 ---
 
-# PRD Review
+# Epic Review
 
-Comprehensive end-of-phase review for a completed PRD. Runs 10 parallel analysis agents, synthesizes findings into a prioritized action list, and optionally executes fixes.
+Comprehensive end-of-phase review for a completed epic. Runs 10 parallel analysis agents, synthesizes findings into a prioritized action list, and optionally executes fixes.
 
 ## Communication Style
 
@@ -23,13 +23,13 @@ Use compressed output throughout: drop articles, filler, pleasantries. Fragments
 ## Usage
 
 ```
-/mp-prd-review #42
-/mp-prd-review https://github.com/owner/repo/issues/42
+/mp-epic-review #42
+/mp-epic-review https://github.com/owner/repo/issues/42
 ```
 
 ## Step 1: Gather Context
 
-### 1a. Fetch PRD and Sub-Issues
+### 1a. Fetch Epic and Sub-Issues
 
 ```bash
 gh issue view <number> --json number,title,body,comments,labels,state
@@ -55,14 +55,14 @@ Collect all PR bodies and comments.
 
 ### 1c. Compute Aggregate Diff
 
-Find the merge-base before the first PRD-related commit and diff against current HEAD:
+Find the merge-base before the first epic-related commit and diff against current HEAD:
 
 ```bash
 git fetch origin main
 git log --oneline --all --grep="refs #<first_sub_issue>" --grep="fixes #<first_sub_issue>" --grep="closes #<first_sub_issue>" --format="%H" | tail -1
 ```
 
-Use the parent of the earliest PRD commit as the base:
+Use the parent of the earliest epic commit as the base:
 
 ```bash
 git diff <base>..HEAD --stat
@@ -107,8 +107,8 @@ Spawn each as a sub-agent:
 
 Prompt each with:
 
-> Review the following PRD-scope changes (aggregate of multiple PRs implementing PRD #N: "[title]").
-> This is a PRD-end review — look for cross-PR patterns, not just individual PR issues.
+> Review the following epic-scope changes (aggregate of multiple PRs implementing Epic #N: "[title]").
+> This is a epic-end review — look for cross-PR patterns, not just individual PR issues.
 >
 > [context slice per agent table above]
 
@@ -116,8 +116,8 @@ Prompt each with:
 
 Spawn `mp-scanner-architecture` sub-agent:
 
-> Scan these files changed during PRD #N: "[title]".
-> Focus on structural concerns introduced or worsened across the full PRD scope.
+> Scan these files changed during Epic #N: "[title]".
+> Focus on structural concerns introduced or worsened across the full epic scope.
 >
 > Changed files: [list with stats]
 > Architectural decisions from discussions: [filtered comments]
@@ -128,7 +128,7 @@ The agent reads its own reference files (`deep-modules.md`, `interface-design.md
 
 Spawn `Explore` sub-agent (breadth: medium):
 
-> Scan files changed during PRD #N for cleanup opportunities introduced across multiple PRs:
+> Scan files changed during Epic #N for cleanup opportunities introduced across multiple PRs:
 >
 > - Unused exports, types, or functions added in one PR but never consumed
 > - Stale imports left after refactoring across PRs
@@ -149,7 +149,7 @@ Spawn `Explore` sub-agent (breadth: medium):
 
 Spawn `Explore` sub-agent (breadth: medium):
 
-> Check if project documentation is stale relative to changes made in PRD #N: "[title]".
+> Check if project documentation is stale relative to changes made in Epic #N: "[title]".
 >
 > For each file below, check only the ones that exist; treat missing files as out of scope.
 >
@@ -168,13 +168,13 @@ Spawn `Explore` sub-agent (breadth: medium):
 
 Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
 
-> Scan all PR bodies and comments + issue bodies and comments from PRD #N for deferred, unfinished, or incomplete work.
+> Scan all PR bodies and comments + issue bodies and comments from Epic #N for deferred, unfinished, or incomplete work.
 >
 > Look for: "deferred", "TODO", "left for later", "unresolved", "out of scope", "follow-up", "nice to have", "future work", "skipped", "punted", "not implemented yet", "known issue", "hack", "workaround", "temporary".
 >
 > For each candidate found:
 >
-> 1. Read the relevant source files to check if it was actually implemented in a later PR within the PRD
+> 1. Read the relevant source files to check if it was actually implemented in a later PR within the epic
 > 2. Search open GitHub issues to check if it's already tracked:
 >    ```bash
 >    gh issue list --state open --search "<keywords>" --json number,title --limit 5
@@ -207,7 +207,7 @@ Multiple agents may flag the same issue (e.g., code-quality and dead-code scanne
 
 **Severity:** Critical → Important → Minor
 
-- **Critical** — must fix before PRD is considered done (security vulnerabilities, broken functionality, spec violations)
+- **Critical** — must fix before the epic is considered done (security vulnerabilities, broken functionality, spec violations)
 - **Important** — should fix (DRY violations, architectural concerns, missing docs)
 - **Minor** — nice to have (naming improvements, minor refactors)
 
@@ -222,16 +222,16 @@ Multiple agents may flag the same issue (e.g., code-quality and dead-code scanne
 
 ### 3c. Write PHASE_END Document
 
-Write to `.mpx/reviews/PHASE_END_PRD_<N>.md`:
+Write to `.mpx/reviews/PHASE_END_EPIC_<N>.md`:
 
 ```markdown
-# PRD Review: PRD #<N> — [Title]
+# Epic Review: Epic #<N> — [Title]
 
 Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 
 ## Summary
 
-[2-3 sentences on overall PRD health, total findings count by severity]
+[2-3 sentences on overall epic health, total findings count by severity]
 
 ## Critical
 
@@ -286,7 +286,7 @@ Each item's checkbox (`- [ ]`) is the execution tracking mechanism.
 
 Present the synthesized action list to the user:
 
-> PRD #N review complete. Found X critical, Y important, Z minor items across 6 categories.
+> Epic #N review complete. Found X critical, Y important, Z minor items across 6 categories.
 >
 > [Show the PHASE_END document content]
 >
@@ -295,7 +295,7 @@ Present the synthesized action list to the user:
 > - Confirm all items → proceed to execution
 > - Drop specific items → "drop items 3, 7"
 > - Edit items → "change item 5 to [X]"
-> - Defer everything → document is saved at `.mpx/reviews/PHASE_END_PRD_N.md`
+> - Defer everything → document is saved at `.mpx/reviews/PHASE_END_EPIC_N.md`
 
 Wait for user response before proceeding.
 
@@ -325,7 +325,7 @@ or for HITL items:
 gh issue create --title "[title]" --label "task,HITL" --body "[body with open questions]"
 ```
 
-Link new issues as sub-issues of the PRD using GraphQL `addSubIssue`.
+Link new issues as sub-issues of the epic using GraphQL `addSubIssue`.
 
 6. After all fixes: run static checks and tests to verify nothing broke
 
@@ -337,25 +337,25 @@ Run all detected CHECK and TEST commands via `mp-checker`.
 
 ### If > 20 items or user defers:
 
-Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_PRD_N.md`, and execute items manually or via `/mp-execute` for individual issues created from unresolved items.
+Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_EPIC_N.md`, and execute items manually or via `/mp-execute` for individual issues created from unresolved items.
 
 ## Step 6: Close-out
 
 After all items are resolved (or explicitly deferred):
 
 1. Update PHASE_END.md with final status
-2. Check if all sub-issues of the PRD are closed:
+2. Check if all sub-issues of the epic are closed:
 
 ```bash
-gh issue list --search "parent:<prd_number>" --state open --json number,title --limit 100
+gh issue list --search "parent:<epic_number>" --state open --json number,title --limit 100
 ```
 
 3. If all closed and all critical/important items resolved:
 
-> All items resolved. Close PRD #N: "[title]"?
+> All items resolved. Close Epic #N: "[title]"?
 
 Wait for user confirmation before closing:
 
 ```bash
-gh issue close <prd_number> --reason completed
+gh issue close <epic_number> --reason completed
 ```
