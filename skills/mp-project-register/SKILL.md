@@ -3,10 +3,10 @@ name: mp-project-register
 description: "Registers an existing project with the workstation — one colour driving its Windows Terminal profile and icon, its VS Code Peacock theme, its status-line ports and its Raycast quicklinks."
 argument-hint: "<project folder name or path>"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Glob, AskUserQuestion, Bash(node *), Bash(python *), Bash(ls *), Bash(gh repo view *)
+allowed-tools: Read, Edit, Glob, AskUserQuestion, Bash(node *), Bash(python *), Bash(ls *), Bash(gh repo view *), Bash(env*)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: setup
 ---
 
@@ -61,9 +61,10 @@ session, ask for a fresh one rather than reusing it.
 
 ### Step 2: Resolve the project
 
-Take the folder from `$ARGUMENTS`. A bare name is resolved against the machine roots
-`MPX_PROJECTS` then `MPX_WORK`; confirm the match when both contain it. Fail with the
-variable's name when neither resolves.
+Resolve `MPX_PROJECTS` and `MPX_WORK` with `env | grep '^MPX_'` — written in prose they are
+literal text, not paths to search. Take the folder from `$ARGUMENTS`. A bare name is
+resolved against the machine roots `MPX_PROJECTS` then `MPX_WORK`; confirm the match when
+both contain it. Fail with the variable's name when neither resolves.
 
 Report what is already registered, so a re-run repairs rather than duplicates:
 

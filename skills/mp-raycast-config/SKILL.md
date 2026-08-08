@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Edit, Glob, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: utility
 ---
 
@@ -136,9 +136,10 @@ accepted.
 node "${CLAUDE_SKILL_DIR}/scripts/rayconfig.mjs" encode "<scratchpad>/rayconfig-edited.json" "<output>.rayconfig" '<passphrase>'
 ```
 
-Write the rebuilt file to a per-run folder under `MPX_AI_GENERATED/_RAYCAST/`, and fail
-with the variable's name when that root is unresolvable. Copy the original export
-alongside it as the rollback.
+Resolve `MPX_AI_GENERATED` with `env | grep '^MPX_'` — written as `$MPX_AI_GENERATED` it is
+literal text, not a path, until it is looked up. Write the rebuilt file to a per-run folder
+under `MPX_AI_GENERATED/_RAYCAST/`, and fail with the variable's name when that root is
+unresolvable. Copy the original export alongside it as the rollback.
 
 Then tell the user, in these words: **Raycast → Ctrl+, → Advanced → Import Settings &
 Data → pick the rebuilt file → passphrase → tick Quicklinks and Settings only.**

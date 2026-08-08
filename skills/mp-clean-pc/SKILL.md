@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Agent, Artifact, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: utility
 ---
 
@@ -38,7 +38,7 @@ Read `~/.claude/mp-clean-pc/state.json` when it exists:
 - **Baseline from the last run** → report the delta since then.
 - **Quarantine roots** → report their current size so pending items get emptied.
 
-Resolve project roots from `MPX_PROJECTS`, `MPX_WORK`, `MPX_CLONED`, `MPX_APPS`, `MPX_ONEDRIVE`. An unset variable means that root is unavailable — ask rather than guessing a path.
+Resolve project roots with `$env:MPX_PROJECTS`, `$env:MPX_WORK`, `$env:MPX_CLONED`, `$env:MPX_APPS`, `$env:MPX_ONEDRIVE` (PowerShell) before Step 3 — the per-domain sub-agents spawned there cannot look these up themselves, so they need the literal resolved value, not the variable name. An unset variable means that root is unavailable — ask rather than guessing a path.
 
 `$ARGUMENTS` optionally narrows the sweep to one domain name and/or one drive letter. With no arguments, scan all eight domains across all local fixed disks.
 

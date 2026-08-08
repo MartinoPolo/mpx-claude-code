@@ -3,10 +3,10 @@ name: mp-video-to-image
 description: "Turns any YouTube video into a printable one-page sheet image, reading the video with the Gemini API and handing the composed prompt to ChatGPT for generation. Workout videos get a dedicated exercise mode; everything else becomes an infographic overview."
 when_to_use: "User asks for a cheat sheet, overview image, infographic or visual summary of a YouTube video — including a workout or exercise video."
 argument-hint: "<youtube-url> [focus instructions] [--mode exercise|generic] [--out <dir>] [--model <id>]"
-allowed-tools: Read, Write, Bash(node *), Bash(yt-dlp*), Bash(ffmpeg*)
+allowed-tools: Read, Write, Bash(node *), Bash(yt-dlp*), Bash(ffmpeg*), Bash(env*)
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.8"
   category: utility
 ---
 
@@ -46,9 +46,11 @@ For an exercise run, read [`reference/EXERCISE.md`](reference/EXERCISE.md) befor
 Focus is free text — "only the stretching section", "skip the warm-up" — and it reaches
 Gemini verbatim, so pass the user's own wording rather than a paraphrase.
 
-Resolve machine roots per [`../shared/EXPLORATION.md`](../shared/EXPLORATION.md) § "Paths
-outside the working directory". Every run gets its own folder,
-`$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`, holding a single
+Resolve machine roots with `env | grep '^MPX_'` before Step 3 — a written `$MPX_AI_GENERATED`
+is literal text until it is looked up (see [`../shared/EXPLORATION.md`](../shared/EXPLORATION.md)
+§ "Paths outside the working directory"), and checking now catches an unset variable before
+Step 3 spends the Gemini call on a run that would fail to write anyway. Every run gets its
+own folder, `$MPX_AI_GENERATED\_VIDEO_SHEETS\[<channel>] <video title>\`, holding a single
 `prompt.md`; the user saves the generated image there by hand. With neither
 `MPX_AI_GENERATED` nor `MPX_ONEDRIVE` set the script stops and names the variable to set —
 pass `--out` to override it.

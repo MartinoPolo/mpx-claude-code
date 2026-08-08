@@ -3,10 +3,10 @@ name: mp-tutorial-create
 description: "Compiles an interactive, self-contained HTML tutorial from a topic or code showcase into the OneDrive tutorials folder."
 when_to_use: "User asks to create or make a tutorial."
 argument-hint: "<topic or code-showcase description> [--type topic|code-showcase] [--format brief|standard|deep] [--category <name>]"
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Agent, WebSearch, WebFetch
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Bash(env*), Agent, WebSearch, WebFetch
 metadata:
   author: MartinoPolo
-  version: "1.6.1"
+  version: "1.6.2"
   category: utility
 ---
 
@@ -45,7 +45,9 @@ Then ask for approval or adjustments. Adjust and re-show if the user changes the
 
 ### Step 4: Author Source
 
-Read `${CLAUDE_SKILL_DIR}/reference/SOURCE_FORMAT.md`, then write `<slug>.source.md` directly into `$MPX_AI_GENERATED\_TUTORIALS\<category>\`.
+Resolve `MPX_AI_GENERATED` with `env | grep '^MPX_'` before writing — `Write` takes a real
+path, and `$MPX_AI_GENERATED` written in prose is literal text, not one. Read
+`${CLAUDE_SKILL_DIR}/reference/SOURCE_FORMAT.md`, then write `<slug>.source.md` directly into `$MPX_AI_GENERATED\_TUTORIALS\<category>\`.
 
 Authoring rules:
 
