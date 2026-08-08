@@ -1,5 +1,5 @@
 ---
-name: mp-continue
+name: continue
 description: "Recovers interrupted sub-agent and background work after a session-limit hit, crash, or manual interrupt, then resumes it."
 argument-hint: "[optional focus or task to resume first]"
 disable-model-invocation: true

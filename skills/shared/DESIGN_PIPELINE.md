@@ -1,16 +1,16 @@
 # Design Pipeline
 
-Conventions shared by `mp-design-init`, `mp-design-brief`, `mp-mockup`, and `mp-design-refine`.
+Conventions shared by `/mp:design-init`, `/mp:design-brief`, `/mp:mockup`, and `/mp:design-refine`.
 Those skills link here instead of restating any of it.
 
 ## Pipeline
 
 | Skill | Runs | Produces |
 | ------------------ | -------------------- | --------------------------------------------- |
-| `mp-design-init` | once per project | `designs/DESIGN_SYSTEM.md`, `designs/tokens.css` |
-| `mp-design-brief` | once per component | `DESIGN_BRIEF_<NAME>.md`, `Design needed` labels |
-| `mp-mockup` | after the brief | `variants/variant-<letter>.html` |
-| `mp-design-refine` | after variant chosen | `refined.html`, `SUMMARY.md`, labels removed |
+| `/mp:design-init` | once per project | `designs/DESIGN_SYSTEM.md`, `designs/tokens.css` |
+| `/mp:design-brief` | once per component | `DESIGN_BRIEF_<NAME>.md`, `Design needed` labels |
+| `/mp:mockup` | after the brief | `variants/variant-<letter>.html` |
+| `/mp:design-refine` | after variant chosen | `refined.html`, `SUMMARY.md`, labels removed |
 
 ## Folder layout
 
@@ -87,7 +87,7 @@ When the brief specifies surrounding context, reproduce it:
 ## Design gating label
 
 `Design needed` gates implementation issues on an unfinished design.
-`mp-design-brief` creates the label and applies it; `mp-design-refine` removes it.
+`/mp:design-brief` creates the label and applies it; `/mp:design-refine` removes it.
 
 Match the repo's actual label if it differs — discover with `gh label list --search design`.
 With no GitHub remote or no `gh`, skip the gating steps and say so in the report.

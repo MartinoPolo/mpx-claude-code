@@ -1,5 +1,5 @@
 ---
-name: mp-design-init
+name: design-init
 description: "Bootstraps a project's visual identity — derives a palette, font pairing, density, and motion language from the project's domain, then writes designs/tokens.css and designs/DESIGN_SYSTEM.md."
 when_to_use: "User asks to init or bootstrap a design system, set up design tokens, or establish a project's visual identity. Run once per project."
 argument-hint: ""
@@ -112,5 +112,5 @@ Rejected: [alternatives considered]
 
 ## Step 8: Report
 
-Visual identity in one sentence, files written, and that `/mp-design-brief` → `/mp-mockup` →
-`/mp-design-refine` now consume these tokens.
+Visual identity in one sentence, files written, and that `/mp:design-brief` → `/mp:mockup` →
+`/mp:design-refine` now consume these tokens.

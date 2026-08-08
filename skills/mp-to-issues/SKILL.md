@@ -1,5 +1,5 @@
 ---
-name: mp-to-issues
+name: to-issues
 description: "Breaks an epic issue into vertical-slice sub-issues with blocking relationships."
 argument-hint: <epic issue URL or number>
 disable-model-invocation: true

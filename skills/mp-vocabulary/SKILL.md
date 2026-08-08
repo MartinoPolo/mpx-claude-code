@@ -1,5 +1,5 @@
 ---
-name: mp-vocabulary
+name: vocabulary
 description: "Creates or updates the domain language section of CONTEXT.md, confirming terms with the user first."
 argument-hint: "[topic or context to focus term extraction on]"
 disable-model-invocation: true

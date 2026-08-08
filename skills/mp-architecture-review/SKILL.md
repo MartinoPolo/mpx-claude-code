@@ -1,5 +1,5 @@
 ---
-name: mp-architecture-review
+name: architecture-review
 description: "Reviews codebase architecture and opens a refactor issue with the findings."
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion, Agent

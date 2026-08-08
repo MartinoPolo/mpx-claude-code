@@ -1,0 +1,14 @@
+{
+  "name": "mp",
+  "owner": {
+    "name": "MartinoPolo",
+    "url": "https://github.com/MartinoPolo"
+  },
+  "plugins": [
+    {
+      "name": "mp",
+      "source": "./",
+      "description": "Opinionated Claude Code toolkit: planning-to-ship skills (/mp:<name>), review/check agents, hooks, and a rich status line."
+    }
+  ]
+}

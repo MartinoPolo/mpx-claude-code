@@ -57,7 +57,7 @@ When a question about the codebase can be answered by looking, look. Reserve
 questions for decisions only the user can make — product intent, priorities,
 trade-offs, anything requiring taste or outside knowledge.
 
-Used by `mp-grill`, `mp-hitl`, and any skill that interviews the user.
+Used by `/mp:grill`, `/mp:hitl`, and any skill that interviews the user.
 
 ## Library documentation is not in this repo
 
@@ -68,7 +68,7 @@ local `node_modules` or from memory.
 ## Paths outside the working directory
 
 Machine roots come from `MPX_*` environment variables, surfaced into every session
-by the `machine-paths.js` SessionStart hook. Inside a sub-agent, resolve them at
+by the `machine-paths.mjs` SessionStart hook. Inside a sub-agent, resolve them at
 runtime — `env | grep '^MPX_'` — rather than guessing.
 
 | Variable             | Root                     |
@@ -91,7 +91,7 @@ variable as unavailable and say so; do not substitute a guessed path.
 
 Markdown does not interpolate environment variables, so `$MPX_WORK` written in a
 skill body is literal text. There are exactly three working channels for a machine
-root to reach an agent: the `machine-paths.js` SessionStart hook (main thread only —
+root to reach an agent: the `machine-paths.mjs` SessionStart hook (main thread only —
 it does **not** propagate into sub-agent contexts), a runtime lookup inside the agent
 (`env | grep '^MPX_'`), and `` !`command` `` preprocessing in a skill body.
 

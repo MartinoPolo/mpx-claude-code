@@ -11,8 +11,8 @@ if (process.env.TERM_PROGRAM === 'vscode') {
   process.exit(0);
 }
 
-const { execFileSync, spawnSync } = require('child_process');
-const { readStdin } = require('./shared');
+import { execFileSync, spawnSync } from 'node:child_process';
+import { readStdin } from './shared.mjs';
 
 const MIN_VERSION = process.env.FALLOW_GATE_MIN_VERSION ?? '2.46.0';
 

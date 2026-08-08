@@ -1,5 +1,5 @@
 ---
-name: mp-pr
+name: pr
 description: "Creates or updates a pull request from the commits already on the current branch."
 disable-model-invocation: true
 allowed-tools: Agent, Read, Bash(node *), Bash(gh pr *), Bash(gh issue view *), Bash(git status *), Bash(git log *), Bash(git diff *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git rev-list *), Bash(git remote *)

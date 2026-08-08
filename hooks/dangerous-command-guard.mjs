@@ -4,9 +4,10 @@
  * Exit 0 = allow, Exit 2 = block (stderr fed back to Claude)
  */
 
-const { readStdin } = require("./shared");
+import { readStdin } from "./shared.mjs";
+import { fileURLToPath } from "node:url";
 
-const RM_RF_ALLOWED_TARGETS = new Set([
+export const RM_RF_ALLOWED_TARGETS = new Set([
   "node_modules",
   "dist",
   "build",
@@ -30,7 +31,7 @@ const RM_RF_ALLOWED_TARGETS = new Set([
  * @param {string} command
  * @returns {{ blocked: boolean, message?: string }}
  */
-function checkDangerousCommand(command) {
+export function checkDangerousCommand(command) {
   const trimmed = command.trim();
 
   // 1. Detect rm with recursive+force — both short and long form
@@ -163,8 +164,6 @@ async function main() {
   process.exit(0);
 }
 
-module.exports = { checkDangerousCommand, RM_RF_ALLOWED_TARGETS };
-
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch(() => process.exit(0));
 }

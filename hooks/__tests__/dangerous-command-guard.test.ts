@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkDangerousCommand } from "../dangerous-command-guard.js";
+import { checkDangerousCommand } from "../dangerous-command-guard.mjs";
 
 describe("dangerous-command-guard", () => {
   describe("rm -rf with dangerous paths", () => {

@@ -1,5 +1,5 @@
 ---
-name: mp-issue-create
+name: issue-create
 description: "Creates GitHub issues in the repo's standard format, optionally linked to an epic."
 when_to_use: "User asks to create or file a GitHub issue."
 argument-hint: "<description> [--epic <number>]"

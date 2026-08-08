@@ -1,32 +1,57 @@
-# mpx — Claude Code Customization Toolkit
+# mp — a Claude Code plugin
 
-Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with GitHub-driven project workflows, TDD execution, and general-purpose dev tools.
+Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with GitHub-driven project workflows, TDD execution, and general-purpose dev tools. Packaged as the `mp` plugin; this repo is both the plugin and its marketplace.
 
-**Why it's good:**
+**Features:**
 
 - **Full pipeline, hands-off** — requirements → epic → GitHub issues → TDD execution → reviewed PR → CI-green auto-merge, with the main agent as a pure orchestrator (raw findings, test failures, and CI logs never enter its context).
 - **Dozens of cherry-pickable skills and agents** — git workflows, parallel code review, design pipeline, maintenance sweeps, content generators (tutorials, podcasts, video sheets).
 - **Benchmarked model/effort choices** — every agent's model and effort pin is backed by a measured benchmark, not vibes ([details](docs/SUBAGENTS.md)).
 - **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
-- **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)).
+- **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)). Requires a short manual setup step — see [Manual setup](#manual-setup-not-pluginnable) below.
+
+## Install
+
+### Marketplace
+
+```
+/plugin marketplace add MartinoPolo/mpx-claude-code
+/plugin install mp@mp
+```
+
+The first command registers this repo as a marketplace (it lists one plugin, `mp`, sourced from `./`); the second installs that plugin. This ships skills, agents, hooks, and the `output-styles/` directory. It does **not** touch your `settings.json` — see [Manual setup](#manual-setup-not-pluginnable) for the status line, default model, and output style.
+
+### Local development
+
+To iterate on the plugin's own hooks, agents, or skills, run Claude Code against your working copy instead of an installed release:
+
+```
+claude --plugin-dir <path-to-clone>
+```
+
+This loads the plugin live, in place — no copy step. After editing a hook or agent file, run `/reload-plugins` to pick up the change; `SKILL.md` edits apply immediately. (A marketplace install instead copies the plugin into a versioned cache directory, which is why local development uses `--plugin-dir` rather than reinstalling.)
+
+### Invocation
+
+Once installed, every shipped skill invokes as `/mp:<name>` — for example `/mp:execute`, `/mp:ship`, `/mp:review`. The plugin name (`mp`) supplies the namespace prefix automatically.
 
 ## Workflow
 
 ```mermaid
 flowchart LR
-    grill["/mp-grill<br/>requirements Q&A → .mpx/ docs"]
-    epic["/mp-to-epic<br/>CONTEXT.md → epic issue"]
-    issues["/mp-to-issues<br/>vertical-slice sub-issues<br/>HITL / AFK"]
-    execute["/mp-execute<br/>TDD → PR → CI-green merge"]
+    grill["/mp:grill<br/>requirements Q&A → .mpx/ docs"]
+    epic["/mp:to-epic<br/>CONTEXT.md → epic issue"]
+    issues["/mp:to-issues<br/>vertical-slice sub-issues<br/>HITL / AFK"]
+    execute["/mp:execute<br/>TDD → PR → CI-green merge"]
     grill --> epic --> issues --> execute
 ```
 
-- **HITL** label = issue needs human decisions; **AFK** label = implementable autonomously. `/mp-hitl` converts the former into the latter.
-- **Bugs:** `/mp-bug-report` investigates root cause → TDD fix plan → labeled issue.
-- **Standalone git:** `/mp-ship`, `/mp-commit-push-pr`, `/mp-pr` when implementation is already done.
-- **Between sessions:** `/mp-handoff` saves context to `HANDOFF.md`.
+- **HITL** label = issue needs human decisions; **AFK** label = implementable autonomously. `/mp:hitl` converts the former into the latter.
+- **Bugs:** `/mp:bug-report` investigates root cause → TDD fix plan → labeled issue.
+- **Standalone git:** `/mp:ship`, `/mp:commit-push-pr`, `/mp:pr` when implementation is already done.
+- **Between sessions:** `/mp:handoff` saves context to `HANDOFF.md`.
 
-### Execution pipeline (`/mp-execute`)
+### Execution pipeline (`/mp:execute`)
 
 One GitHub issue (or inline task) per run. The main agent is a pure orchestrator — the review-fix, test-fix, and CI-fix loops run inside nested sub-agents that return bounded JSON, so raw findings, test failures, and CI logs never enter its context.
 
@@ -35,7 +60,7 @@ flowchart TD
     resolve["1 · Resolve input<br/>#issue · milestone · inline task"]
     analyze["2 · Analyze<br/>mp-issue-analyzer"]
     ask(["open questions? → ask user<br/>library gaps? → mp-context7-docs-fetcher"])
-    checks["3 · Detect checks<br/>detect-check-scripts.sh (CHECK_ALL-aware)"]
+    checks["3 · Detect checks<br/>detect-check-scripts.mjs (CHECK_ALL-aware)"]
     tdd["4 · TDD execution<br/>mp-tdd-executor · red-green-refactor"]
     verify["5 · Verify-fix loop<br/>mp-check-fixer: static checks + tests + 4 reviewers<br/>(--full-review: 7) + optional browser verify<br/>fixes applied inside · bounded JSON out"]
     triage["6 · Unresolved triage<br/>mp-unresolved-issue-tracker (issues only)"]
@@ -61,48 +86,46 @@ TDD principles: [tests](skills/mp-execute/tests.md), [mocking](skills/mp-execute
 - **GitHub:** Milestones = versions/releases, Issues = epics (parent) + tasks (sub-issues with blocking), Project Board = tracking.
 - **`.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `skills/shared/DOCUMENTATION_STRATEGY.md`. Tracked and committed — everything in it is team-shared; gitignore only `.mpx/tmp/`, the scratch area.
 
-## Skills Reference
+## Skills reference
 
-Most skills are `/`-only via `disable-model-invocation: true` and cost no context; only the few Claude must reach for unprompted stay model-invocable (their descriptions sit in every session's context). `/mp-ship` carries trigger phrasing for the whole git family. Conventions: `skills/shared/AUTHORING.md`.
+Everything below ships with the plugin (installed under `skills/`) and invokes as `/mp:<name>`. Most skills are `/`-only via `disable-model-invocation: true` and cost no context; only the few Claude must reach for unprompted stay model-invocable (their descriptions sit in every session's context). `/mp:ship` carries trigger phrasing for the whole git family. Conventions: `skills/shared/AUTHORING.md`. Personal, non-shipped skills are covered separately under [Local skills](#local-skills-not-installed).
 
 ### Planning
 
 | Skill              | Description                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------ |
-| `/mp-grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
-| `/mp-to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
-| `/mp-to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
-| `/mp-hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |
-| `/mp-vocabulary`   | Maintain canonical domain terms in `.mpx/CONTEXT.md`                                 |
-| `/mp-issue-create` | Create well-structured GitHub issues                                                 |
-| `/mp-bug-report`   | Root cause → TDD fix plan → labeled bug issue                                        |
-| `/mp-epic-review`  | epic-end review: code quality, architecture, cleanup, docs, unresolved items         |
+| `/mp:grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
+| `/mp:to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
+| `/mp:to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
+| `/mp:hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |
+| `/mp:vocabulary`   | Maintain canonical domain terms in `.mpx/CONTEXT.md`                                 |
+| `/mp:issue-create` | Create well-structured GitHub issues                                                 |
+| `/mp:bug-report`   | Root cause → TDD fix plan → labeled bug issue                                        |
+| `/mp:epic-review`  | epic-end review: code quality, architecture, cleanup, docs, unresolved items         |
 
 ### Execution & code quality
 
 | Skill           | Description                                                                        |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `/mp-execute`   | The execution orchestrator (pipeline above)                                        |
-| `/mp-check-fix` | Detect and run check scripts, fix failures (`CHECK_ALL` first, else typecheck/lint/format/build) |
-| `/mp-review`    | Unified code review — scope: PR, branch, changes; 4 or 7 parallel reviewers; optional autofix loop via `mp-executor` (≤3 iterations); findings → `REVIEW.md` |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `/mp:execute`   | The execution orchestrator (pipeline above)                                         |
+| `/mp:check-fix` | Detect and run check scripts, fix failures (`CHECK_ALL` first, else typecheck/lint/format/build) |
+| `/mp:review`    | Unified code review — scope: PR, branch, changes; 4 or 7 parallel reviewers; optional autofix loop via `mp-executor` (≤3 iterations); findings → `REVIEW.md` |
 
 ### Board workflow (Obsidian)
 
-Obsidian board notes (bugs/tasks with screenshots) → GitHub issues → autonomous batch fixes. Lanes (`To Process` → `Ready to implement` → `Manual testing` → `Archive`) are the state machine; the checkbox stays the user's manual-verification flag. Convention: `skills/shared/BOARD_CONVENTION.md`.
+Obsidian board notes (bugs/tasks with screenshots) → GitHub issues → autonomous batch fixes. Lanes (`To Process` → `Ready to implement` → `Manual testing` → `Archive`) are the state machine; the checkbox stays the user's manual-verification flag. Convention: `skills/shared/BOARD_CONVENTION.md`. The board setup and note-conversion steps (`mp-board-setup`, `mp-board-to-issues`) are personal-workflow skills under [Local skills](#local-skills-not-installed); the batch-execution step below ships with the plugin.
 
 | Skill                 | Description                                                                 |
-| --------------------- | --------------------------------------------------------------------------- |
-| `/mp-board-setup`     | One-time: vault board + `.mpx/BOARD.md` symlink + `board-files` junction    |
-| `/mp-board-to-issues` | `To Process` notes → labelled GitHub issues (merge, dedup, size, AFK/HITL)  |
-| `/mp-batch-execute`   | Implement a batch of AFK issues on one branch → verify → one PR             |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `/mp:batch-execute`   | Implement a batch of AFK issues on one branch → verify → one PR             |
 
 ### Testing
 
 | Skill                 | Description                                                                     |
-| --------------------- | ------------------------------------------------------------------------------- |
-| `/mp-playwright-test` | Raw-Playwright visual verification over a scope — per-surface PASS/FAIL + screenshots |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| `/mp:playwright-test` | Raw-Playwright visual verification over a scope — per-surface PASS/FAIL + screenshots |
 
-Both it and `/mp-batch-execute`'s verify gate follow `skills/shared/PLAYWRIGHT_TESTING.md` (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing, perf traces, and Lighthouse only.
+Both it and `/mp:batch-execute`'s verify gate follow `skills/shared/PLAYWRIGHT_TESTING.md` (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing, perf traces, and Lighthouse only.
 
 ### Periodic maintenance
 
@@ -110,15 +133,15 @@ Run after milestones/epics. Sorted by attention required; all except the last tw
 
 | Skill                     | Scope             | Attention | Notes                                             |
 | ------------------------- | ----------------- | --------- | ------------------------------------------------- |
-| `/mp-fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code                              |
-| `/mp-suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc.           |
-| `/mp-consolidate-context` | `.mpx/CONTEXT.md` | Low       | Dedup + tighten, fully automatic                  |
-| `/mp-skill-audit`         | All skills        | Low       | 15 consistency rules, auto-fixes drift            |
-| `/mp-harvest-decisions`   | Last 30d sessions | Low       | Transcripts → CONTEXT.md + DECISIONS.md           |
-| `/mp-components-audit`    | Whole repo (UI)   | Medium    | Design-system drift; reports, `autofix` optional  |
-| `/mp-code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication                  |
-| `/mp-decompose`           | Whole repo        | Medium    | Splits oversized files into modules               |
-| `/mp-architecture-review` | Whole repo        | High      | Interactive — pain points, deepening candidates   |
+| `/mp:fallow-fix`          | Whole repo        | Low       | Auto-fixes dead code                              |
+| `/mp:suppression-audit`   | Whole repo        | Low       | Audits eslint-disable, @ts-ignore, etc.           |
+| `/mp:consolidate-context` | `.mpx/CONTEXT.md` | Low       | Dedup + tighten, fully automatic                  |
+| `/mp:skill-audit`         | All skills        | Low       | Consistency rules, auto-fixes drift               |
+| `/mp:harvest-decisions`   | Recent sessions   | Low       | Transcripts → CONTEXT.md + DECISIONS.md           |
+| `/mp:components-audit`    | Whole repo (UI)   | Medium    | Design-system drift; reports, `autofix` optional  |
+| `/mp:code-clean`          | Whole repo        | Medium    | Dead code removal, deduplication                  |
+| `/mp:decompose`           | Whole repo        | Medium    | Splits oversized files into modules               |
+| `/mp:architecture-review` | Whole repo        | High      | Interactive — pain points, deepening candidates   |
 
 ### Design
 
@@ -126,54 +149,64 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under 
 
 | Skill               | Description                                                              |
 | ------------------- | ------------------------------------------------------------------------ |
-| `/mp-design-init`   | Derive palette/fonts/density/motion → `designs/tokens.css` + system doc  |
-| `/mp-design-brief`  | Component design brief; gates dependent issues with `Design needed`      |
-| `/mp-mockup`        | N self-contained HTML variants (parallel `mp-ui-variant-generator`)      |
-| `/mp-design-refine` | Apply refinements → `refined.html`, remove the design gate               |
+| `/mp:design-init`   | Derive palette/fonts/density/motion → `designs/tokens.css` + system doc  |
+| `/mp:design-brief`  | Component design brief; gates dependent issues with `Design needed`      |
+| `/mp:mockup`        | N self-contained HTML variants (parallel `mp-ui-variant-generator`)      |
+| `/mp:design-refine` | Apply refinements → `refined.html`, remove the design gate               |
 
 ### Git
 
 | Skill                | Description                                                        |
 | -------------------- | ------------------------------------------------------------------ |
-| `/mp-commit`         | Stage and commit with conventional format                          |
-| `/mp-commit-push`    | Commit and push (no PR)                                            |
-| `/mp-pr`             | Create or update PR from existing commits                          |
-| `/mp-commit-push-pr` | Commit, push, create/update PR                                     |
-| `/mp-sync-base`      | Merge target branch into current branch                            |
-| `/mp-ship`           | Sync base, commit, push, PR, watch CI green (`mp-ci-fixer`), merge |
+| `/mp:commit`         | Stage and commit with conventional format                          |
+| `/mp:commit-push`    | Commit and push (no PR)                                            |
+| `/mp:pr`             | Create or update PR from existing commits                          |
+| `/mp:commit-push-pr` | Commit, push, create/update PR                                     |
+| `/mp:sync-base`      | Merge target branch into current branch                            |
+| `/mp:ship`           | Sync base, commit, push, PR, watch CI green (`mp-ci-fixer`), merge |
 
 ### Setup & utility
 
 | Skill                    | Description                                                           |
-| ------------------------ | --------------------------------------------------------------------- |
-| `/mp-setup-sveltekit`    | SvelteKit project from template with GitHub setup                     |
-| `/mp-setup-react-native` | React Native monorepo from template with GitHub setup                 |
-| `/mp-init-repo`          | Init git repo with .gitignore and .claude/ structure                  |
-| `/mp-handoff`            | Save session progress to `HANDOFF.md`                                 |
-| `/mp-continue`           | Recover interrupted sub-agent/background work, then continue          |
-| `/mp-skill-create`       | Create new skills with structured conventions                         |
-| `/mp-agent-create`       | Create new custom agents with structured conventions                  |
-| `/mp-script-discovery`   | Discover runnable scripts and dev servers                             |
-| `/mp-symlink`            | Windows symlinks/junctions the way that works in Claude Code          |
-| `/mp-clean-pc`           | Full-disk cleanup sweep — ranked dashboard, quarantine over delete    |
-| `/mp-raycast-config`     | Decrypt, audit and rewrite Raycast quicklinks, aliases and hotkeys    |
-| `/mp-project-register`   | One colour → Windows Terminal profile, icon, dropdown group, Peacock, ports, quicklinks |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `/mp:setup-sveltekit`    | SvelteKit project from template with GitHub setup                     |
+| `/mp:setup-react-native` | React Native monorepo from template with GitHub setup                 |
+| `/mp:init-repo`          | Init git repo with .gitignore and .claude/ structure                  |
+| `/mp:handoff`            | Save session progress to `HANDOFF.md`                                 |
+| `/mp:continue`           | Recover interrupted sub-agent/background work, then continue          |
+| `/mp:skill-create`       | Create new skills with structured conventions                         |
+| `/mp:agent-create`       | Create new custom agents with structured conventions                  |
+| `/mp:script-discovery`   | Discover runnable scripts and dev servers                             |
+| `/mp:symlink`            | Windows symlinks/junctions the way that works in Claude Code          |
 
-### Content generators
+### Vendored reference
 
-All output to `MPX_AI_GENERATED` subfolders.
+| Skill            | Description                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| `/mp:notebooklm` | Third-party `notebooklm-py` CLI reference, pinned to a fixed release; edits belong upstream |
 
-| Skill                | Description                                                                     |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `/mp-tutorial-create`| Compact markdown → interactive self-contained HTML tutorial (quizzes, Mermaid, CSS playground) |
-| `/mp-podcast`        | Topic → two-host educational MP3 (parallel research, NotebookLM + Gemini TTS fallback) |
-| `/mp-video-to-image` | YouTube video → printable one-page sheet image (`--mode exercise` or `generic`) |
-
-Vendored: `/notebooklm` — third-party `notebooklm-py` CLI reference, pinned v0.7.3, edits belong upstream.
+Used by the `mp-podcast` skill under [Local skills](#local-skills-not-installed).
 
 ### Deprecated
 
-Retired skills, agents, hooks and scripts are archived under [`deprecated/`](deprecated/) — never deleted. Includes the pre-pipeline design skill (`/mp-design-ui-3` and its 18-style catalog), the superseded grill/requirements skills, and the bash status-line originals.
+Retired skills, agents, hooks and scripts are archived under [`deprecated/`](deprecated/) — never deleted. Includes the pre-pipeline design skill (`mp-design-ui-3` and its style catalog), the superseded grill/requirements skills, and the bash status-line originals.
+
+## Local skills (not installed)
+
+`local/skills/` holds personal and example skills that live **outside** the plugin's `skills/` scan — installing `mp` via the marketplace does not install these. They're kept in the repo for reference and as a showcase of what's possible; cherry-pick by copying a folder into your own skill directory (classic `~/.claude/skills/`, a project's `.claude/skills/`, or a separate `--plugin-dir`). Their `SKILL.md` files keep the `mp-` prefix in their `name:` field, so once installed outside this plugin they invoke under their own name (e.g. `/mp-podcast`) rather than the `/mp:` namespace.
+
+Several depend on the [machine-root environment variables](#machine-roots-mpx_) below, and a couple assume a Windows workstation.
+
+| Skill                 | Description                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `mp-board-setup`      | One-time: create an Obsidian board for the project and link it into the repo                          |
+| `mp-board-to-issues`  | Convert `To Process` board notes into labelled GitHub issues (merge, dedup, size, AFK/HITL)            |
+| `mp-clean-pc`         | Full-disk cleanup sweep — ranked dashboard, per-group approval, quarantine over delete                |
+| `mp-podcast`          | Topic + your own repos/notes → two-host educational MP3 (NotebookLM, with a Gemini TTS fallback)      |
+| `mp-project-register` | One colour → terminal profile, icon, editor theme, status-line ports, and quicklinks for a project     |
+| `mp-raycast-config`   | Decrypt, audit, and rewrite a Raycast quicklinks/aliases/hotkeys export                               |
+| `mp-tutorial-create`  | Compact markdown → interactive self-contained HTML tutorial (quizzes, Mermaid, CSS playground)         |
+| `mp-video-to-image`   | YouTube video → printable one-page sheet image (`--mode exercise` or `generic`)                       |
 
 ## Agents
 
@@ -196,26 +229,25 @@ Retired skills, agents, hooks and scripts are archived under [`deprecated/`](dep
 | mp-reviewer-* (7 agents)    | Sonnet | Medium | Best-practices, code-quality, error-handling, performance, security, spec-alignment, test-quality reviewers |
 | mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for epic-end review                        |
 
-- Model and effort pins come from a July 2026 benchmark (80 sub-agents); the `Explore` agent overrides Claude Code's built-in to keep automatic explorations off Opus — rationale, findings, and gotchas in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
+- Model and effort pins come from a benchmark run across dozens of sub-agents; the `Explore` agent overrides Claude Code's built-in to keep automatic explorations off Opus — rationale, findings, and gotchas in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
 - Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md); the raw benchmark tables behind the `TESTED` verdicts live in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
 - Reviewers share [`skills/shared/REVIEWER_PROTOCOL.md`](skills/shared/REVIEWER_PROTOCOL.md) and load language guides from `agents/references/` (TypeScript, React, Svelte 5, Python, Rust).
 
 ## Hooks
 
-Configured via `settings.json`; auto-detect the project toolchain (`vite-plus` | `biome` | `classic`).
+Shipped with the plugin via [`hooks/hooks.json`](hooks/hooks.json) — installed automatically, no manual step. Paths resolve through `${CLAUDE_PLUGIN_ROOT}`. Several auto-detect the project toolchain (`vite-plus` | `biome` | `classic`).
 
 | Hook                         | Event                    | Description                                                        |
-| ---------------------------- | ------------------------ | ------------------------------------------------------------------ |
-| `enforce-pkg-mgr.js`         | PreToolUse (Bash)        | Blocks wrong package manager commands (detects from lockfile)      |
-| `pre-commit-gate.js`         | PreToolUse (Bash)        | Runs `check:all` (Vite Plus) or typecheck before git commits       |
-| `dangerous-command-guard.js` | PreToolUse (Bash)        | Blocks `rm -rf`, force-push to main, `git clean -fdx`, SQL DROP…   |
-| `fallow-gate.js`             | PreToolUse (Bash)        | Blocks commit/push when the fallow audit verdict is fail           |
-| `format-lint-file.js`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files                                |
-| `post-bash-context.js`       | PostToolUse (Bash)       | Enriches context after bash commands                               |
-| `compact-instructions.js`    | PreCompact (*)           | Appends `instructions/COMPACT.md` to the compaction prompt (pi consumes the same file via `mpx-pi/extensions/compact-instructions.ts`) |
-| `notify-flash-beep.ps1`      | Stop                     | Flashes taskbar + notification sound (custom: `~/.claude/sounds/notify.wav`) |
-| `herdr-agent-state.ps1`      | SessionStart (*)         | Reports session state to herdr (no-op unless `HERDR_ENV=1`)        |
-| `machine-paths.js`           | SessionStart (*)         | Surfaces the machine-root `MPX_*` environment variables into session context |
+| ----------------------------- | ------------------------ | -------------------------------------------------------------------- |
+| `enforce-pkg-mgr.mjs`         | PreToolUse (Bash)        | Blocks wrong package manager commands (detects from lockfile)      |
+| `pre-commit-gate.mjs`         | PreToolUse (Bash)        | Runs `check:all` (Vite Plus) or typecheck before git commits       |
+| `dangerous-command-guard.mjs` | PreToolUse (Bash)        | Blocks `rm -rf`, force-push to main, `git clean -fdx`, SQL DROP…   |
+| `fallow-gate.mjs`             | PreToolUse (Bash)        | Blocks commit/push when the fallow audit verdict is fail           |
+| `format-lint-file.mjs`        | PostToolUse (Edit/Write) | Auto-formats and lints edited files                                |
+| `post-bash-context.mjs`       | PostToolUse (Bash)       | Enriches context after bash commands                                |
+| `compact-instructions.mjs`    | PreCompact (*)           | Appends `instructions/COMPACT.md` to the compaction prompt (pi consumes the same file via its own extension — see [Cross-harness](#cross-harness)) |
+| `notify.mjs`                  | Stop                     | Desktop notification (taskbar flash + sound); Windows-only, silent no-op on other platforms |
+| `machine-paths.mjs`           | SessionStart (*)         | Surfaces the machine-root `MPX_*` environment variables into session context |
 
 Test suites for the guard hooks live in `hooks/__tests__/`.
 
@@ -246,39 +278,68 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
-**Account color** — `cc`/`ccw` repaint the terminal background before launching, so personal (dark red) and work (dark blue) are distinguishable at a glance without a profile per account. `scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the two tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color.
+**Account color** — a pair of shell launcher functions (`cc`/`ccw` in the author's own setup) repaint the terminal background before launching, so one account is distinguishable from another at a glance without a profile per account. `scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color. This piece is optional — the status line works without it, just without a per-account background tint.
 
-**Tab title** — left to Claude Code. It drives the title from its own status: the session summary, prefixed by an animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one signal with the session's real state behind it, so nothing here competes with it, and the account stays readable from the pane tint above. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`) and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle them, so `/rename [P] project` is the supported way to put an account prefix in the tab: it sets the text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default `true`) is what allows it.
+**Tab title** — left to Claude Code. It drives the title from its own status: the session summary, prefixed by an animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one signal with the session's real state behind it, so nothing here competes with it. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`) and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle them, so `/rename [P] project` is the supported way to put a prefix in the tab: it sets the text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default `true`) is what allows it.
 
-A custom titler was built and reverted — `[P] worktree · project`, set by `cc`/`ccw` behind `CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1`, with the state glyph rebuilt from `UserPromptSubmit`/`Stop`/`SessionStart` hooks driving a console-attaching C helper. It is kept, unwired, under [`deprecated/scripts/terminal-title.mts`](deprecated/scripts/terminal-title.mts) and [`deprecated/hooks/terminal-title-state.c`](deprecated/hooks/terminal-title-state.c) for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the tab read idle while the session worked. The summary was lost outright — it lives in memory alone, in no transcript or session file. Reviving it means a state source Claude Code does not currently expose, not another hook.
+A custom titler was built and reverted — `[P] worktree · project`, driven by a console-attaching C helper reacting to `UserPromptSubmit`/`Stop`/`SessionStart` hooks. It is kept, unwired, under [`deprecated/scripts/terminal-title.mts`](deprecated/scripts/terminal-title.mts) and [`deprecated/hooks/terminal-title-state.c`](deprecated/hooks/terminal-title-state.c) for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the tab read idle while the session worked. The summary was lost outright — it lives in memory alone, in no transcript or session file. Reviving it means a state source Claude Code does not currently expose, not another hook.
 
-All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a ~3.5× render speedup. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
+All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a large render-speed win. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
 
-## Installation — the repo is the live config
+## Manual setup (not pluginnable)
 
-`~/.claude` doesn't hold copies of this repo — it holds **junctions and symlinks into it**. The
-directories (`agents/`, `skills/`, `hooks/`, `scripts/`, `instructions/`, `rules/`, `sounds/`,
-`templates/`) are junctions, and `CLAUDE.md`, `AGENTS.md`, `settings.json`, `settings.local.json`
-are file symlinks. Editing the repo changes live behavior in every session immediately, and git
-tracks every config change. The work account's `~/.claude-work` mirrors the same links, so both
-accounts share one source of truth. Setup script, dual-account details, and Windows symlink
-gotchas: [WINDOWS-SETUP.md](WINDOWS-SETUP.md).
+Claude Code plugins can ship skills, agents, hooks, and output-style files — but a plugin cannot set fields in your own `settings.json`. The following are genuinely useful parts of this toolkit that require a one-time manual step after installing `mp`:
 
-Prerequisite: [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) and
-`git config --global core.symlinks true` (without it, git checkout silently replaces symlinks
-with plain text files).
+- **`statusLine` / `subagentStatusLine`** — the status line scripts above. These render from `settings.json` command entries, which only a user can set.
+- **`model`** — a default model/effort pin.
+- **`env`** — environment variable overrides (e.g. a default-model env var).
+- **`outputStyle`** — the plugin ships `output-styles/mp-terse.md` (a terse, answer-first response style), but making it the *default* for every session is a user setting.
 
-### Machine roots (`MPX_*`)
+### Status line
 
-Personal absolute paths live in user-scope environment variables, not committed files. The [`machine-paths.js`](hooks/machine-paths.js) SessionStart hook injects whichever are set into every session; unset ones are skipped silently.
+`scripts/status-line.mts` and `scripts/subagent-status-line.mts` import sibling helpers from `scripts/lib/*.mts` and read their per-project/account/scheme config from `statusline-projects.json`, `statusline-accounts.json`, and `statusline-schemes.json` one directory above `scripts/` — so the two entry scripts can't be lifted in isolation. Keep the `scripts/` folder (with its `lib/` subfolder) together with those three JSON files, either by:
+
+- pointing `statusLine`/`subagentStatusLine` straight at a `--plugin-dir` checkout's `scripts/` folder (simplest for local development), or
+- copying the `scripts/` folder and the three `statusline-*.json` files to a stable path of your own and pointing at that (recommended for a marketplace install, since the plugin cache path is version-dependent and not meant to be hardcoded).
+
+The three `statusline-*.json` files ship with placeholder/example content (project names, account tints, color schemes) — edit them to describe your own projects and accounts.
+
+### Example `settings.json` snippet
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"<path-to-scripts>/status-line.mts\""
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "node \"<path-to-scripts>/subagent-status-line.mts\""
+  },
+  "outputStyle": "mp-terse",
+  "model": "opus[1m]",
+  "env": {
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-8[1m]"
+  }
+}
+```
+
+Replace `<path-to-scripts>` with wherever you kept `scripts/` per the note above. `outputStyle`, `model`, and `env` are illustrative — adapt or drop them; only the two `statusLine`/`subagentStatusLine` entries are required to get the status line working.
+
+- **Context budget:** set `autoCompactWindow` to control when auto-compaction fires — see [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md#the-context-bar-and-autocompactwindow) for the math behind picking a value (auto-compaction needs at least 200k tokens of headroom below it to fire at all).
+- **MCP:** the skills and agents here lean on Context7 (library docs) and, for one agent, chrome-devtools — install/enable those as user- or project-scope MCP servers per Claude Code's own MCP setup.
+
+## Machine roots (`MPX_*`)
+
+Personal absolute paths (project folders, work repos, an assets output folder, etc.) don't belong in a public repo, so this toolkit never hardcodes them. Instead, several skills and the `machine-paths.mjs` SessionStart hook read them from optional user-scope environment variables. If a variable is unset, the hook is silent and the corresponding skill asks rather than guesses.
 
 | Variable             | Root                    |
-| -------------------- | ----------------------- |
+| --------------------- | ----------------------- |
 | `MPX_PROJECTS`       | Personal projects       |
 | `MPX_WORK`           | Work repositories       |
 | `MPX_CLONED`         | Cloned OSS repositories |
 | `MPX_APPS`           | Local apps              |
-| `MPX_ONEDRIVE`       | OneDrive root           |
+| `MPX_ONEDRIVE`       | Cloud-synced document root |
 | `MPX_AI_GENERATED`   | Skill-generated assets  |
 | `MPX_OBSIDIAN_VAULT` | Obsidian vault          |
 
@@ -286,23 +347,28 @@ Personal absolute paths live in user-scope environment variables, not committed 
 [Environment]::SetEnvironmentVariable('MPX_PROJECTS', 'C:\your\projects', 'User')
 ```
 
-Markdown does not interpolate env vars, so sub-agents resolve them at runtime with `env | grep '^MPX_'`. Unset = unavailable — ask, do not guess.
+```bash
+export MPX_PROJECTS="$HOME/projects"   # add to your shell profile to persist
+```
 
-## Global Instructions
+None of these are required to use the plugin — set only the ones relevant to the skills you use. Markdown does not interpolate env vars, so sub-agents resolve them at runtime with `env | grep '^MPX_'`. Unset = unavailable — a skill should ask, not guess.
 
-[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see AGENTS.md, so the file is injected at compaction time instead — by the `compact-instructions.js` PreCompact hook here and by `mpx-pi/extensions/compact-instructions.ts` in pi — and costs no per-turn context. Response style lives in the `mp-terse` output style (`~/.claude/output-styles/mp-terse.md`, set via `outputStyle` in user settings) and is reinforced each turn by a `UserPromptSubmit` echo hook. Root `CLAUDE.md` and `AGENTS.md` are one-line `@AGENTS.md` includes that pull it into every session, main agent and sub-agents alike; via the symlinks above it governs every repo on the machine. Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+## Cross-harness
 
-## Settings
+Skills follow the open [Agent Skills](https://docs.anthropic.com/en/docs/claude-code) standard: plain `SKILL.md` files with frontmatter, portable to any harness that implements the standard. A sibling repo, `mpx-pi`, provides a generic extension for the [`pi`](https://github.com/earendil-works/pi-coding-agent) coding agent that reads the same `skills/` source and projects the identical `/mp:<name>` commands there, with no per-skill glue.
 
-`settings.json` — env vars, MCP plugins, hooks, status line config. Installed to `~/.claude/settings.json`.
+Hooks, the status line, and sub-agent wiring are Claude-Code-specific and are not portable as-is; `pi` re-implements the equivalent behavior natively where it needs it (for example its own compaction-instructions extension consumes the same `instructions/COMPACT.md` file this repo's `compact-instructions.mjs` hook injects).
 
-- **Context budget:** `autoCompactWindow: 213000` → auto-compaction fires at **180k tokens used** on the 1M model. 200k is a hard floor (below it Claude Code silently skips auto-compaction); the fixed 33k of deductions makes 213000 the number.
-- **MCP:** Context7 (library docs), TypeScript LSP, chrome-devtools at user scope (per-agent `mcpServers:` frontmatter measured inert on 2.1.212). `ENABLE_TOOL_SEARCH: "auto:1"` keeps the cost to tool names only (~260 tokens).
+## Global instructions
+
+[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see `AGENTS.md`, so the file is injected at compaction time instead by the `compact-instructions.mjs` hook (see [Cross-harness](#cross-harness) for the `pi` equivalent), and costs no per-turn context. Response style lives in the `mp-terse` output style (`output-styles/mp-terse.md`, made the default via `outputStyle` in user settings — see [Manual setup](#manual-setup-not-pluginnable)). Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+
+If you use this repo as a template for your own instructions, point your project's `CLAUDE.md`/`AGENTS.md` at your own rule file the same way — a one-line `@AGENTS.md` include.
 
 ## Templates & Scripts
 
 | Template                         | Stack                                                       | GitHub                                                                              |
-| -------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| --------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `template-sveltekit`             | SvelteKit + Vite Plus + Drizzle + Vitest + Playwright       | [MartinoPolo/template-sveltekit](https://github.com/MartinoPolo/template-sveltekit) |
 | `template-react-native-monorepo` | React + RN + Expo + Hono + Gluestack + NativeWind + Drizzle | [MartinoPolo/template-react-native-monorepo](https://github.com/MartinoPolo/template-react-native-monorepo) |
 

@@ -1,6 +1,6 @@
 # Board Convention
 
-Shared single-source-of-truth for the Obsidian **board** workflow, referenced by `mp-board-setup`, `mp-board-to-issues`, and `mp-batch-execute`. The board is a plain-markdown file that lives in an Obsidian vault (so pasted screenshots work) and is exposed inside the repo via two links under `.mpx/` (so agents can read requirements **and** images).
+Shared single-source-of-truth for the Obsidian **board** workflow, referenced by `/mp:board-setup`, `/mp:board-to-issues`, and `/mp:batch-execute`. The board is a plain-markdown file that lives in an Obsidian vault (so pasted screenshots work) and is exposed inside the repo via two links under `.mpx/` (so agents can read requirements **and** images).
 
 ## Why a board
 
@@ -13,7 +13,7 @@ GitHub's issue API cannot round-trip images to an agent — an agent creating or
 | `.mpx/BOARD.md` | file symlink | `<vault>\Boards\<project>.md` | the board's text (requirements) |
 | `.mpx/board-files/` | directory junction | `<vault>\Files` | the vault's shared attachments folder (images) |
 
-Both are **gitignored** — they point outside the repo and are per-machine. The vault root comes from the `MPX_OBSIDIAN_VAULT` environment variable. `mp-board-setup` creates all of this.
+Both are **gitignored** — they point outside the repo and are per-machine. The vault root comes from the `MPX_OBSIDIAN_VAULT` environment variable. `/mp:board-setup` creates all of this.
 
 > **Writing back to the board:** because `.mpx/BOARD.md` is a real symlink, the Write/Edit tools may refuse to write through it ("Refusing to write through symlink"). Resolve it to the vault target (`<vault>\Boards\<project>.md`) and edit that real path directly.
 
@@ -23,7 +23,7 @@ Board items reference screenshots as bare-filename wikilinks: `![[Pasted image 2
 
 ## Sections (H1 headings) — the pipeline
 
-The board is a four-lane pipeline. Every note starts in `# To Process`; the skills **move** it lane-by-lane as work progresses (they never delete or retype the note). `mp-board-setup` seeds all four headings:
+The board is a four-lane pipeline. Every note starts in `# To Process`; the skills **move** it lane-by-lane as work progresses (they never delete or retype the note). `/mp:board-setup` seeds all four headings:
 
 ```markdown
 # To Process
@@ -40,15 +40,15 @@ Paste every new note under `# To Process` regardless of whether it's a bug, task
 | Lane | Holds | An item arrives here via |
 |---|---|---|
 | `# To Process` | raw intake notes, not yet processed | you paste it |
-| `# Ready to implement` | a GitHub issue exists (`→ #N` appended) | `mp-board-to-issues` moves it |
-| `# Manual testing` | implemented, awaiting your manual verification | `mp-batch-execute` moves it |
+| `# Ready to implement` | a GitHub issue exists (`→ #N` appended) | `/mp:board-to-issues` moves it |
+| `# Manual testing` | implemented, awaiting your manual verification | `/mp:batch-execute` moves it |
 | `# Archive` | you manually tested it and checked it off | you move it |
 
 Only `# To Process` items are converted to issues; items in the other three lanes are skipped by both work skills.
 
 ### Type classification (from content)
 
-`mp-board-to-issues` reads each note and picks the GitHub type label from what it describes:
+`/mp:board-to-issues` reads each note and picks the GitHub type label from what it describes:
 
 | Note describes | Type label | Native? |
 |---|---|---|
@@ -75,13 +75,13 @@ The checkbox belongs to **you**: it is your manual-verification flag. While an i
 | Step | Who | Board effect | Checkbox |
 |---|---|---|---|
 | paste a note | you | add `- [ ]` under `# To Process` | `- [ ]` |
-| GitHub issue created | `mp-board-to-issues` | move item to `# Ready to implement`, append ` → #<N>` | unchanged `- [ ]` |
-| implemented | `mp-batch-execute` | move item to `# Manual testing` | unchanged `- [ ]` |
+| GitHub issue created | `/mp:board-to-issues` | move item to `# Ready to implement`, append ` → #<N>` | unchanged `- [ ]` |
+| implemented | `/mp:batch-execute` | move item to `# Manual testing` | unchanged `- [ ]` |
 | manually verified | **you** | check the box, then move to `# Archive` | `- [ ]` → `- [x]` |
 
 ### Issue-number annotation
 
-When `mp-board-to-issues` creates issue `#142` from an item, it appends the reference and moves the item, leaving the marker `- [ ]`:
+When `/mp:board-to-issues` creates issue `#142` from an item, it appends the reference and moves the item, leaving the marker `- [ ]`:
 
 ```markdown
 # Ready to implement
@@ -89,8 +89,8 @@ When `mp-board-to-issues` creates issue `#142` from an item, it appends the refe
 - [ ] The edit-name button should be a ghost button ... ![[...]] → #142
 ```
 
-`mp-batch-execute` matches a board item back to its issue by this ` → #<N>` annotation (or, in board-direct mode, by item text identity) to move it from `# Ready to implement` to `# Manual testing`.
+`/mp:batch-execute` matches a board item back to its issue by this ` → #<N>` annotation (or, in board-direct mode, by item text identity) to move it from `# Ready to implement` to `# Manual testing`.
 
 ## Targeting the board (shared by both work skills)
 
-`# To Process` is the only intake lane, so the work skills take no section argument. `mp-board-to-issues` processes **every `- [ ]` item under `# To Process`** (skipping any that already carry a `→ #N` annotation); `mp-batch-execute` in board-direct mode (`board`) does the same. Items in `# Ready to implement`, `# Manual testing`, and `# Archive` are never re-processed.
+`# To Process` is the only intake lane, so the work skills take no section argument. `/mp:board-to-issues` processes **every `- [ ]` item under `# To Process`** (skipping any that already carry a `→ #N` annotation); `/mp:batch-execute` in board-direct mode (`board`) does the same. Items in `# Ready to implement`, `# Manual testing`, and `# Archive` are never re-processed.

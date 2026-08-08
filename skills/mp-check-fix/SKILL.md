@@ -1,5 +1,5 @@
 ---
-name: mp-check-fix
+name: check-fix
 description: "Detects the project's check scripts, runs them, and fixes what fails."
 when_to_use: "User asks to run checks, fix lint or type errors, or get the build green."
 compatibility: Requires package.json scripts for check:all/check-all or typecheck/lint/format/build
@@ -12,14 +12,14 @@ metadata:
 
 # Check & Fix
 
-Deterministic check execution and fix loop based on `detect-check-scripts.sh`.
+Deterministic check execution and fix loop based on `detect-check-scripts.mjs`.
 
 This skill accepts no arguments. Ignore argument-based filtering and follow detector output only.
 
 ## Step 1: Detect Available Checks
 
 ```bash
-bash $HOME/.claude/scripts/detect-check-scripts.sh
+node $HOME/.claude/scripts/detect-check-scripts.mjs
 ```
 
 Handle all outputs explicitly:
@@ -28,7 +28,7 @@ Handle all outputs explicitly:
 - `PM_UNKNOWN=true`: ask user which package manager to use (`npm`, `pnpm`, `yarn`, `bun`), then re-run:
 
 ```bash
-bash $HOME/.claude/scripts/detect-check-scripts.sh . <chosen_pm>
+node $HOME/.claude/scripts/detect-check-scripts.mjs . <chosen_pm>
 ```
 
 - `PM=<pm>`: continue with detected scripts.

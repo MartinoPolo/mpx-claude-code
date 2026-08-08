@@ -178,7 +178,7 @@ get sensible defaults (auto base branch, detected package manager, no managed po
 ## 8. Skills adaptation
 
 **Finding (verified 2026-08-07):** no skill hard-codes a port. They already defer to "the project's
-`AGENTS.md` / memory for the exact port" (`mp-playwright-test` SKILL, `shared/PLAYWRIGHT_TESTING.md`).
+`AGENTS.md` / memory for the exact port" (`/mp:playwright-test` SKILL, `shared/PLAYWRIGHT_TESTING.md`).
 So the behavioral fix is **one global rule**, not per-skill edits.
 
 **Concrete consumers:**
@@ -189,9 +189,9 @@ So the behavioral fix is **one global rule**, not per-skill edits.
   `vite.preview.*` configs read `.worktree-ports.json` explicitly and pass `port:`; the Storybook
   launcher (already JS) reads the JSON directly. **Fallback lives in the config/launcher default**
   (e.g. `readPorts().docs ?? 8101`), never in `AGENTS.md`.
-- *Skills (behavioral — no port logic, they inherit the global rule):* `mp-playwright-test` +
-  `shared/PLAYWRIGHT_TESTING.md`, `mp-continue` (port-zombie kill/restart), `mp-ship`, `mp-execute`,
-  `mp-check-fix`.
+- *Skills (behavioral — no port logic, they inherit the global rule):* `/mp:playwright-test` +
+  `shared/PLAYWRIGHT_TESTING.md`, `/mp:continue` (port-zombie kill/restart), `/mp:ship`, `/mp:execute`,
+  `/mp:check-fix`.
 
 **Global rule** — add to the top-level `AGENTS.md` (Phase 4):
 

@@ -1,5 +1,5 @@
 ---
-name: mp-review
+name: review
 description: "Reviews a branch, working diff, or PR across specialist axes (security, performance, tests, quality) and optionally applies the fixes."
 when_to_use: "User asks to review code, changes, or a pull request."
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"

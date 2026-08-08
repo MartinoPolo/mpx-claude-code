@@ -1,5 +1,5 @@
 ---
-name: mp-init-repo
+name: init-repo
 description: "Initializes a git repo, pushes it to GitHub, and sets up branch protection."
 disable-model-invocation: true
 allowed-tools: Bash, Write, AskUserQuestion
@@ -20,7 +20,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
 2. **Run the init script**: Execute the initialization script:
 
    ```bash
-   bash $HOME/.claude/skills/mp-init-repo/scripts/init-repo.sh
+   node $HOME/.claude/skills/mp-init-repo/scripts/init-repo.mjs
    ```
 
 3. **Create `.mpx/` structure**: Create the project documentation directory (see `skills/shared/DOCUMENTATION_STRATEGY.md` for format):
@@ -38,7 +38,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
    [3-sentence project summary]
 
    ## Domain Language
-   [Terms added via `/mp-grill` or `/mp-vocabulary`]
+   [Terms added via `/mp:grill` or `/mp:vocabulary`]
 
    ## Core Features
    [Feature index: name + status + epic#]
@@ -51,7 +51,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
    ```markdown
    # Decisions
 
-   Settled architectural and design decisions. Updated via `/mp-grill` and `/mp-harvest-decisions`.
+   Settled architectural and design decisions. Updated via `/mp:grill` and `/mp:harvest-decisions`.
    ```
 
    Commit the `.mpx/` files.

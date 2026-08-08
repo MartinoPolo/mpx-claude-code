@@ -1,5 +1,5 @@
 ---
-name: mp-sync-base
+name: sync-base
 description: "Merges the target base branch into the current branch, resolving conflicts and pushing the result."
 disable-model-invocation: true
 allowed-tools: Bash(git *), Read, Edit, Bash(node $HOME/.claude/scripts/detect-base-branch.js*)

@@ -1,5 +1,5 @@
 ---
-name: mp-symlink
+name: symlink
 description: "Creates and verifies Windows symlinks and directory junctions through PowerShell New-Item."
 when_to_use: "Any symlink or junction work on Windows. Git Bash ln -s and cmd mklink silently create the wrong thing here."
 argument-hint: "[link-path] [target-path]"

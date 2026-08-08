@@ -1,5 +1,5 @@
 ---
-name: mp-consolidate-context
+name: consolidate-context
 description: "Consolidates CONTEXT.md by removing duplicates and outdated items and tightening the language."
 argument-hint: "[path to CONTEXT.md]"
 disable-model-invocation: true

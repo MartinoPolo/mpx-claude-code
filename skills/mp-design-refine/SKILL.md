@@ -1,5 +1,5 @@
 ---
-name: mp-design-refine
+name: design-refine
 description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the GitHub issues that were gated on the design."
 when_to_use: "User asks to refine a design, accept or select a variant, polish a mockup, or refine all pending designs."
 argument-hint: "all | <variant-letter> [refinement requirements...]"
@@ -163,7 +163,7 @@ Report in this order:
 2. **Component map** — counts only: N reuse, N adopted, N custom
 3. **Unblocked** — `#<num> — <title>` per issue whose gate was cleared
 4. **Ready to execute** — those unblocked issues carrying no other open `blocked-by`, so the user
-   knows what can go to `/mp-execute` next
+   knows what can go to `/mp:execute` next
 5. **Still blocked** — candidates left labelled, one line of reason each
 
 ## Batch mode

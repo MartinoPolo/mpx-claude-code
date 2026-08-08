@@ -1,5 +1,5 @@
 ---
-name: mp-commit-push
+name: commit-push
 description: "Stages, commits, and pushes changes without opening a PR."
 disable-model-invocation: true
 allowed-tools: Agent, Read, Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *), Bash(git push *)

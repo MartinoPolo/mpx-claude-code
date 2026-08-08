@@ -1,6 +1,6 @@
 # Git Commit Workflow
 
-Canonical delegation workflow shared by `mp-commit`, `mp-commit-push`, `mp-commit-push-pr`, and `mp-pr`. This file defines the phases; each skill states which phases it runs and its parameter deltas.
+Canonical delegation workflow shared by `/mp:commit`, `/mp:commit-push`, `/mp:commit-push-pr`, and `/mp:pr`. This file defines the phases; each skill states which phases it runs and its parameter deltas.
 
 ## Phase A: Commit (and Optional Push) via `mp-git-committer`
 

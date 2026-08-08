@@ -4,7 +4,7 @@ The verified platform path. Domain rules live in [DOMAINS.md](DOMAINS.md).
 
 ## Two rules that govern everything here
 
-**1. Run every deletion through the PowerShell tool.** The `dangerous-command-guard.js` hook is registered `PreToolUse` with `matcher: "Bash"`, so it inspects Bash only. It blocks `rmdir /s`, `del /f /q /s`, and `rm -rf <single-component-name>` outside its allowlist. The PowerShell tool is not intercepted, and PowerShell is the right tool for this work anyway. Route deletions through `scripts/Invoke-Removal.ps1`.
+**1. Run every deletion through the PowerShell tool.** The `dangerous-command-guard.mjs` hook is registered `PreToolUse` with `matcher: "Bash"`, so it inspects Bash only. It blocks `rmdir /s`, `del /f /q /s`, and `rm -rf <single-component-name>` outside its allowlist. The PowerShell tool is not intercepted, and PowerShell is the right tool for this work anyway. Route deletions through `scripts/Invoke-Removal.ps1`.
 
 **2. Keep the trailing backslash on drive roots.** `"C:\".TrimEnd('\')` yields `"C:"`, which in .NET means *the current directory on drive C:*, not the root. This once reported a 459 GB drive as 0.5 GB, twice in a row, with no error. `Get-NormalizedRoot` in `scripts/_Common.ps1` handles it.
 

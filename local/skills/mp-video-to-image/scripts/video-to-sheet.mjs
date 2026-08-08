@@ -23,7 +23,6 @@ const GENERATE_CONTENT_ENDPOINT =
 const OEMBED_ENDPOINT = "https://www.youtube.com/oembed";
 const OEMBED_TIMEOUT_MS = 10_000;
 const SHEETS_FOLDER_NAME = "_VIDEO_SHEETS";
-const AI_GENERATED_FOLDER_NAME = "AI GENERATED";
 const RAW_TEXT_PREVIEW_LENGTH = 300;
 const NETWORK_ATTEMPTS = 3;
 const USAGE =
@@ -181,19 +180,9 @@ function resolveOutputDirectory(requestedDirectory, folderName) {
     return path.join(aiGeneratedRoot, SHEETS_FOLDER_NAME, folderName);
   }
 
-  const oneDriveRoot = (process.env.MPX_ONEDRIVE ?? "").trim();
-  if (oneDriveRoot) {
-    return path.join(
-      oneDriveRoot,
-      AI_GENERATED_FOLDER_NAME,
-      SHEETS_FOLDER_NAME,
-      folderName,
-    );
-  }
-
   exitWithError(
     "No output location: set the machine environment variable MPX_AI_GENERATED to the " +
-      `"${AI_GENERATED_FOLDER_NAME}" folder inside OneDrive, or pass --out <dir>.\n` +
+      "AI-generated assets root, or pass --out <dir>.\n" +
       '  setx MPX_AI_GENERATED "<path-to-AI-GENERATED>"\n' +
       "Open a new terminal afterwards so the variable is visible.",
   );

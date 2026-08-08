@@ -1,5 +1,5 @@
 ---
-name: mp-skill-audit
+name: skill-audit
 description: "Audits all active skills for convention drift and common defects, fixing what it can and reporting the rest."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Glob, Grep, Agent
@@ -19,7 +19,7 @@ The conventions being audited are defined in
 [`../shared/EXPLORATION.md`](../shared/EXPLORATION.md). Read them before auditing —
 each check below points at the rule it enforces.
 
-When invoked from `mp-skill-create`, pass the single skill path as `$ARGUMENTS`.
+When invoked from `/mp:skill-create`, pass the single skill path as `$ARGUMENTS`.
 
 ## Step 1: Discover Skills
 
@@ -83,7 +83,7 @@ Flag implicit or missing tool references.
 
 ### Check 7: Vocabulary Confirmation Rule
 
-Applies only to skills that write to `.mpx/CONTEXT.md` § Domain Language (currently: `mp-grill`, `mp-vocabulary`, `mp-harvest-decisions`).
+Applies only to skills that write to `.mpx/CONTEXT.md` § Domain Language (currently: `/mp:grill`, `/mp:vocabulary`, `/mp:harvest-decisions`).
 
 Verify the skill requires user confirmation with full proposed text before writing terms. Flag if missing.
 

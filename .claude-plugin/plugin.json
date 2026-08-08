@@ -1,0 +1,20 @@
+{
+  "name": "mp",
+  "version": "0.1.0",
+  "description": "Opinionated Claude Code toolkit: planning-to-ship skills, review/check agents, hooks, and a rich status line. Skills invoke as /mp:<name>.",
+  "author": {
+    "name": "MartinoPolo",
+    "url": "https://github.com/MartinoPolo"
+  },
+  "homepage": "https://github.com/MartinoPolo/mpx-claude-code",
+  "repository": "https://github.com/MartinoPolo/mpx-claude-code",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "agents",
+    "hooks",
+    "workflow",
+    "status-line"
+  ]
+}

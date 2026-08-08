@@ -49,4 +49,4 @@ It's OK to report nothing if architecture looks solid.
 `[Critical|Important|Minor] title — file:line`
 `What & Why` — describe the structural concern and its impact on maintainability/testability
 `Category` — which architectural principle is violated (deep modules, interface design, dependency direction)
-`Promotion candidate` — YES if this warrants a full `/mp-architecture-review` deep dive, NO if it's a straightforward fix
+`Promotion candidate` — YES if this warrants a full `/mp:architecture-review` deep dive, NO if it's a straightforward fix

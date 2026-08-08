@@ -1,6 +1,6 @@
 # Batch Mode
 
-`/mp-design-refine all` — refine every design folder whose variant choice is recorded but
+`/mp:design-refine all` — refine every design folder whose variant choice is recorded but
 unprocessed. Step numbers refer to [SKILL.md](SKILL.md).
 
 ## A. Discover

@@ -1,7 +1,7 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
-const LOCKFILE_MAP = {
+export const LOCKFILE_MAP = {
   "bun.lockb": "bun",
   "bun.lock": "bun",
   "pnpm-lock.yaml": "pnpm",
@@ -9,21 +9,21 @@ const LOCKFILE_MAP = {
   "package-lock.json": "npm",
 };
 
-const RUNNER_MAP = {
+export const RUNNER_MAP = {
   bun: "bunx",
   pnpm: "pnpm exec",
   yarn: "yarn exec",
   npm: "npx",
 };
 
-function detectPackageManager(dir) {
+export function detectPackageManager(dir) {
   for (const [file, pm] of Object.entries(LOCKFILE_MAP)) {
     if (fs.existsSync(path.join(dir, file))) return pm;
   }
   return null;
 }
 
-function findPackageManager(startDir) {
+export function findPackageManager(startDir) {
   let dir = startDir;
   while (dir && dir !== path.dirname(dir)) {
     const pm = detectPackageManager(dir);
@@ -33,7 +33,7 @@ function findPackageManager(startDir) {
   return null;
 }
 
-function findProjectRoot(startDir, markers = ["package.json"]) {
+export function findProjectRoot(startDir, markers = ["package.json"]) {
   let dir = startDir;
   while (dir && dir !== path.dirname(dir)) {
     if (markers.some((m) => fs.existsSync(path.join(dir, m)))) return dir;
@@ -42,7 +42,7 @@ function findProjectRoot(startDir, markers = ["package.json"]) {
   return null;
 }
 
-function getRunner(projectRoot) {
+export function getRunner(projectRoot) {
   const pm = detectPackageManager(projectRoot);
   return pm ? (RUNNER_MAP[pm] ?? "npx") : "npx";
 }
@@ -53,7 +53,7 @@ function getRunner(projectRoot) {
  * - biome: Biome formatter + linter
  * - classic: Prettier + ESLint (or manual setup)
  */
-function detectToolchain(projectRoot) {
+export function detectToolchain(projectRoot) {
   if (!projectRoot) return "classic";
   const vpBin = path.join(projectRoot, "node_modules", ".bin", "vp");
   // Windows: .bin/vp.cmd or .bin/vp.ps1
@@ -73,7 +73,7 @@ function detectToolchain(projectRoot) {
   return "classic";
 }
 
-function readStdin() {
+export function readStdin() {
   return new Promise((resolve, reject) => {
     let data = "";
     process.stdin.setEncoding("utf8");
@@ -88,14 +88,3 @@ function readStdin() {
     process.stdin.resume();
   });
 }
-
-module.exports = {
-  LOCKFILE_MAP,
-  RUNNER_MAP,
-  detectPackageManager,
-  detectToolchain,
-  findPackageManager,
-  findProjectRoot,
-  getRunner,
-  readStdin,
-};

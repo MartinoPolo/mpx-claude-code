@@ -1,5 +1,5 @@
 ---
-name: mp-agent-create
+name: agent-create
 description: "Creates a new Claude Code sub-agent following this repo's conventions, with a review checklist."
 argument-hint: "[agent name or description]"
 disable-model-invocation: true

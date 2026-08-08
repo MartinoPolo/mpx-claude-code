@@ -1,5 +1,5 @@
 ---
-name: mp-hitl
+name: hitl
 description: "Resolves HITL-blocked issues into AFK-ready ones by grilling the human decisions out of them."
 argument-hint: "[epic issue URL or number] [lowest|most-blocking]"
 disable-model-invocation: true

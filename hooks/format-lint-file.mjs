@@ -5,15 +5,15 @@
  * Always exits 0.
  */
 
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
-const {
+import fs from "node:fs";
+import path from "node:path";
+import { execSync } from "node:child_process";
+import {
   readStdin,
   getRunner,
   findProjectRoot,
   detectToolchain,
-} = require("./shared");
+} from "./shared.mjs";
 
 const PRETTIER_CONFIGS = [
   ".prettierrc",

@@ -1,5 +1,5 @@
 ---
-name: mp-mockup
+name: mockup
 description: "Generates self-contained HTML variant mockups from a design brief, one by default or N in parallel, and opens them for comparison."
 when_to_use: "User asks to create a mockup, mock up a component, visualize a design, or produce design variants."
 argument-hint: "[count] [component-name or 'all']"
@@ -25,10 +25,10 @@ Shared conventions — folder layout, project discovery, mockup HTML rules, cont
 - `all` / `N all` → every component with a brief and no variants.
 
 ```
-/mp-mockup                        → 1 variant, auto-detected component
-/mp-mockup 3                      → 3 variants, auto-detected component
-/mp-mockup settings-panel         → 1 variant for settings-panel
-/mp-mockup 3 settings-panel       → 3 variants for settings-panel
+/mp:mockup                        → 1 variant, auto-detected component
+/mp:mockup 3                      → 3 variants, auto-detected component
+/mp:mockup settings-panel         → 1 variant for settings-panel
+/mp:mockup 3 settings-panel       → 3 variants for settings-panel
 ```
 
 ## Step 1: Read the design language
@@ -45,7 +45,7 @@ Auto-detect → the folder under `designs/` that has a brief and no `variants/va
 
 Scan the project's component directories and read real props and variants from source, variants
 files, or stories. For a pattern nothing covers, spawn `mp-context7-docs-fetcher` against the
-project's component library — note it and defer installation to `mp-design-refine`.
+project's component library — note it and defer installation to `/mp:design-refine`.
 
 ## Step 4: Generate
 
@@ -78,4 +78,4 @@ open side by side for comparison.
 ## Step 6: Report
 
 Each variant: letter, one-line angle, file path. Close with the next command —
-`/mp-design-refine <variant-letter> <requirements>` produces `refined.html` and `SUMMARY.md`.
+`/mp:design-refine <variant-letter> <requirements>` produces `refined.html` and `SUMMARY.md`.

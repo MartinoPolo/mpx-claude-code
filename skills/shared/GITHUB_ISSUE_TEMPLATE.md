@@ -1,6 +1,6 @@
 # GitHub Issue Template
 
-Canonical issue body format for all task issues created by `mp-issue-create` and `mp-to-issues`.
+Canonical issue body format for all task issues created by `/mp:issue-create` and `/mp:to-issues`.
 
 ## Template
 
@@ -56,7 +56,7 @@ Canonical issue body format for all task issues created by `mp-issue-create` and
 ### Acceptance Criteria
 
 - Checkbox list. Each criterion is independently testable.
-- `mp-execute` maps each criterion to one or more test cases — write them accordingly.
+- `/mp:execute` maps each criterion to one or more test cases — write them accordingly.
 - Use observable behavior, not implementation detail ("API returns 401 when token is expired", not "check token expiry in middleware").
 
 ### Blocking Relationships

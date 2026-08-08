@@ -4,9 +4,9 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readCompactInstructions } from "../compact-instructions.js";
+import { readCompactInstructions } from "../compact-instructions.mjs";
 
-const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "compact-instructions.js");
+const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "compact-instructions.mjs");
 const scratch = mkdtempSync(path.join(tmpdir(), "compact-instructions-"));
 
 function runHook(sourcePath: string): { stdout: string; status: number } {

@@ -1,5 +1,5 @@
 ---
-name: mp-setup-react-native
+name: setup-react-native
 description: "Creates a React and React Native monorepo from template, with GitHub repo, branch protection, and CI."
 argument-hint: <project-name>
 disable-model-invocation: true
@@ -102,7 +102,7 @@ Create `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (see `skills/shared/DOCUMENTATI
 [3-sentence project summary]
 
 ## Domain Language
-[Terms added via `/mp-grill` or `/mp-vocabulary`]
+[Terms added via `/mp:grill` or `/mp:vocabulary`]
 
 ## Core Features
 [Feature index: name + status + epic#]
@@ -115,7 +115,7 @@ Create `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (see `skills/shared/DOCUMENTATI
 ```markdown
 # Decisions
 
-Settled architectural and design decisions. Updated via `/mp-grill` and `/mp-harvest-decisions`.
+Settled architectural and design decisions. Updated via `/mp:grill` and `/mp:harvest-decisions`.
 ```
 
 ### Step 7: Link Framework Rules

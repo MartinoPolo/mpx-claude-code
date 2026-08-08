@@ -1,5 +1,5 @@
 ---
-name: mp-bug-report
+name: bug-report
 description: "Investigates a bug's root cause, designs a TDD fix plan, and opens a GitHub issue labelled bug."
 argument-hint: "bug description(s) — inline text or multiple descriptions separated by newlines"
 disable-model-invocation: true

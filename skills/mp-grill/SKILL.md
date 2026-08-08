@@ -1,5 +1,5 @@
 ---
-name: mp-grill
+name: grill
 description: "Interviews the user about a plan, design, or requirements until the design is settled, then records the decisions in project docs."
 when_to_use: "User asks to be grilled, or to pin down requirements or a design."
 argument-hint: "[topic, requirements text, or path to requirements file]"
