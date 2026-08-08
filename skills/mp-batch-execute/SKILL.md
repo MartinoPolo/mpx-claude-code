@@ -3,7 +3,7 @@ name: batch-execute
 description: "Implements a batch of small AFK issues in sequential sub-agents on one shared branch, then opens a single PR."
 argument-hint: '<#100-150 | #136,140 | label:redesign | board> [size:S] [--full-review | --no-review]'
 disable-model-invocation: true
-allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(node $HOME/.claude/scripts/detect-check-scripts.mjs*)
+allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs*)
 metadata:
   author: MartinoPolo
   version: "0.10"
@@ -72,7 +72,7 @@ Runs **once** on the integrated batch branch, orchestrated at this level (not ne
 Run the detect script and hand the results to `mp-checker`:
 
 ```bash
-node $HOME/.claude/scripts/detect-check-scripts.mjs
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs
 ```
 
 - **Static checks** (`CHECK_ALL` or `TYPECHECK`/`LINT`/`FORMAT`/`BUILD`) — always.

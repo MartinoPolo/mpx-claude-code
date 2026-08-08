@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Error Handling
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
 
 Review changed code for reliability and failure-path quality.
 

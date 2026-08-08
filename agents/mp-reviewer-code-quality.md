@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Code Quality
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
 
 Review provided diff/scope for code quality issues. Report high-confidence issues.
 

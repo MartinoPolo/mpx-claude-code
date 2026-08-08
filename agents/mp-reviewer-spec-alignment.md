@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Spec Alignment
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
 
 Validate implementation against original task text/spec.
 Do NOT trust implementer summary — verify by reading actual code

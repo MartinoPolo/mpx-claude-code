@@ -330,7 +330,7 @@ Link new issues as sub-issues of the epic using GraphQL `addSubIssue`.
 6. After all fixes: run static checks and tests to verify nothing broke
 
 ```bash
-node $HOME/.claude/scripts/detect-check-scripts.mjs
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs
 ```
 
 Run all detected CHECK and TEST commands via `mp-checker`.

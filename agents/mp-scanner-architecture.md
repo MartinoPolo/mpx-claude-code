@@ -13,9 +13,9 @@ Scan changed files for structural and architectural concerns. Flag issues — do
 
 First run these via Bash and read the output before scanning:
 
-- `cat $HOME/.claude/skills/shared/deep-modules.md` — deep vs shallow module evaluation
-- `cat $HOME/.claude/skills/shared/interface-design.md` — testability rules
-- `cat $HOME/.claude/skills/mp-architecture-review/REFERENCE.md` — dependency categories
+- `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/deep-modules.md` — deep vs shallow module evaluation
+- `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/interface-design.md` — testability rules
+- `cat ${CLAUDE_PLUGIN_ROOT}/skills/mp-architecture-review/REFERENCE.md` — dependency categories
 
 ## What to Scan For
 

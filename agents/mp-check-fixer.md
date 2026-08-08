@@ -27,7 +27,7 @@ application separated, and keeps this agent's context free of edit mechanics.
 - `changed_scope` — branch and/or files changed by the preceding implementation
 - `browser_verification` — optional flag; if true, run Phase 3
 
-Commands missing → derive them: `node $HOME/.claude/scripts/detect-check-scripts.mjs` (key=value output).
+Commands missing → derive them: `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs` (key=value output).
 
 ## Phase 1: Static checks + review (up to 3 iterations)
 

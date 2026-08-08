@@ -28,7 +28,7 @@ Audit all code quality suppressions and lint config rule changes across the repo
 
 ### Step 1: Detect Check Commands
 
-Run `node $HOME/.claude/scripts/detect-check-scripts.mjs` (optionally pass a project dir as arg) to discover available check scripts. It prints `KEY=value` pairs (e.g. `CHECK_ALL=...`, `TYPECHECK=...`, `LINT=...`, `FORMAT=...`, `TEST=...`, `TEST_E2E=...`, plus `_DIR` companions and `MONOREPO=true` when applicable). Parse these and store the resulting command plan for Step 5.
+Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs` (optionally pass a project dir as arg) to discover available check scripts. It prints `KEY=value` pairs (e.g. `CHECK_ALL=...`, `TYPECHECK=...`, `LINT=...`, `FORMAT=...`, `TEST=...`, `TEST_E2E=...`, plus `_DIR` companions and `MONOREPO=true` when applicable). Parse these and store the resulting command plan for Step 5.
 
 ### Step 2: Scan for All Suppressions
 

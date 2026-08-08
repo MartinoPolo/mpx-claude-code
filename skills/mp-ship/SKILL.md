@@ -54,7 +54,7 @@ gh pr list --head <current-branch> --json number,state,url --jq '.[0]'
 
 ## Step 2: Sync Base Branch
 
-Invoke the `/mp:sync-base` skill (Skill tool), passing `$ARGUMENTS` as the base branch if provided. It detects the base deterministically via `node $HOME/.claude/scripts/detect-base-branch.js`, fetches, merges, resolves conflicts (asks the user on complex ones), and pushes.
+Invoke the `/mp:sync-base` skill (Skill tool), passing `$ARGUMENTS` as the base branch if provided. It detects the base deterministically via `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js`, fetches, merges, resolves conflicts (asks the user on complex ones), and pushes.
 
 If it reports "already up-to-date" → continue to Step 3.
 
@@ -74,7 +74,7 @@ Spawn `mp-git-committer` sub-agent:
 
 **4a. Find linked issue:**
 
-Fast-path: `node $HOME/.claude/scripts/extract-branch-issue.js`
+Fast-path: `node ${CLAUDE_PLUGIN_ROOT}/scripts/extract-branch-issue.js`
 
 If no number extracted, spawn `mp-issue-finder` sub-agent with repo, branch, commits, diff summary.
 

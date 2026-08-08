@@ -15,7 +15,7 @@ Read the shared contract first — it defines the role boundary, what the parent
 pass, quality rules, blockers, and the output format:
 
 ```bash
-cat $HOME/.claude/skills/shared/EXECUTOR_CONTRACT.md
+cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/EXECUTOR_CONTRACT.md
 ```
 
 ## Role
@@ -50,8 +50,8 @@ Repeat until every behavior is covered.
 Read when a behavior needs a structural decision:
 
 ```bash
-cat $HOME/.claude/skills/mp-execute/tests.md          # good vs bad tests
-cat $HOME/.claude/skills/mp-execute/mocking.md        # when to mock
-cat $HOME/.claude/skills/shared/deep-modules.md       # deep modules
-cat $HOME/.claude/skills/shared/interface-design.md   # interfaces for testability
+cat ${CLAUDE_PLUGIN_ROOT}/skills/mp-execute/tests.md          # good vs bad tests
+cat ${CLAUDE_PLUGIN_ROOT}/skills/mp-execute/mocking.md        # when to mock
+cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/deep-modules.md       # deep modules
+cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/interface-design.md   # interfaces for testability
 ```

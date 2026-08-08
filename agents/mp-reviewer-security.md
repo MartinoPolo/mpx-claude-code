@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Security
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format. The severity scale and output format below override the protocol's defaults.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format. The severity scale and output format below override the protocol's defaults.
 
 Review changed scope for exploitable security vulnerabilities.
 Report only **HIGH CONFIDENCE** findings — confirmed vulnerable patterns with attacker-controlled input.

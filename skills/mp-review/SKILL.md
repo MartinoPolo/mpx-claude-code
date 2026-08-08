@@ -3,7 +3,7 @@ name: review
 description: "Reviews a branch, working diff, or PR across specialist axes (security, performance, tests, quality) and optionally applies the fixes."
 when_to_use: "User asks to review code, changes, or a pull request."
 argument-hint: "scope=<branch|changes|pr[:id|#id|url]> [full|partial|half] [autofix|autofix=true|autofix=false]"
-allowed-tools: Read, Write, Agent, AskUserQuestion, Bash(git branch --show-current *), Bash(git diff *), Bash(gh pr view *), Bash(gh pr diff *), Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
+allowed-tools: Read, Write, Agent, AskUserQuestion, Bash(git branch --show-current *), Bash(git diff *), Bash(gh pr view *), Bash(gh pr diff *), Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
   version: "0.7"
@@ -64,7 +64,7 @@ Default coverage: `full`
 #### Branch scope
 
 1. Determine current branch (`git branch --show-current`)
-2. Run `node $HOME/.claude/scripts/detect-base-branch.js [explicit-branch]` (pass user hint as arg if given). It checks `origin/<branch>` existence and commits-ahead for `dev > develop > main > master` and prints one branch name to stdout (falls back to `main`).
+2. Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js [explicit-branch]` (pass user hint as arg if given). It checks `origin/<branch>` existence and commits-ahead for `dev > develop > main > master` and prints one branch name to stdout (falls back to `main`).
 3. Use the printed branch as `<base>`
 4. Build diff scope: `<base>...HEAD` using `git diff <base>...HEAD`
 

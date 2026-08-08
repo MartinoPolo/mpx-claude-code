@@ -19,7 +19,7 @@ This skill accepts no arguments. Ignore argument-based filtering and follow dete
 ## Step 1: Detect Available Checks
 
 ```bash
-node $HOME/.claude/scripts/detect-check-scripts.mjs
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs
 ```
 
 Handle all outputs explicitly:
@@ -28,7 +28,7 @@ Handle all outputs explicitly:
 - `PM_UNKNOWN=true`: ask user which package manager to use (`npm`, `pnpm`, `yarn`, `bun`), then re-run:
 
 ```bash
-node $HOME/.claude/scripts/detect-check-scripts.mjs . <chosen_pm>
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs . <chosen_pm>
 ```
 
 - `PM=<pm>`: continue with detected scripts.

@@ -3,7 +3,7 @@ name: script-discovery
 description: "Discovers runnable scripts across package.json files and identifies the frontend, backend, and database run commands."
 argument-hint: "[project-dir]"
 disable-model-invocation: true
-allowed-tools: Bash(node $HOME/.claude/scripts/detect-project-scripts.mjs*)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs*)
 metadata:
   author: MartinoPolo
   version: "0.4"
@@ -12,7 +12,7 @@ metadata:
 
 # Script Discovery
 
-Wrap `$HOME/.claude/scripts/detect-project-scripts.mjs`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
+Wrap `${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
 
 ## Goal
 
@@ -27,7 +27,7 @@ Wrap `$HOME/.claude/scripts/detect-project-scripts.mjs`. Use this skill when age
 Script path:
 
 ```bash
-SCRIPT_DETECTOR="$HOME/.claude/scripts/detect-project-scripts.mjs"
+SCRIPT_DETECTOR="${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs"
 node "$SCRIPT_DETECTOR"
 ```
 

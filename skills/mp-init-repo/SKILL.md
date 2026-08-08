@@ -20,7 +20,7 @@ Initialize a new git repository with comprehensive .gitignore, Claude Code proje
 2. **Run the init script**: Execute the initialization script:
 
    ```bash
-   node $HOME/.claude/skills/mp-init-repo/scripts/init-repo.mjs
+   node ${CLAUDE_PLUGIN_ROOT}/skills/mp-init-repo/scripts/init-repo.mjs
    ```
 
 3. **Create `.mpx/` structure**: Create the project documentation directory (see `skills/shared/DOCUMENTATION_STRATEGY.md` for format):
