@@ -1,7 +1,7 @@
 # Status Lines — Design & Implementation
 
-Design decisions and mechanics behind [`scripts/status-line.mts`](../scripts/status-line.mts)
-(main bar) and [`scripts/subagent-status-line.mts`](../scripts/subagent-status-line.mts)
+Design decisions and mechanics behind [`plugins/mp/scripts/status-line.mts`](../plugins/mp/scripts/status-line.mts)
+(main bar) and [`plugins/mp/scripts/subagent-status-line.mts`](../plugins/mp/scripts/subagent-status-line.mts)
 (tasks panel). The README carries the feature overview; this file records *why* each thing is the
 way it is, and the constraints that are easy to trip over. Layout, colors and glyphs are chosen
 against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pair.
@@ -141,7 +141,7 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 | branch name | the branch on its remote (`.../tree/<branch>`, GitLab `/-/tree/`) |
 | `↑3` unpushed count | the compare view of the default branch against this one |
 | `:8100` port | `localhost:8100` over the scheme the probe saw it speak |
-| pencil glyph after the ports | `statusline-projects.json`, where the ports live |
+| pencil glyph after the ports | `plugins/mp/statusline-projects.json`, where the ports live |
 | session id | the session's transcript `.jsonl` |
 | `5h` / `7d` quota labels | the claude.ai usage dashboard |
 
@@ -160,7 +160,7 @@ main checkout, so `dirname(--git-common-dir)` differs from `--show-toplevel`). T
 renders `project/worktree` — project grey linking the original folder, worktree white linking the
 worktree — and each half carries its own VS Code glyph opening its own checkout.
 
-**Dev-server ports** follow the branch segment, declared per project in `statusline-projects.json`
+**Dev-server ports** follow the branch segment, declared per project in `plugins/mp/statusline-projects.json`
 at the repo root (worktrees inherit their project's entry). Each renders as `:8100` hyperlinked
 into the browser, green while something listens and dim while nothing does. Liveness comes from a
 cache written by a detached `--warm-ports` child that probes each port with a short timeout; the
@@ -231,7 +231,7 @@ to the provider's list of runs (`<url>/checks` or `/pipelines`) — the tab is v
 still queued and shows earlier attempts.
 
 The render path is **network-free**: it reads a `$TMPDIR` cache and, when stale, spawns
-[`scripts/status-line-mr-refresh.mjs`](../scripts/status-line-mr-refresh.mjs) detached for one
+[`plugins/mp/scripts/status-line-mr-refresh.mjs`](../plugins/mp/scripts/status-line-mr-refresh.mjs) detached for one
 `glab api graphql` (GitLab) or `gh pr list` (GitHub) call. Rate limits are a non-issue at this
 call volume.
 
@@ -241,7 +241,7 @@ against the *local* copy of the remote ref, which is why the fetch age sits besi
 
 ## Sub-agent status line
 
-[`scripts/subagent-status-line.mts`](../scripts/subagent-status-line.mts) (settings key
+[`plugins/mp/scripts/subagent-status-line.mts`](../plugins/mp/scripts/subagent-status-line.mts) (settings key
 `subagentStatusLine`, toggled with **Ctrl+T**) renders one row per sub-agent plus a session-wide
 tally. It answers "who is running now, on what model, at what effort, for how long".
 
@@ -349,7 +349,7 @@ run while a type name shared by four agents has four transcripts and no honest t
 
 Shared vocabulary — tier colors, status glyphs, the `N×` idiom, `formatDuration`, the state-file row
 format, the drift rule — lives in
-[`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) so the two renderers cannot
+[`plugins/mp/scripts/lib/subagent-history.mts`](../plugins/mp/scripts/lib/subagent-history.mts) so the two renderers cannot
 drift into two dialects.
 
 ## Sub-agent effort markers
@@ -390,13 +390,13 @@ the pin.
 
 Shared libraries keep the two renderers from drifting:
 
-- [`scripts/lib/statusline-ansi.mts`](../scripts/lib/statusline-ansi.mts) — `RESET`, `BOLD`, the
+- [`plugins/mp/scripts/lib/statusline-ansi.mts`](../plugins/mp/scripts/lib/statusline-ansi.mts) — `RESET`, `BOLD`, the
   five-slot effort gauge, stdin reading, cache reads, the cache-key sanitizer, and the integer guard
   that rejects negatives, decimals, empty strings and `"null"` (nearly every numeric field is gated
   on it).
-- [`scripts/lib/compaction.mts`](../scripts/lib/compaction.mts) — the incremental transcript reader,
+- [`plugins/mp/scripts/lib/compaction.mts`](../plugins/mp/scripts/lib/compaction.mts) — the incremental transcript reader,
   the limit math, and the row renderer; each renderer passes its own `CompactionStyle`.
-- [`scripts/lib/subagent-history.mts`](../scripts/lib/subagent-history.mts) — everything both
+- [`plugins/mp/scripts/lib/subagent-history.mts`](../plugins/mp/scripts/lib/subagent-history.mts) — everything both
   renderers say *about* a sub-agent. Rendering is **not** shared: the panel draws padded columns and
   the main bar draws a sentence.
 
@@ -422,10 +422,10 @@ Personal and work sessions run side by side in one Windows Terminal, and naming 
 bar was not enough — "which account is this" gets asked from across the room. The pane background
 answers it.
 
-`cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call [`scripts/account-color.mts`](../scripts/account-color.mts)
+`cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call [`plugins/mp/scripts/account-color.mts`](../plugins/mp/scripts/account-color.mts)
 before handing off to `claude`, and an `EXIT` trap calls it again with `reset` so the profile's own
 colors return however the session ends. The tints live in
-[`statusline-accounts.json`](../statusline-accounts.json): personal near-black with a faint red cast,
+[`plugins/mp/statusline-accounts.json`](../plugins/mp/statusline-accounts.json): personal near-black with a faint red cast,
 work dark blue. Pi (the third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`,
 in a different repo, painting dark green — so the three canvases read as personal (default-dark red),
 work (blue), pi (green).
@@ -485,7 +485,7 @@ expose, not another hook.
 ## The derived palette
 
 Palette indices 16–255 are constants a color scheme never remaps, so a bar painted in fixed indices
-rendered identically on every scheme and *wrong* on a light one. [`scripts/lib/terminal-theme.mts`](../scripts/lib/terminal-theme.mts)
+rendered identically on every scheme and *wrong* on a light one. [`plugins/mp/scripts/lib/terminal-theme.mts`](../plugins/mp/scripts/lib/terminal-theme.mts)
 reads the scheme and emits 24-bit color instead, so all tones are *derived* from that scheme's own
 colors.
 
@@ -495,7 +495,7 @@ colors.
 - **The scheme is resolved** `WT_PROFILE_ID` → that profile's `colorScheme` →
   `profiles.defaults.colorScheme` → `Campbell`. Windows Terminal's settings.json is JSONC, so it is
   parsed by a string-aware stripper (a `//` inside a `startingDirectory` is data, not a comment).
-- **The built-in schemes are vendored** into `statusline-schemes.json` rather than read from the
+- **The built-in schemes are vendored** into `plugins/mp/statusline-schemes.json` rather than read from the
   installed `defaults.json`, which sits under a version-stamped WindowsApps directory that cannot be
   cheaply located. User-defined schemes in settings.json still win, matching Windows Terminal's
   precedence.
@@ -552,8 +552,8 @@ The sub-agent status column keeps `✓`/`×` because it is one cell wide with no
 ## Verifying a change
 
 ```bash
-node scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
-npx vitest run scripts/__tests__     # unit tests over the pure helpers
+node plugins/mp/scripts/verify-statusline.mts   # end-to-end: real executables, real stdin, installed symlink
+npx vitest run plugins/mp/scripts/__tests__     # unit tests over the pure helpers
 ```
 
 The harness runs each fixture through the real executable in a throwaway sandbox (`TMPDIR` +
@@ -571,7 +571,7 @@ Two traps the harness exists to catch:
   hands raw bytes to Windows Terminal. Claude Code renders on the untranslated path, so the file is
   the honest preview.
 - **The installed path differs from the repo path.** Claude Code invokes these through
-  `~/.claude/scripts`, a symlink to this repo. Node resolves `import.meta.url` to the link target
+  `~/.claude/scripts`, a symlink to `plugins/mp/scripts` in this repo. Node resolves `import.meta.url` to the link target
   while leaving `process.argv[1]` as the link path, so an entry-point guard comparing the two without
   `realpath` renders nothing at all — no error, just a blank line. Running fixtures from the repo path
   cannot catch it.

@@ -34,21 +34,22 @@ A symlink/junction is a filesystem pointer. The link path appears as a regular f
 
 Run from an **Administrator** command prompt. Set `REPO` to your clone location.
 
+> **Post plugin-split:** skills, agents, and hooks are no longer symlinked into `~/.claude`. They load from the `mp` / `mp-gh` plugins via repeated `--plugin-dir` flags on the launcher (see [Git Bash launchers](#git-bash-launchers-bashrc) below). Only `output-styles` and `scripts` stay symlinked — the default `outputStyle` and the main `statusLine` in `settings.json` are user-level settings, not pluginnable, so they must resolve under `~/.claude`. Both now target `plugins/mp/`. The remaining junctions (`assets instructions rules sounds templates`) are repo-level content that is not part of any plugin.
+
 ```cmd
 set REPO=<your-clone-path>
 set DEST=%USERPROFILE%\.claude
 
-:: Directory junctions
-mklink /J "%DEST%\agents"       "%REPO%\agents"
+:: Directory junctions — repo-level content (not plugin-provided)
 mklink /J "%DEST%\assets"       "%REPO%\assets"
-mklink /J "%DEST%\hooks"        "%REPO%\hooks"
 mklink /J "%DEST%\instructions" "%REPO%\instructions"
-mklink /J "%DEST%\output-styles" "%REPO%\output-styles"
 mklink /J "%DEST%\rules"        "%REPO%\rules"
-mklink /J "%DEST%\scripts"      "%REPO%\scripts"
-mklink /J "%DEST%\skills"       "%REPO%\skills"
 mklink /J "%DEST%\sounds"       "%REPO%\sounds"
 mklink /J "%DEST%\templates"    "%REPO%\templates"
+
+:: Directory junctions — from the mp plugin (needed by non-pluginnable user settings)
+mklink /J "%DEST%\output-styles" "%REPO%\plugins\mp\output-styles"
+mklink /J "%DEST%\scripts"       "%REPO%\plugins\mp\scripts"
 
 :: File symlinks (or use mklink /H for hard links without admin)
 mklink "%DEST%\AGENTS.md"           "%REPO%\instructions\AGENTS.md"
@@ -69,7 +70,8 @@ Run two permanently-logged-in Claude Code accounts at once — one per terminal 
 
 ### Shared vs per-account
 
-- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `agents assets hooks instructions output-styles rules scripts skills sounds templates`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it.
+- **Shared** (junctions + file symlinks into this repo, identical in both dirs): `assets instructions rules sounds templates output-styles scripts`, plus `AGENTS.md CLAUDE.md settings.json settings.local.json WINDOWS-SETUP.md`. One source of truth — edit once, both accounts see it. (`output-styles` and `scripts` target `plugins/mp/`; the rest is repo-level content.)
+- **Plugin-loaded, not symlinked** (each account gets a different set via `--plugin-dir`): skills, agents, and hooks. Personal loads `mp` + `mp-gh`; work loads `mp` + `kf`. See the launcher functions below.
 - **Per-account** (real files, independent): `.credentials.json`, `history.jsonl`, `projects/`, `sessions/`, `plugins/`, caches, telemetry.
 
 > `settings.local.json` is centralized at the **repo root** and symlinked into both config dirs. It stays git-ignored (`*.local.json`) — a local single source of truth, not version-controlled (it holds machine paths).
@@ -83,10 +85,14 @@ $repo = "C:\_MP_projects\mpx-claude-code"
 $work = "$HOME\.claude-work"
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
-# Directory junctions (no admin)
-"agents","assets","hooks","instructions","output-styles","rules","scripts","skills","sounds","templates" | ForEach-Object {
+# Directory junctions — repo-level content (no admin)
+"assets","instructions","rules","sounds","templates" | ForEach-Object {
   New-Item -ItemType Junction -Path "$work\$_" -Target "$repo\$_"
 }
+
+# Directory junctions — from the mp plugin (non-pluginnable user settings need them under the config dir)
+New-Item -ItemType Junction -Path "$work\output-styles" -Target "$repo\plugins\mp\output-styles"
+New-Item -ItemType Junction -Path "$work\scripts"       -Target "$repo\plugins\mp\scripts"
 
 # File symlinks (admin or Developer Mode)
 New-Item -ItemType SymbolicLink -Path "$work\AGENTS.md"           -Target "$repo\instructions\AGENTS.md"
@@ -106,11 +112,16 @@ Each launch also repaints the pane background to the account's tint and exports 
 
 Functions rather than aliases: the painter runs `node`, which only reaches PATH once `fnm env` is eval'd later in `.bashrc`, and one definition serves both accounts while forwarding `"$@"` properly.
 
+Since the plugin split, each launch also passes the account's plugins as repeated `--plugin-dir` flags. `--plugin-dir` loads a plugin **in place** (live edits work; skills apply immediately, hooks/agents after `/reload-plugins`) and never copies to the plugin cache — the opposite of a marketplace install. Personal loads the neutral `mp` plugin plus the GitHub layer `mp-gh`; work loads `mp` plus the KanbanFlow/GitLab `kf` plugin from its own repo. Both share the one `mp` source, so a fix lands in every session.
+
 ```bash
+MPX_REPO="C:/_MP_projects/mpx-claude-code"
+KF_REPO="C:/_MP_projects/kanbanflow-cli"
+
 _claude_account_launch() {
   local account="$1" config_dir="$2"
   shift 2
-  local painter="C:/_MP_projects/mpx-claude-code/scripts/account-color.mts"
+  local painter="$MPX_REPO/plugins/mp/scripts/account-color.mts"
   (
     trap 'node "$painter" reset' EXIT
     node "$painter" "$account"
@@ -118,11 +129,16 @@ _claude_account_launch() {
   )
 }
 
-cc()   { _claude_account_launch personal "$HOME/.claude"      "$@"; }
-ccd()  { _claude_account_launch personal "$HOME/.claude"      --dangerously-skip-permissions "$@"; }
-ccw()  { _claude_account_launch work     "$HOME/.claude-work" "$@"; }
-ccwd() { _claude_account_launch work     "$HOME/.claude-work" --dangerously-skip-permissions "$@"; }
+# Personal: mp (neutral) + mp-gh (GitHub layer)
+cc()   { _claude_account_launch personal "$HOME/.claude" --plugin-dir "$MPX_REPO/plugins/mp" --plugin-dir "$MPX_REPO/plugins/gh" "$@"; }
+ccd()  { _claude_account_launch personal "$HOME/.claude" --plugin-dir "$MPX_REPO/plugins/mp" --plugin-dir "$MPX_REPO/plugins/gh" --dangerously-skip-permissions "$@"; }
+
+# Work: mp (neutral) + kf (KanbanFlow/GitLab, separate repo)
+ccw()  { _claude_account_launch work "$HOME/.claude-work" --plugin-dir "$MPX_REPO/plugins/mp" --plugin-dir "$KF_REPO" "$@"; }
+ccwd() { _claude_account_launch work "$HOME/.claude-work" --plugin-dir "$MPX_REPO/plugins/mp" --plugin-dir "$KF_REPO" --dangerously-skip-permissions "$@"; }
 ```
+
+> Prefixes per account: personal gets `/mp:` **and** `/mp-gh:`; work gets `/mp:` **and** `/kf:` (never `/mp-gh:`). Two plugins cannot share a prefix, which is why the GitHub and KanbanFlow layers are separate plugins rather than folders inside `mp`.
 
 ### Verify
 
@@ -170,7 +186,7 @@ cmd.exe //c "mklink <project-path>\.claude\rules\react.md <repo>\rules-per-proje
 
 ```cmd
 :: Directory link — always use rmdir, NEVER del (del destroys the target's contents)
-rmdir "%USERPROFILE%\.claude\agents"
+rmdir "%USERPROFILE%\.claude\rules"
 
 :: File symlink
 del "%USERPROFILE%\.claude\AGENTS.md"
@@ -211,7 +227,7 @@ cmd.exe //c "mklink C:\Users\me\.claude\FILE.md C:\repo\FILE.md"
 rm ~/.claude/FILE.md
 
 # For removing directory links, use Git Bash rm -rf or rmdir via cmd
-rm -rf ~/.claude/agents
+rm -rf ~/.claude/rules
 ```
 
 **Rule of thumb:** If your paths have no spaces, drop inner quotes entirely. If they do, run `mklink` from a native `cmd.exe` window rather than piping through Git Bash.

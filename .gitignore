@@ -17,8 +17,7 @@ telemetry/
 history.jsonl
 stats-cache.json
 
-# Plugin data
-plugins/
+# Plugin data (the marketplace plugins live under plugins/ and ARE tracked)
 chrome/
 ide/
 
@@ -32,10 +31,6 @@ paste-cache/
 # Local overrides
 *.local.md
 *.local.json
-
-# Machine-local links into the work repo's KanbanFlow skills (see mp-symlink)
-skills/kf-*/
-skills/shared/KF_*.md
 
 # Notes (personal)
 *-notes.md

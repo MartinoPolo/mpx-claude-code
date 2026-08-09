@@ -1,7 +1,7 @@
 # Sub-Agents — Benchmarks & the `Explore` Override
 
 Deep-dive behind the agent roster table in the [README](../README.md). The spawn rule set
-itself lives in [`skills/shared/SUBAGENT_PROTOCOL.md`](../skills/shared/SUBAGENT_PROTOCOL.md),
+itself lives in [`plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md`](../plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md),
 with every rule tagged `TESTED`, `DOC`, or `UNVERIFIED`.
 
 ## Model/effort benchmark (July 2026)
@@ -42,9 +42,9 @@ cannot override it — writing `effort:` into a spawn instruction is a defect, n
 `effort:` is a frontmatter-only reasoning knob, independent of `Explore`'s breadth wording
 (`quick`/`medium`/`very thorough`) — see `SUBAGENT_PROTOCOL.md` § 7.
 
-[`scripts/usage-audit.mjs`](../scripts/usage-audit.mjs) counts real skill and agent invocations
+[`plugins/mp/scripts/usage-audit.mjs`](../plugins/mp/scripts/usage-audit.mjs) counts real skill and agent invocations
 across the local session store, to tell live workflows from dead ones.
-[`scripts/analyze-subagent-models.py`](../scripts/analyze-subagent-models.py) parses
+[`plugins/mp/scripts/analyze-subagent-models.py`](../plugins/mp/scripts/analyze-subagent-models.py) parses
 `~/.claude/projects/**/*.jsonl` and reports which model every spawned sub-agent actually ran
 on — the way to verify any of the above rather than assume it. The measured rule: an explicit
 `model` parameter is obeyed 100% of the time, prose asking for a model is obeyed 0% of the time.
@@ -57,12 +57,12 @@ session model** (capped at Opus), so with `"model": "claude-opus-5[1m]"` in `set
 every automatic exploration was running on Opus.
 
 A user-level agent named `Explore` overrides the built-in and keeps its own `model`, so
-[`agents/Explore.md`](../agents/Explore.md) pins it to Sonnet. This is preferred over the
+[`plugins/mp/agents/Explore.md`](../plugins/mp/agents/Explore.md) pins it to Sonnet. This is preferred over the
 `CLAUDE_CODE_SUBAGENT_MODEL` env var, which is higher-priority but blunt — it would also force
 `mp-issue-analyzer`, `mp-tdd-executor`, and `mp-ui-variant-generator` off Opus.
 
 Call sites therefore **never pass `model` when spawning `Explore`** — see
-[`skills/shared/EXPLORATION.md`](../skills/shared/EXPLORATION.md).
+[`plugins/mp/skills/shared/EXPLORATION.md`](../plugins/mp/skills/shared/EXPLORATION.md).
 
 Two gotchas, both verified against session transcripts:
 
@@ -86,9 +86,9 @@ main thread runs `claude-opus-5[1m]`, and every denied tool rejects on attempt w
 - Each agent's `description` **and its `tools` list** are printed into the agent roster in
   every session, so an enumerated MCP tool list is a standing context charge. Agents needing
   MCP tools omit `tools` and use `disallowedTools` instead — see
-  [`skills/shared/AUTHORING.md`](../skills/shared/AUTHORING.md) § Tool grants.
+  [`plugins/mp/skills/shared/AUTHORING.md`](../plugins/mp/skills/shared/AUTHORING.md) § Tool grants.
 - All 7 `mp-reviewer-*` agents read the shared
-  [`skills/shared/REVIEWER_PROTOCOL.md`](../skills/shared/REVIEWER_PROTOCOL.md) (verification
+  [`plugins/mp/skills/shared/REVIEWER_PROTOCOL.md`](../plugins/mp/skills/shared/REVIEWER_PROTOCOL.md) (verification
   discipline + report format); role-specific judgment criteria stay in each agent file.
 - `mp-context7-docs-fetcher` is unbenchmarked: the context7 plugin had been installed against an
   unrelated project path, so it registered no server in this repo despite being enabled. It is
@@ -97,7 +97,7 @@ main thread runs `claude-opus-5[1m]`, and every denied tool rejects on attempt w
 ## Benchmark evidence (raw data)
 
 The measurements behind the `TESTED` verdicts in
-[`SUBAGENT_PROTOCOL.md`](../skills/shared/SUBAGENT_PROTOCOL.md). The protocol states the
+[`SUBAGENT_PROTOCOL.md`](../plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md). The protocol states the
 rules; this section preserves the numbers.
 
 ### Model parameter obedience (§ 1)
@@ -126,7 +126,7 @@ Bare `Explore` before the override existed (`[1m]` is the 1M-context variant):
 
 16 `Explore` spawns issued *by other sub-agents* resolved to haiku (11) or opus-4-8 (5),
 never sonnet, even when the spawning agent was sonnet. `UNVERIFIED` — whether the
-`agents/Explore.md` override also corrects nested spawns.
+`plugins/mp/agents/Explore.md` override also corrects nested spawns.
 
 ### Effort × model on search (§ 7)
 

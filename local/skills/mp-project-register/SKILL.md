@@ -185,7 +185,7 @@ badge colours itself the first time VS Code opens the folder. Any stale derived 
 ### Step 8: Register dev-server ports
 
 When the project serves anything on localhost, use `Edit` to add its ports to `devServers`
-in `statusline-projects.json` at the root of this repo, keyed by the project folder name. The
+in `plugins/mp/statusline-projects.json`, keyed by the project folder name. The
 status line then renders each as a clickable `:port` that turns green while something is
 listening. Read the ports from the project's own config — a `dev` script, `vite.config.*`
 or a compose file — rather than assuming defaults. Skip the step for a project with no

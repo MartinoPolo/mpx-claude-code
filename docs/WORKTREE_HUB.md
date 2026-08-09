@@ -3,23 +3,23 @@
 Harness-agnostic worktree creation/removal plus per-worktree dev-server ports. One
 implementation, callable identically from Claude Code, Pi, Fork, Grovekeeper, or a plain shell.
 
-- Library: [`scripts/lib/worktree-hub.mts`](../scripts/lib/worktree-hub.mts) — all pure logic
+- Library: [`plugins/mp/scripts/lib/worktree-hub.mts`](../plugins/mp/scripts/lib/worktree-hub.mts) — all pure logic
   (path, base-branch, `.worktreeinclude`, port math, reconciliation), unit-tested in
-  [`scripts/__tests__/worktree-hub.test.ts`](../scripts/__tests__/worktree-hub.test.ts).
-- CLIs: [`scripts/setup-worktree.mts`](../scripts/setup-worktree.mts),
-  [`scripts/remove-worktree.mts`](../scripts/remove-worktree.mts).
+  [`plugins/mp/scripts/__tests__/worktree-hub.test.ts`](../plugins/mp/scripts/__tests__/worktree-hub.test.ts).
+- CLIs: [`plugins/mp/scripts/setup-worktree.mts`](../plugins/mp/scripts/setup-worktree.mts),
+  [`plugins/mp/scripts/remove-worktree.mts`](../plugins/mp/scripts/remove-worktree.mts).
 - Shell wrappers: `setup-worktree` / `remove-worktree` in
-  [`scripts/shell-functions.sh`](../scripts/shell-functions.sh).
+  [`plugins/mp/scripts/shell-functions.sh`](../plugins/mp/scripts/shell-functions.sh).
 
 Runs under Node's native TypeScript type stripping — no build step, no dependencies. Bash was
 dropped because the port hub needs a JSON registry, cross-platform port probing (`node:net`), and
-Windows parity; the deprecated bash creators remain in [`scripts/deprecated/`](../scripts/deprecated/).
+Windows parity; the deprecated bash creators remain in [`plugins/mp/scripts/deprecated/`](../plugins/mp/scripts/deprecated/).
 
 ## Usage
 
 ```bash
-node scripts/setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--no-open] [--reconcile]
-node scripts/remove-worktree.mts [--skip-confirmation] [--reconcile] [name...]
+node plugins/mp/scripts/setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--no-open] [--reconcile]
+node plugins/mp/scripts/remove-worktree.mts [--skip-confirmation] [--reconcile] [name...]
 ```
 
 `<name>` is the new branch name (slashes nest under the worktree root). `--reconcile` on either
@@ -107,4 +107,4 @@ collisions (and ports held by unrelated processes) are avoided by probing each c
 | Claude Code | `WorktreeCreate`/`WorktreeRemove` hooks exec the CLI for `claude --worktree`; in-session isolation ignores those hooks, so create manually |
 | Pi | Call the CLI manually, or wrap in a thin `onCreate` extension |
 | Grovekeeper | Repoint its spawn from the bash creator to `node …setup-worktree.mts` |
-| Shell | Source `scripts/shell-functions.sh`; `setup-worktree` cd's into the new worktree via a `WORKTREE_PATH=` stdout marker |
+| Shell | Source `plugins/mp/scripts/shell-functions.sh`; `setup-worktree` cd's into the new worktree via a `WORKTREE_PATH=` stdout marker |

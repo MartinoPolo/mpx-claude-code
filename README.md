@@ -1,6 +1,6 @@
 # mp — a Claude Code plugin
 
-Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with GitHub-driven project workflows, TDD execution, and general-purpose dev tools. Packaged as the `mp` plugin; this repo is both the plugin and its marketplace.
+Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with GitHub-driven project workflows, TDD execution, and general-purpose dev tools. This repo is a **marketplace of two plugins**: the tracker-neutral **`mp`** (skills, agents, hooks, status line — everything not coupled to a specific issue tracker) and **`mp-gh`**, a GitHub layer on top of it (issue/PR/epic workflow skills and agents). The neutral `mp` plugin can be paired with a different tracker plugin (the author runs a private KanbanFlow/GitLab `kf` plugin on a second account); `mp-gh` is the GitHub pairing. See [Repository layout](#repository-layout-two-plugins).
 
 **Features:**
 
@@ -10,6 +10,22 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 - **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
 - **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)). Requires a short manual setup step — see [Manual setup](#manual-setup-not-pluginnable) below.
 
+## Repository layout (two plugins)
+
+```
+mpx-claude-code/
+├─ .claude-plugin/marketplace.json   lists both plugins
+├─ plugins/
+│  ├─ mp/    → /mp:<name>      tracker-neutral: skills, agents, hooks,
+│  │                           output-styles, scripts, status line, shared docs
+│  └─ gh/    → /mp-gh:<name>   GitHub layer: issue/PR/epic skills + agents
+└─ docs · instructions · rules · templates · local · README   (repo-level, not plugins)
+```
+
+A plugin's `name` supplies its slash prefix, and two plugins cannot share one — that is why the GitHub-coupled skills live in their own `mp-gh` plugin rather than as folders inside `mp`. The neutral `mp` plugin is meant to be paired, per account, with whichever tracker layer fits: `mp-gh` for GitHub, or a separate tracker plugin elsewhere.
+
+**Cross-plugin references:** `mp-gh` skills reuse neutral shared docs and scripts that live in `mp` (e.g. `GIT_COMMIT_WORKFLOW.md`, `detect-check-scripts.mjs`). Because `--plugin-dir` loads each plugin in place and **skips any symlink resolving outside the plugin folder**, cross-plugin links are written as a relative hop off the plugin root — `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/<file>` and `${CLAUDE_PLUGIN_ROOT}/../mp/scripts/<file>` — which resolves only when both plugins sit side by side under `plugins/` and are loaded from source (the supported per-account setup below). A marketplace install that copied one plugin without the other would break this hop.
+
 ## Install
 
 ### Marketplace
@@ -17,41 +33,46 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 ```
 /plugin marketplace add MartinoPolo/mpx-claude-code
 /plugin install mp@mp
+/plugin install mp-gh@mp
 ```
 
-The first command registers this repo as a marketplace (it lists one plugin, `mp`, sourced from `./`); the second installs that plugin. This ships skills, agents, hooks, and the `output-styles/` directory. It does **not** touch your `settings.json` — see [Manual setup](#manual-setup-not-pluginnable) for the status line, default model, and output style.
+The first command registers this repo as a marketplace (it lists two plugins, `mp` and `mp-gh`, sourced from `./plugins/mp` and `./plugins/gh`); the next two install them. Installing `mp` ships the neutral skills, agents, hooks, and `output-styles/`; `mp-gh` adds the GitHub skills and agents. Neither touches your `settings.json` — see [Manual setup](#manual-setup-not-pluginnable) for the status line, default model, and output style.
 
-### Local development
+### Local development / per-account loading (recommended)
 
-To iterate on the plugin's own hooks, agents, or skills, run Claude Code against your working copy instead of an installed release:
+The author does not marketplace-install locally — a marketplace install copies each plugin into a versioned cache and kills live edits. Instead each account's launcher loads the plugins straight from the working copy with repeated `--plugin-dir` flags:
 
 ```
-claude --plugin-dir <path-to-clone>
+# personal account: neutral + GitHub
+claude --plugin-dir <clone>/plugins/mp --plugin-dir <clone>/plugins/gh
+
+# a second account can pair the neutral plugin with a different tracker plugin
+claude --plugin-dir <clone>/plugins/mp --plugin-dir <other-tracker-plugin>
 ```
 
-This loads the plugin live, in place — no copy step. After editing a hook or agent file, run `/reload-plugins` to pick up the change; `SKILL.md` edits apply immediately. (A marketplace install instead copies the plugin into a versioned cache directory, which is why local development uses `--plugin-dir` rather than reinstalling.)
+`--plugin-dir` loads a plugin live, in place — no copy step, and it is what makes the cross-plugin `../mp` hop above resolve. After editing a hook or agent file run `/reload-plugins`; `SKILL.md` edits apply immediately. The full Windows two-account launcher setup is in [`WINDOWS-SETUP.md`](WINDOWS-SETUP.md).
 
 ### Invocation
 
-Once installed, every shipped skill invokes as `/mp:<name>` — for example `/mp:execute`, `/mp:ship`, `/mp:review`. The plugin name (`mp`) supplies the namespace prefix automatically.
+Neutral skills invoke as `/mp:<name>` (for example `/mp:review`, `/mp:grill`); GitHub skills invoke as `/mp-gh:<name>` (for example `/mp-gh:execute`, `/mp-gh:ship`, `/mp-gh:to-issues`). Each plugin's name supplies its namespace prefix automatically. In the skill tables below the prefix shown is the plugin the skill ships in.
 
 ## Workflow
 
 ```mermaid
 flowchart LR
     grill["/mp:grill<br/>requirements Q&A → .mpx/ docs"]
-    epic["/mp:to-epic<br/>CONTEXT.md → epic issue"]
-    issues["/mp:to-issues<br/>vertical-slice sub-issues<br/>HITL / AFK"]
-    execute["/mp:execute<br/>TDD → PR → CI-green merge"]
+    epic["/mp-gh:to-epic<br/>CONTEXT.md → epic issue"]
+    issues["/mp-gh:to-issues<br/>vertical-slice sub-issues<br/>HITL / AFK"]
+    execute["/mp-gh:execute<br/>TDD → PR → CI-green merge"]
     grill --> epic --> issues --> execute
 ```
 
-- **HITL** label = issue needs human decisions; **AFK** label = implementable autonomously. `/mp:hitl` converts the former into the latter.
+- **HITL** label = issue needs human decisions; **AFK** label = implementable autonomously. `/mp-gh:hitl` converts the former into the latter.
 - **Bugs:** `/mp:bug-report` investigates root cause → TDD fix plan → labeled issue.
-- **Standalone git:** `/mp:ship`, `/mp:commit-push-pr`, `/mp:pr` when implementation is already done.
+- **Standalone git:** `/mp-gh:ship`, `/mp-gh:commit-push-pr`, `/mp-gh:pr` when implementation is already done.
 - **Between sessions:** `/mp:handoff` saves context to `HANDOFF.md`.
 
-### Execution pipeline (`/mp:execute`)
+### Execution pipeline (`/mp-gh:execute`)
 
 One GitHub issue (or inline task) per run. The main agent is a pure orchestrator — the review-fix, test-fix, and CI-fix loops run inside nested sub-agents that return bounded JSON, so raw findings, test failures, and CI logs never enter its context.
 
@@ -79,16 +100,16 @@ flowchart TD
 ```
 
 **Flags:** `--no-tdd` · `--full-review` · `--no-review` · `--no-auto-merge`.
-TDD principles: [tests](skills/mp-execute/tests.md), [mocking](skills/mp-execute/mocking.md), [deep modules](skills/shared/deep-modules.md), [interface design](skills/shared/interface-design.md).
+TDD principles: [tests](plugins/gh/skills/mp-execute/tests.md), [mocking](plugins/gh/skills/mp-execute/mocking.md), [deep modules](plugins/mp/skills/shared/deep-modules.md), [interface design](plugins/mp/skills/shared/interface-design.md).
 
 ### Planning system (hybrid)
 
 - **GitHub:** Milestones = versions/releases, Issues = epics (parent) + tasks (sub-issues with blocking), Project Board = tracking.
-- **`.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `skills/shared/DOCUMENTATION_STRATEGY.md`. Tracked and committed — everything in it is team-shared; gitignore only `.mpx/tmp/`, the scratch area.
+- **`.mpx/`:** `CONTEXT.md` (domain language, feature index, constraints) + `DECISIONS.md` (settled decisions with rationale). Format: `plugins/mp/skills/shared/DOCUMENTATION_STRATEGY.md`. Tracked and committed — everything in it is team-shared; gitignore only `.mpx/tmp/`, the scratch area.
 
 ## Skills reference
 
-Everything below ships with the plugin (installed under `skills/`) and invokes as `/mp:<name>`. Most skills are `/`-only via `disable-model-invocation: true` and cost no context; only the few Claude must reach for unprompted stay model-invocable (their descriptions sit in every session's context). `/mp:ship` carries trigger phrasing for the whole git family. Conventions: `skills/shared/AUTHORING.md`. Personal, non-shipped skills are covered separately under [Local skills](#local-skills-not-installed).
+Skills below ship in one of the two plugins — the prefix on each row tells you which: `/mp:<name>` for the neutral `mp` plugin (installed under `plugins/mp/skills/`), `/mp-gh:<name>` for the GitHub `mp-gh` plugin (`plugins/gh/skills/`). Most skills are `/`-only via `disable-model-invocation: true` and cost no context; only the few Claude must reach for unprompted stay model-invocable (their descriptions sit in every session's context). `/mp-gh:ship` carries trigger phrasing for the whole git family. Conventions: `plugins/mp/skills/shared/AUTHORING.md`. Personal, non-shipped skills are covered separately under [Local skills](#local-skills-not-installed).
 
 ### Planning
 
@@ -96,29 +117,29 @@ Everything below ships with the plugin (installed under `skills/`) and invokes a
 | ------------------ | ------------------------------------------------------------------------------------ |
 | `/mp:grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
 | `/mp:grill-voice`  | `mp-grill` over JSON round files for the mobile voice app — answer by voice on a walk |
-| `/mp:to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
-| `/mp:to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
-| `/mp:hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |
+| `/mp-gh:to-epic`   | CONTEXT.md → epic as GitHub issue                                                    |
+| `/mp-gh:to-issues` | Break epic into vertical-slice sub-issues (tasks)                                    |
+| `/mp-gh:hitl`      | Resolve HITL issues into AFK-ready by grilling decisions                             |
 | `/mp:vocabulary`   | Maintain canonical domain terms in `.mpx/CONTEXT.md`                                 |
-| `/mp:issue-create` | Create well-structured GitHub issues                                                 |
+| `/mp-gh:issue-create` | Create well-structured GitHub issues                                              |
 | `/mp:bug-report`   | Root cause → TDD fix plan → labeled bug issue                                        |
-| `/mp:epic-review`  | epic-end review: code quality, architecture, cleanup, docs, unresolved items         |
+| `/mp-gh:epic-review` | epic-end review: code quality, architecture, cleanup, docs, unresolved items       |
 
 ### Execution & code quality
 
 | Skill           | Description                                                                        |
 | --------------- | ----------------------------------------------------------------------------------- |
-| `/mp:execute`   | The execution orchestrator (pipeline above)                                         |
+| `/mp-gh:execute` | The execution orchestrator (pipeline above)                                        |
 | `/mp:check-fix` | Detect and run check scripts, fix failures (`CHECK_ALL` first, else typecheck/lint/format/build) |
 | `/mp:review`    | Unified code review — scope: PR, branch, changes; 4 or 7 parallel reviewers; optional autofix loop via `mp-executor` (≤3 iterations); findings → `REVIEW.md` |
 
 ### Board workflow (Obsidian)
 
-Obsidian board notes (bugs/tasks with screenshots) → GitHub issues → autonomous batch fixes. Lanes (`To Process` → `Ready to implement` → `Manual testing` → `Archive`) are the state machine; the checkbox stays the user's manual-verification flag. Convention: `skills/shared/BOARD_CONVENTION.md`. The board setup and note-conversion steps (`mp-board-setup`, `mp-board-to-issues`) are personal-workflow skills under [Local skills](#local-skills-not-installed); the batch-execution step below ships with the plugin.
+Obsidian board notes (bugs/tasks with screenshots) → GitHub issues → autonomous batch fixes. Lanes (`To Process` → `Ready to implement` → `Manual testing` → `Archive`) are the state machine; the checkbox stays the user's manual-verification flag. Convention: `plugins/mp/skills/shared/BOARD_CONVENTION.md`. The board setup and note-conversion steps (`mp-board-setup`, `mp-board-to-issues`) are personal-workflow skills under [Local skills](#local-skills-not-installed); the batch-execution step below ships with the plugin.
 
 | Skill                 | Description                                                                 |
 | --------------------- | ---------------------------------------------------------------------------- |
-| `/mp:batch-execute`   | Implement a batch of AFK issues on one branch → verify → one PR             |
+| `/mp-gh:batch-execute` | Implement a batch of AFK issues on one branch → verify → one PR            |
 
 ### Testing
 
@@ -126,7 +147,7 @@ Obsidian board notes (bugs/tasks with screenshots) → GitHub issues → autonom
 | --------------------- | ---------------------------------------------------------------------------------- |
 | `/mp:playwright-test` | Raw-Playwright visual verification over a scope — per-surface PASS/FAIL + screenshots |
 
-Both it and `/mp:batch-execute`'s verify gate follow `skills/shared/PLAYWRIGHT_TESTING.md` (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing, perf traces, and Lighthouse only.
+Both it and `/mp-gh:batch-execute`'s verify gate follow `plugins/mp/skills/shared/PLAYWRIGHT_TESTING.md` (sanity-gate, assert-don't-eyeball, programmatic auth, never `networkidle`). The MCP-based `mp-chrome-devtools-tester` agent is for exploratory testing, perf traces, and Lighthouse only.
 
 ### Periodic maintenance
 
@@ -146,7 +167,7 @@ Run after milestones/epics. Sorted by attention required; all except the last tw
 
 ### Design
 
-Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under `designs/<component-name>/`. Contract: `skills/shared/DESIGN_PIPELINE.md`.
+Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under `designs/<component-name>/`. Contract: `plugins/mp/skills/shared/DESIGN_PIPELINE.md`.
 
 | Skill               | Description                                                              |
 | ------------------- | ------------------------------------------------------------------------ |
@@ -161,18 +182,18 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under 
 | -------------------- | ------------------------------------------------------------------ |
 | `/mp:commit`         | Stage and commit with conventional format                          |
 | `/mp:commit-push`    | Commit and push (no PR)                                            |
-| `/mp:pr`             | Create or update PR from existing commits                          |
-| `/mp:commit-push-pr` | Commit, push, create/update PR                                     |
+| `/mp-gh:pr`          | Create or update PR from existing commits                          |
+| `/mp-gh:commit-push-pr` | Commit, push, create/update PR                                  |
 | `/mp:sync-base`      | Merge target branch into current branch                            |
-| `/mp:ship`           | Sync base, commit, push, PR, watch CI green (`mp-ci-fixer`), merge |
+| `/mp-gh:ship`        | Sync base, commit, push, PR, watch CI green (`mp-ci-fixer`), merge |
 
 ### Setup & utility
 
 | Skill                    | Description                                                           |
 | ------------------------ | ----------------------------------------------------------------------- |
-| `/mp:setup-sveltekit`    | SvelteKit project from template with GitHub setup                     |
-| `/mp:setup-react-native` | React Native monorepo from template with GitHub setup                 |
-| `/mp:init-repo`          | Init git repo with .gitignore and .claude/ structure                  |
+| `/mp-gh:setup-sveltekit`    | SvelteKit project from template with GitHub setup                  |
+| `/mp-gh:setup-react-native` | React Native monorepo from template with GitHub setup              |
+| `/mp-gh:init-repo`          | Init git repo with .gitignore and .claude/ structure               |
 | `/mp:handoff`            | Save session progress to `HANDOFF.md`                                 |
 | `/mp:continue`           | Recover interrupted sub-agent/background work, then continue          |
 | `/mp:skill-create`       | Create new skills with structured conventions                         |
@@ -231,12 +252,13 @@ Several depend on the [machine-root environment variables](#machine-roots-mpx_) 
 | mp-scanner-architecture     | Sonnet | Medium | Lightweight architecture scanner for epic-end review                        |
 
 - Model and effort pins come from a benchmark run across dozens of sub-agents; the `Explore` agent overrides Claude Code's built-in to keep automatic explorations off Opus — rationale, findings, and gotchas in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
-- Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`skills/shared/SUBAGENT_PROTOCOL.md`](skills/shared/SUBAGENT_PROTOCOL.md); the raw benchmark tables behind the `TESTED` verdicts live in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
-- Reviewers share [`skills/shared/REVIEWER_PROTOCOL.md`](skills/shared/REVIEWER_PROTOCOL.md) and load language guides from `agents/references/` (TypeScript, React, Svelte 5, Python, Rust).
+- Spawn rules (every rule tagged `TESTED`/`DOC`/`UNVERIFIED`): [`plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md`](plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md); the raw benchmark tables behind the `TESTED` verdicts live in [`docs/SUBAGENTS.md`](docs/SUBAGENTS.md).
+- Reviewers share [`plugins/mp/skills/shared/REVIEWER_PROTOCOL.md`](plugins/mp/skills/shared/REVIEWER_PROTOCOL.md) and load language guides from `plugins/mp/agents/references/` (TypeScript, React, Svelte 5, Python, Rust).
+- The 4 GitHub-coupled agents — `mp-issue-finder`, `mp-pr-manager`, `mp-unresolved-issue-tracker`, `mp-ci-fixer` — ship in the **`mp-gh`** plugin; the rest ship in `mp`.
 
 ## Hooks
 
-Shipped with the plugin via [`hooks/hooks.json`](hooks/hooks.json) — installed automatically, no manual step. Paths resolve through `${CLAUDE_PLUGIN_ROOT}`. Several auto-detect the project toolchain (`vite-plus` | `biome` | `classic`).
+Shipped with the plugin via [`plugins/mp/hooks/hooks.json`](plugins/mp/hooks/hooks.json) — installed automatically, no manual step. Paths resolve through `${CLAUDE_PLUGIN_ROOT}`. Several auto-detect the project toolchain (`vite-plus` | `biome` | `classic`).
 
 | Hook                         | Event                    | Description                                                        |
 | ----------------------------- | ------------------------ | -------------------------------------------------------------------- |
@@ -250,13 +272,13 @@ Shipped with the plugin via [`hooks/hooks.json`](hooks/hooks.json) — installed
 | `notify.mjs`                  | Stop                     | Desktop notification (taskbar flash + sound); Windows-only, silent no-op on other platforms |
 | `machine-paths.mjs`           | SessionStart (*)         | Surfaces the machine-root `MPX_*` environment variables into session context |
 
-Test suites for the guard hooks live in `hooks/__tests__/`.
+Test suites for the guard hooks live in `plugins/mp/hooks/__tests__/`.
 
 ## Status Lines
 
 ![Status Line](assets/status-line.png)
 
-**Main bar** (`scripts/status-line.mts`):
+**Main bar** (`plugins/mp/scripts/status-line.mts`):
 
 - Session name (bold magenta) · session id, linked to the session's transcript `.jsonl` — the account is shown by the pane background tint, not named here
 - Model (`Opus 5 (1M)`) · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
@@ -275,17 +297,17 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
   ```
   A tally row with tokens charged per tier, then one row per agent — status · type · tier · effort gauge · elapsed · tokens · compaction counts (`2×auto` amber, `1×manual` grey; silent when it never compacted). **Five rows plus every failure**, failures always first: up to five agents keep spawn order, past five they rank by tokens, largest first, and the remainder become `+N more`. Agent types come from the `agent-<id>.meta.json` sidecars Claude Code writes at spawn; a **type name opens the `.claude/agents/<type>.md` that defines it** (project-level first, then user-level, no link for a built-in nobody overrode) while a row's **status glyph opens that run's own transcript**. A red `!` marks a banned tier. Absent until the first agent finishes
 
-**Sub-agent panel** (`scripts/subagent-status-line.mts`, visible below the main bar whenever a sub-agent is running): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (effort above `high` or effort on haiku) get a red `!` on the offending cell with a reason line; a resolved Fable tier is not independently a violation because frontier selection is contextual. The panel is the **live** view and the main bar's `Σ` row is the **ledger** — running agents appear in one, finished agents in the other, never both.
+**Sub-agent panel** (`plugins/mp/scripts/subagent-status-line.mts`, visible below the main bar whenever a sub-agent is running): one row per sub-agent — status · model · effort as the main bar's `◆◆◆◇◇` gauge · elapsed · context · live progress label — plus a session-wide `Σ` tally. Sub-agents compact independently and each writes its own transcript, so a row that compacted carries the same indented history beneath it. Rule violations (effort above `high` or effort on haiku) get a red `!` on the offending cell with a reason line; a resolved Fable tier is not independently a violation because frontier selection is contextual. The panel is the **live** view and the main bar's `Σ` row is the **ledger** — running agents appear in one, finished agents in the other, never both.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
-**Account color** — a pair of shell launcher functions (`cc`/`ccw` in the author's own setup) repaint the terminal background before launching, so one account is distinguishable from another at a glance without a profile per account. `scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color. This piece is optional — the status line works without it, just without a per-account background tint.
+**Account color** — a pair of shell launcher functions (`cc`/`ccw` in the author's own setup) repaint the terminal background before launching, so one account is distinguishable from another at a glance without a profile per account. `plugins/mp/scripts/account-color.mts` emits the OSC 11/12 sequences and `statusline-accounts.json` holds the tints; tab color stays free to mean *project*. Both bars then derive their whole 24-color palette from the Windows Terminal color scheme in `statusline-schemes.json` — every neutral is a blend of that scheme's own foreground toward the background actually on screen, so the bars follow a scheme change and invert correctly on a light one, with a 4.5:1 contrast floor (7:1 for the emphasis tone) enforced per color. This piece is optional — the status line works without it, just without a per-account background tint.
 
 **Tab title** — left to Claude Code. It drives the title from its own status: the session summary, prefixed by an animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one signal with the session's real state behind it, so nothing here competes with it. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`) and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle them, so `/rename [P] project` is the supported way to put a prefix in the tab: it sets the text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default `true`) is what allows it.
 
 A custom titler was built and reverted — `[P] worktree · project`, driven by a console-attaching C helper reacting to `UserPromptSubmit`/`Stop`/`SessionStart` hooks. It is kept, unwired, under [`deprecated/scripts/terminal-title.mts`](deprecated/scripts/terminal-title.mts) and [`deprecated/hooks/terminal-title-state.c`](deprecated/hooks/terminal-title-state.c) for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the tab read idle while the session worked. The summary was lost outright — it lives in memory alone, in no transcript or session file. Reviving it means a state source Claude Code does not currently expose, not another hook.
 
-All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a large render-speed win. Verify changes with `node scripts/verify-statusline.mts` + `npx vitest run scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
+All three renderers are zero-dependency `.mts` run by Node's native type stripping (≥ 22.18) — ported from bash for a large render-speed win. Verify changes with `node plugins/mp/scripts/verify-statusline.mts` + `npx vitest run plugins/mp/scripts/__tests__`. All design decisions, mechanics, and gotchas: [`docs/STATUS_LINE.md`](docs/STATUS_LINE.md).
 
 ## Manual setup (not pluginnable)
 
@@ -294,14 +316,14 @@ Claude Code plugins can ship skills, agents, hooks, and output-style files — b
 - **`statusLine` / `subagentStatusLine`** — the status line scripts above. These render from `settings.json` command entries, which only a user can set.
 - **`model`** — a default model/effort pin.
 - **`env`** — environment variable overrides (e.g. a default-model env var).
-- **`outputStyle`** — the plugin ships `output-styles/mp-terse.md` (a terse, answer-first response style), but making it the *default* for every session is a user setting.
+- **`outputStyle`** — the plugin ships `plugins/mp/output-styles/mp-terse.md` (a terse, answer-first response style), but making it the *default* for every session is a user setting.
 
 ### Status line
 
-`scripts/status-line.mts` and `scripts/subagent-status-line.mts` import sibling helpers from `scripts/lib/*.mts` and read their per-project/account/scheme config from `statusline-projects.json`, `statusline-accounts.json`, and `statusline-schemes.json` one directory above `scripts/` — so the two entry scripts can't be lifted in isolation. Keep the `scripts/` folder (with its `lib/` subfolder) together with those three JSON files, either by:
+`plugins/mp/scripts/status-line.mts` and `plugins/mp/scripts/subagent-status-line.mts` import sibling helpers from `plugins/mp/scripts/lib/*.mts` and read their per-project/account/scheme config from `statusline-projects.json`, `statusline-accounts.json`, and `statusline-schemes.json` one directory above `scripts/` (i.e. at `plugins/mp/`) — so the two entry scripts can't be lifted in isolation. Keep the `scripts/` folder (with its `lib/` subfolder) together with those three JSON files, either by:
 
-- pointing `statusLine`/`subagentStatusLine` straight at a `--plugin-dir` checkout's `scripts/` folder (simplest for local development), or
-- copying the `scripts/` folder and the three `statusline-*.json` files to a stable path of your own and pointing at that (recommended for a marketplace install, since the plugin cache path is version-dependent and not meant to be hardcoded).
+- pointing `statusLine`/`subagentStatusLine` straight at a `--plugin-dir` checkout's `plugins/mp/scripts/` folder (simplest for local development), or
+- copying the `plugins/mp/scripts/` folder and the three `statusline-*.json` files to a stable path of your own and pointing at that (recommended for a marketplace install, since the plugin cache path is version-dependent and not meant to be hardcoded).
 
 The three `statusline-*.json` files ship with placeholder/example content (project names, account tints, color schemes) — edit them to describe your own projects and accounts.
 
@@ -356,13 +378,13 @@ None of these are required to use the plugin — set only the ones relevant to t
 
 ## Cross-harness
 
-Skills follow the open [Agent Skills](https://docs.anthropic.com/en/docs/claude-code) standard: plain `SKILL.md` files with frontmatter, portable to any harness that implements the standard. A sibling repo, `mpx-pi`, provides a generic extension for the [`pi`](https://github.com/earendil-works/pi-coding-agent) coding agent that reads the same `skills/` source and projects the identical `/mp:<name>` commands there, with no per-skill glue.
+Skills follow the open [Agent Skills](https://docs.anthropic.com/en/docs/claude-code) standard: plain `SKILL.md` files with frontmatter, portable to any harness that implements the standard. A sibling repo, `mpx-pi`, provides a generic extension for the [`pi`](https://github.com/earendil-works/pi-coding-agent) coding agent that reads the same `plugins/mp/skills/` source and projects the identical `/mp:<name>` commands there, with no per-skill glue.
 
 Hooks, the status line, and sub-agent wiring are Claude-Code-specific and are not portable as-is; `pi` re-implements the equivalent behavior natively where it needs it (for example its own compaction-instructions extension consumes the same `instructions/COMPACT.md` file this repo's `compact-instructions.mjs` hook injects).
 
 ## Global instructions
 
-[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see `AGENTS.md`, so the file is injected at compaction time instead by the `compact-instructions.mjs` hook (see [Cross-harness](#cross-harness) for the `pi` equivalent), and costs no per-turn context. Response style lives in the `mp-terse` output style (`output-styles/mp-terse.md`, made the default via `outputStyle` in user settings — see [Manual setup](#manual-setup-not-pluginnable)). Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
+[`instructions/AGENTS.md`](instructions/AGENTS.md) is the always-on rule file — working principles, sub-agent policy, preferences. Compaction-summary instructions live separately in [`instructions/COMPACT.md`](instructions/COMPACT.md): harness compaction prompts never see `AGENTS.md`, so the file is injected at compaction time instead by the `compact-instructions.mjs` hook (see [Cross-harness](#cross-harness) for the `pi` equivalent), and costs no per-turn context. Response style lives in the `mp-terse` output style (`plugins/mp/output-styles/mp-terse.md`, made the default via `outputStyle` in user settings — see [Manual setup](#manual-setup-not-pluginnable)). Agents with a bounded-JSON return contract (`mp-check-fixer`, `mp-ci-fixer`, `mp-git-committer`) follow their contract instead of its output-style rules.
 
 If you use this repo as a template for your own instructions, point your project's `CLAUDE.md`/`AGENTS.md` at your own rule file the same way — a one-line `@AGENTS.md` include.
 
@@ -375,7 +397,7 @@ If you use this repo as a template for your own instructions, point your project
 
 Both include the Vite Plus toolchain (OxLint + Oxfmt + tsgolint), ESLint gap rules, 80% coverage thresholds, `.claude/` + `.mpx/` structure, GitHub Actions CI.
 
-**Worktrees:** `node scripts/setup-worktree.mts <name> [--base <ref>]` creates an isolated worktree — path derived from the repo location, base branch auto-detected, editor config + `.worktreeinclude` matches copied, per-worktree dev-server ports allocated, deps installed in the background; `remove-worktree.mts` releases the ports and cleans up. Harness-agnostic Node/TS hub (the `setup-worktree`/`remove-worktree` shell functions wrap it). Design, port model, and per-repo config: [`docs/WORKTREE_HUB.md`](docs/WORKTREE_HUB.md). The old bash creators live in [`scripts/deprecated/`](scripts/deprecated/).
+**Worktrees:** `node plugins/mp/scripts/setup-worktree.mts <name> [--base <ref>]` creates an isolated worktree — path derived from the repo location, base branch auto-detected, editor config + `.worktreeinclude` matches copied, per-worktree dev-server ports allocated, deps installed in the background; `remove-worktree.mts` releases the ports and cleans up. Harness-agnostic Node/TS hub (the `setup-worktree`/`remove-worktree` shell functions wrap it). Design, port model, and per-repo config: [`docs/WORKTREE_HUB.md`](docs/WORKTREE_HUB.md). The old bash creators live in [`plugins/mp/scripts/deprecated/`](plugins/mp/scripts/deprecated/).
 
 **Tests:** `npm test` (Vitest) covers hooks and status-line scripts.
 

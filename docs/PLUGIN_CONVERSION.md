@@ -4,6 +4,57 @@ Convert this repo into a public **Claude Code plugin** named `mp`, cross-platfor
 Skills also run under **pi** from one source of truth. Execution happens in a separate
 session; this doc is the handoff.
 
+## Status: single-plugin conversion DONE; split into `mp` + `mp-gh` EXECUTED
+
+The repo is no longer a single plugin at its root. It is now a **two-plugin marketplace**:
+
+```
+mpx-claude-code/
+├─ .claude-plugin/
+│  └─ marketplace.json     lists both plugins (source ./plugins/mp and ./plugins/gh)
+├─ plugins/
+│  ├─ mp/                  tracker-neutral toolkit → /mp:<name>
+│  │  ├─ .claude-plugin/plugin.json   name:"mp"
+│  │  ├─ skills/           (minus the GitHub set) + skills/shared/ neutral docs
+│  │  ├─ agents/           (minus the 4 GitHub agents)
+│  │  ├─ hooks/            hooks.json + *.mjs (all hooks live here)
+│  │  ├─ output-styles/    mp-terse.md
+│  │  ├─ scripts/          status line, detect-*, worktree, account-color, etc.
+│  │  └─ statusline-{accounts,projects,schemes}.json   read by scripts as ../<file>
+│  └─ gh/                  GitHub layer → /mp-gh:<name>
+│     ├─ .claude-plugin/plugin.json   name:"mp-gh"
+│     ├─ skills/           mp-execute, mp-ship, mp-pr, mp-commit-push-pr, mp-issue-create,
+│     │                    mp-to-issues, mp-to-epic, mp-hitl, mp-epic-review, mp-init-repo,
+│     │                    mp-setup-react-native, mp-setup-sveltekit, mp-batch-execute
+│     ├─ agents/           mp-pr-manager, mp-issue-finder, mp-ci-fixer, mp-unresolved-issue-tracker
+│     └─ skills/shared/GITHUB_ISSUE_TEMPLATE.md
+└─ (repo-level, unchanged) docs/ instructions/ rules/ rules-per-project/ templates/ local/
+   deprecated/ README.md WINDOWS-SETUP.md AGENTS.md CLAUDE.md package.json tests
+```
+
+**Why the split:** two accounts, one toolkit. Personal loads `mp` + `mp-gh`; work loads `mp`
++ `kf` (KanbanFlow/GitLab, its own repo). A plugin's `name` supplies the slash prefix and two
+plugins cannot share one, so the GitHub-coupled skills live in their own plugin rather than as
+folders inside `mp`. Loading is per-account via repeated `--plugin-dir` flags (see
+`WINDOWS-SETUP.md`), never a marketplace install (which copies to the plugin cache and kills
+live edits).
+
+**Cross-plugin references (constraint):** `--plugin-dir` loads each plugin in place but **skips
+symlinks that resolve outside the plugin folder**, so there are no cross-plugin symlinks. Where
+a `gh` skill needs a neutral shared doc or a shared script (both live in `mp`), it references it
+with a relative hop off its own plugin root: `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/<file>`
+and `${CLAUDE_PLUGIN_ROOT}/../mp/scripts/<file>`. This resolves correctly only when both plugins
+sit side by side under `plugins/` and are loaded in place — which is exactly the supported
+per-account `--plugin-dir` setup. `GITHUB_ISSUE_TEMPLATE.md` moved with the `gh` skills, so its
+`${CLAUDE_SKILL_DIR}/../shared/` references stay intra-plugin.
+
+**Statusline configs co-located:** `statusline-{accounts,projects,schemes}.json` moved into
+`plugins/mp/` alongside `scripts/` because the scripts resolve them as `<script-dir>/../<file>`
+(`status-line.mts`, `account-color.mts`, `lib/terminal-theme.mts`). They are a sibling of the
+`scripts/` dir, not the repo root.
+
+The rest of this document is the original single-plugin conversion plan, retained for history.
+
 ## Goal & shape
 
 - One GitHub repo = one plugin `mp` (the repo is both marketplace and plugin).

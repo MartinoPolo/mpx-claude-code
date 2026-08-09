@@ -1,0 +1,21 @@
+{
+  "name": "mp",
+  "version": "0.2.0",
+  "description": "Tracker-neutral Claude Code toolkit: planning-to-ship skills, review/check agents, hooks, and a rich status line. Skills invoke as /mp:<name>. Pairs with the mp-gh plugin for GitHub workflows.",
+  "license": "MIT",
+  "author": {
+    "name": "MartinoPolo",
+    "url": "https://github.com/MartinoPolo"
+  },
+  "homepage": "https://github.com/MartinoPolo/mpx-claude-code",
+  "repository": "https://github.com/MartinoPolo/mpx-claude-code",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "agents",
+    "hooks",
+    "workflow",
+    "status-line"
+  ]
+}

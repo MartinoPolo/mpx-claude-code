@@ -1,0 +1,22 @@
+{
+  "name": "mp-gh",
+  "version": "0.1.0",
+  "description": "GitHub layer for the mp toolkit: issue/PR/epic workflow skills and agents. Personal account.",
+  "license": "MIT",
+  "author": {
+    "name": "MartinoPolo",
+    "url": "https://github.com/MartinoPolo"
+  },
+  "homepage": "https://github.com/MartinoPolo/mpx-claude-code",
+  "repository": "https://github.com/MartinoPolo/mpx-claude-code",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "agents",
+    "github",
+    "workflow",
+    "issues",
+    "pull-requests"
+  ]
+}
