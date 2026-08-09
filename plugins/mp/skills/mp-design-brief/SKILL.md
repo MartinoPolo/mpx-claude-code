@@ -1,12 +1,12 @@
 ---
 name: design-brief
-description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent GitHub issues with a Design needed label."
+description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent tracker issues/tasks with a Design needed label."
 when_to_use: "User asks for a design brief, design spec, component spec, or UI spec."
 argument-hint: "[component-name]"
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash(gh *)
+allowed-tools: Read, Write, Glob, Grep, Agent, Bash(gh *), Bash(kf *), Bash(glab *)
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: design
 ---
 
@@ -31,8 +31,9 @@ Brief structure and writing rules: [BRIEF_TEMPLATE.md](BRIEF_TEMPLATE.md).
 
 Before writing anything:
 
-1. **GitHub** — `gh issue list --search "<keywords>" --state all`, then `gh issue view <n>
-   --json title,body,comments` on the hits. Issue comments carrying human decisions rank highest.
+1. **Issue tracker** — search the project's tracker for related issues/tasks, then read the hits
+   in full. Comments carrying human decisions rank highest. Resolve which tracker CLI and how to
+   run each verb via [ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md).
 2. **Project docs** — context, decisions, and epic specs, wherever the project keeps them.
 3. **Existing implementation** — read any code for this feature. Current state vs. desired state.
 4. **Related briefs** — other folders under `designs/`.
@@ -79,31 +80,20 @@ snake-case filename — following [BRIEF_TEMPLATE.md](BRIEF_TEMPLATE.md).
 
 ## Step 6: Gate dependent issues
 
-Implementation issues that cannot proceed without this design get labelled.
+Implementation issues/tasks that cannot proceed without this design get the `Design needed` gate.
+Resolve the tracker and the concrete label/column this maps to via
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md) § Label mapping.
 
-1. Ensure the label exists:
+1. Ensure the `Design needed` gate exists in the tracker (create it if the tracker needs labels
+   declared up front).
+2. Find dependents — search the tracker for open issues/tasks referencing this component, and
+   enumerate the epic's child tasks.
+3. Apply the `Design needed` label to each confirmed dependent — skim the body when uncertain, so
+   unrelated issues/tasks stay clean.
+4. Report which issues/tasks were labelled and why.
 
-    ```bash
-    gh label list --search "Design needed" --json name -q '.[].name'
-    gh label create "Design needed" --color "FBCA04" --description "Design must be completed before implementation"
-    ```
-
-2. Find dependents:
-
-    ```bash
-    gh issue list --search "<component-name>" --state open --json number,title,labels
-    gh issue view <epic-number> --json subIssues -q '.subIssues[].number'
-    ```
-
-3. Label each confirmed dependent — skim the body when uncertain, so unrelated issues stay clean:
-
-    ```bash
-    gh issue edit <number> --add-label "Design needed"
-    ```
-
-4. Report which issues were labelled and why.
-
-With no GitHub remote or no `gh`, skip this step and note it in the report.
+If no tracker resolves (ISSUE_TRACKER.md § Resolution falls through to asking and the user
+declines), skip this step and note it in the report.
 
 ## Step 7: Hand off
 

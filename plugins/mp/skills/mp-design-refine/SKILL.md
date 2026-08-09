@@ -1,19 +1,21 @@
 ---
 name: design-refine
-description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the GitHub issues that were gated on the design."
+description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the tracker issues/tasks that were gated on the design."
 when_to_use: "User asks to refine a design, accept or select a variant, polish a mockup, or refine all pending designs."
 argument-hint: "all | <variant-letter> [refinement requirements...]"
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(npx *), Bash(pnpm *), Bash(yarn *), Bash(bunx *), mcp__chrome-devtools__new_page
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(kf *), Bash(glab *), Bash(npx *), Bash(pnpm *), Bash(yarn *), Bash(bunx *), mcp__chrome-devtools__new_page
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: design
 ---
 
 # Design Refinement
 
 Apply refinement requirements to a chosen variant. Produces `refined.html` and `SUMMARY.md`,
-updates the design brief, and clears the design gate on dependent issues.
+updates the design brief, and clears the design gate on dependent issues/tasks in the project's
+tracker. Resolve which tracker CLI and how to run each verb via
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md).
 
 Shared conventions — folder layout, project discovery, mockup HTML rules, container context, the
 `Design needed` label: [DESIGN_PIPELINE.md](../shared/DESIGN_PIPELINE.md).
@@ -117,19 +119,20 @@ Insert below the `# Title` heading:
 Refinement that reveals a missing or wrong requirement fixes it in the brief's own section rather
 than recording it in the summary.
 
-## Step 8: Comment on the GitHub issue
+## Step 8: Comment on the tracker issue/task
 
-Ask for the design issue number if unknown, then:
+Ask for the design issue/task number if unknown, then comment on it (verb + concrete CLI in
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md)) with this body:
 
-```bash
-gh issue comment <number> --body "## Design Refined
+```markdown
+## Design Refined
 
 Variant **<X>** refined: [comma-separated refinements]
 
 **Artifacts:**
-- \`designs/<component-name>/refined.html\` — open in browser to review
-- \`designs/<component-name>/SUMMARY.md\` — component map + implementation notes
-- \`designs/<component-name>/DESIGN_BRIEF_<COMPONENT_NAME>.md\` — updated brief"
+- `designs/<component-name>/refined.html` — open in browser to review
+- `designs/<component-name>/SUMMARY.md` — component map + implementation notes
+- `designs/<component-name>/DESIGN_BRIEF_<COMPONENT_NAME>.md` — updated brief
 ```
 
 ## Step 9: Unblock dependent issues
@@ -137,19 +140,20 @@ Variant **<X>** refined: [comma-separated refinements]
 Run this only once the user has reviewed `refined.html` and approved it. Before approval, report
 "Pending user approval — re-run the unblock pass once approved" and leave every label in place.
 
+The `Design needed` gate maps to a concrete label/column per tracker — see
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md) § Label mapping.
+
 1. **Find candidates** — these signals are complementary, use whichever return results:
 
-    ```bash
-    gh issue view <design-issue> --json subIssues -q '.subIssues[].number'
-    gh issue list --search "designs/<component-name>" --state open --json number,title,labels
-    gh issue list --label "Design needed" --search "<component-name>" --state open --json number,title,labels
-    ```
+    - the design issue/task's child tasks
+    - open issues/tasks referencing `designs/<component-name>`
+    - open issues/tasks carrying the `Design needed` gate that mention `<component-name>`
 
-    Also parse open issue bodies for `Blocked by #<design-issue>`.
+    Also parse open issue/task bodies for `Blocked by #<design-issue>`.
 
-2. **Filter** to issues that genuinely depend on this design — skim the body when uncertain, so
-   unrelated issues keep their labels.
-3. **Remove the gate**: `gh issue edit <number> --remove-label "Design needed"`
+2. **Filter** to issues/tasks that genuinely depend on this design — skim the body when uncertain,
+   so unrelated ones keep their labels.
+3. **Remove the gate** — clear the `Design needed` label from each confirmed dependent.
 4. Feed the results into Step 10.
 
 ## Step 10: Open and report

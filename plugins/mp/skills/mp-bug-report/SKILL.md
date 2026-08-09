@@ -1,18 +1,20 @@
 ---
 name: bug-report
-description: "Investigates a bug's root cause, designs a TDD fix plan, and opens a GitHub issue labelled bug."
+description: "Investigates a bug's root cause, designs a TDD fix plan, and opens an issue/task labelled bug in the project's tracker."
 argument-hint: "bug description(s) — inline text or multiple descriptions separated by newlines"
 disable-model-invocation: true
-allowed-tools: Read, Bash(gh *), AskUserQuestion, Agent
+allowed-tools: Read, Bash(gh *), Bash(kf *), Bash(glab *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: issue-management
 ---
 
 # Bug Report
 
-Investigate bug root cause, design TDD fix plan, create GitHub issue. $ARGUMENTS
+Investigate bug root cause, design TDD fix plan, log an issue/task in the project's tracker.
+Resolve which tracker CLI and how to run each verb via
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md). $ARGUMENTS
 
 ## Input Resolution
 
@@ -60,20 +62,18 @@ Based on investigation results, design ordered RED-GREEN cycles:
 - Each test should survive internal refactors
 - Final step: REFACTOR for cleanup after all cycles pass
 
-### Step 4: Create GitHub Issue
+### Step 4: Log the issue/task
 
-Ensure `bug` label exists:
-
-```bash
-gh label create bug --description "Bug report" --color D73A4A --force
-```
+Ensure the tracker's `bug` type label exists (see
+[ISSUE_TRACKER.md](../shared/ISSUE_TRACKER.md) § Label mapping for how `bug` is represented in the
+resolved tracker).
 
 **Title format:** `bug: [concise description]`
 
-Create issue:
+Log an issue/task in the tracker (verb + concrete CLI in ISSUE_TRACKER.md) with the `bug` label
+plus any area labels detected from codebase exploration, and this body:
 
-```bash
-gh issue create --title "bug: description" --label "bug,area-label" --body "$(cat <<'EOF'
+```markdown
 ## Problem
 
 **Actual behavior:** [what happens]
@@ -102,16 +102,12 @@ gh issue create --title "bug: description" --label "bug,area-label" --body "$(ca
 
 - [ ] [criterion 1]
 - [ ] [criterion 2]
-EOF
-)"
 ```
-
-Add labels: `bug` + any area labels detected from codebase exploration.
 
 ### Step 5: Report
 
-- Print issue URL and one-line root cause summary per bug
-- Multiple bugs: list all issue URLs with brief summary each
+- Print the issue/task reference (URL or number) and one-line root cause summary per bug
+- Multiple bugs: list all issue/task references with brief summary each
 
 ## Rules
 

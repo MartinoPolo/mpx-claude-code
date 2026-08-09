@@ -1,17 +1,17 @@
 ---
 name: architecture-review
-description: "Reviews codebase architecture and opens a refactor issue with the findings."
+description: "Reviews codebase architecture and logs a refactor issue/task in the project's tracker with the findings."
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(gh *), AskUserQuestion, Agent
+allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(kf *), Bash(glab *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.8"
   category: planning
 ---
 
 # Architecture Review
 
-Explore a codebase like an AI would, surface architectural friction, discover opportunities for improving testability, and propose module-deepening refactors as GitHub issue RFCs.
+Explore a codebase like an AI would, surface architectural friction, discover opportunities for improving testability, and propose module-deepening refactors as RFCs logged in the project's tracker. Resolve which tracker CLI and how to run each verb via [`shared/ISSUE_TRACKER.md`](../shared/ISSUE_TRACKER.md).
 
 A **deep module** (John Ousterhout, "A Philosophy of Software Design") has a small interface hiding a large implementation. Deep modules are more testable, more AI-navigable, and let you test at the boundary instead of inside.
 
@@ -83,15 +83,12 @@ After comparing, give your own recommendation: which design you think is stronge
 
 ### 6. User picks an interface (or accepts recommendation)
 
-### 7. Create GitHub issue
+### 7. Log the refactor RFC
 
-Create a refactor RFC as a GitHub issue. Use the template in `${CLAUDE_SKILL_DIR}/REFERENCE.md`. Create the issue immediately and share the URL — skip a review step first.
+Log a refactor RFC as an issue/task in the project's tracker (verb + concrete CLI in
+[`shared/ISSUE_TRACKER.md`](../shared/ISSUE_TRACKER.md)). Use the body template in
+`${CLAUDE_SKILL_DIR}/REFERENCE.md`, title `refactor: [module description]`, and apply the
+tracker's `refactor` type label (see ISSUE_TRACKER.md § Label mapping). Log it immediately and
+share the reference — skip a review step first.
 
-```bash
-gh issue create --title "refactor: [module description]" --label "refactor" --body "$(cat <<'EOF'
-[Use issue template from REFERENCE.md]
-EOF
-)"
-```
-
-Print the issue URL.
+Print the issue/task reference (URL or number).
