@@ -3,6 +3,10 @@
 // atomic cache write, exit. Never invoked inline: Claude Code cancels a status
 // line that blocks, and the API call costs ~0.7s.
 //
+// This process is spawned detached without a console, so every execFileSync
+// must pass windowsHide — otherwise Windows allocates a visible transient
+// console (a Windows Terminal flash) for each child it runs.
+//
 // Usage: node status-line-mr-refresh.mjs <cwd> <branch> <cache_path>
 
 import { execFileSync } from "node:child_process";
@@ -62,7 +66,8 @@ function fetchHeadEpoch() {
     try {
         commonDir = execFileSync("git", ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"], {
             encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"]
+            stdio: ["ignore", "pipe", "ignore"],
+            windowsHide: true
         }).trim();
     } catch {
         return "";
@@ -96,6 +101,7 @@ function runCommand(command, args, options = {}) {
             encoding: "utf8",
             stdio: ["ignore", "pipe", "ignore"],
             timeout: 10000,
+            windowsHide: true,
             ...options
         });
     } catch {
@@ -105,7 +111,7 @@ function runCommand(command, args, options = {}) {
 
 function commandExists(command) {
     try {
-        execFileSync(process.platform === "win32" ? "where" : "which", [command], { stdio: "ignore" });
+        execFileSync(process.platform === "win32" ? "where" : "which", [command], { stdio: "ignore", windowsHide: true });
         return true;
     } catch {
         return false;

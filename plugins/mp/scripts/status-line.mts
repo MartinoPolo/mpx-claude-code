@@ -778,7 +778,8 @@ function readGitStatus(cwd: string): GitStatus | undefined {
     try {
         output = execFileSync("git", ["-C", cwd, "status", "--porcelain=v2", "--branch", "--untracked-files=normal"], {
             encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"]
+            stdio: ["ignore", "pipe", "ignore"],
+            windowsHide: true
         });
     } catch {
         output = "";
@@ -852,7 +853,7 @@ function readWorktreePaths(cwd: string): WorktreePaths | undefined {
         const output = execFileSync(
             "git",
             ["-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-toplevel"],
-            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true }
         );
         return parseWorktreePaths(output);
     } catch {
@@ -952,7 +953,7 @@ function defaultBranch(cwd: string): string {
                 "refs/remotes/origin/main",
                 "refs/remotes/origin/master"
             ],
-            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }
+            { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true }
         );
         return parseDefaultBranch(output);
     } catch {
@@ -973,7 +974,8 @@ function remoteUrls(cwd: string, branch: string, wantCompare: boolean): { branch
     try {
         remote = execFileSync("git", ["-C", cwd, "remote", "get-url", "origin"], {
             encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"]
+            stdio: ["ignore", "pipe", "ignore"],
+            windowsHide: true
         }).trim();
     } catch {
         return { branchUrl: "", compareUrl: "" };
@@ -1921,9 +1923,12 @@ function fetchUsdCzkRate(): string {
     // No cache yet — fetch once synchronously (rare), so a cold start still
     // shows a converted cost on the very first render.
     try {
+        // Runs in a detached, console-less warmer: without windowsHide Windows
+        // allocates a visible transient console for the curl child.
         const raw = execFileSync("curl", ["-s", "--max-time", "3", FX_ENDPOINT], {
             encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"]
+            stdio: ["ignore", "pipe", "ignore"],
+            windowsHide: true
         });
         const rate = lookup(JSON.parse(raw), ["rates", "CZK"]);
         if (rate === null || rate === undefined || rate === "") {
