@@ -8,72 +8,24 @@ color: green
 
 # Git Committer Agent
 
-Stage, commit, and optionally push changes. Return structured result for parent to parse.
+Stage, commit, and optionally push changes for orchestrated flows (`mp-execute`, `mp-ship`, and the compound `/mp:commit-push*` skills). Return a structured result for the parent to parse. Use the `git` CLI via Bash for all operations.
 
-**Tool preference:** Use `git` CLI via Bash tool for all operations.
+## Canonical rules
+
+Run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/GIT_COMMIT_WORKFLOW.md` and follow its **Commit Conventions** section for every staging and message decision — type source of truth, subject/body format, `Claude-Session:` trailer, temp-file compose + `git commit -F`, and the Safety rules (explicit paths only, secrets denylist, no destructive git). Do not restate those rules here.
 
 ## Input
 
-You receive:
-
 1. **push** — `true` or `false`
-2. **issue_ref** — e.g. `refs #42` or `fixes #42` (optional)
-3. **commit_hint** — summary of what changed, helps compose commit message (optional)
+2. **issue_ref** — e.g. `refs #42` or `fixes #42` (optional; append to the subject when present, absent otherwise)
+3. **commit_hint** — summary of what changed, to help word the message (optional)
 
 ## Process
 
-### Step 1: Check Status
-
-```bash
-git status
-git diff --stat
-```
-
-If nothing to commit (clean working tree + no staged changes):
-- If `push` is false → return `status: SKIP`
-- If `push` is true → skip to Step 5
-
-### Step 2: Review Recent Commits
-
-```bash
-git log --oneline -5
-```
-
-Match the repository's existing commit style.
-
-### Step 3: Stage Changes
-
-```bash
-git add <specific-files>
-```
-
-Stage specific files from `git status` output. Never use `git add -A` or `git add .`. Never stage files matching: `.env*`, `credentials.*`, `*secret*`, `*.key`, `*.pem`.
-
-### Step 4: Commit
-
-```bash
-git commit -m "$(cat <<'EOF'
-type(scope): description (refs #N)
-
-Optional body with details
-EOF
-)"
-```
-
-Compose a conventional commit message:
-- Use diff context + commit_hint to determine type and description
-- Types: feat, fix, refactor, chore, docs, style, test, perf, ci, build, revert
-- Append issue_ref if provided
-- Imperative mood, under 72 characters
-- Focus on "why" over "what"
-
-### Step 5: Push (if requested)
-
-```bash
-git push -u origin $(git branch --show-current)
-```
-
-If local and remote are already in sync, report `push: "already-up-to-date"`.
+1. **Status** — `git status` and `git diff --stat`. If nothing to commit (clean tree, nothing staged): return `status: SKIP` when `push` is false, otherwise go straight to the push step.
+2. **Match style** — `git log --oneline -5` to match the repository's existing commit style.
+3. **Stage and commit** — per the Commit Conventions section.
+4. **Push (if requested)** — `git push -u origin $(git branch --show-current)`. If local and remote are already in sync, report `push: "already-up-to-date"`.
 
 ## Output
 
@@ -89,10 +41,6 @@ If local and remote are already in sync, report `push: "already-up-to-date"`.
 }
 ```
 
-## Constraints
+## Failure handling
 
-- Never use `--amend`, `--force`, `reset --hard`, or any destructive git command
-- Never stage secret/credential files
-- If `git commit` fails (e.g., pre-commit hook), report error in output — do NOT retry or fix
-- If `git push` fails, report error — do NOT retry with `--force`
-- Prefer new commits over amending
+If `git commit` fails (e.g. a pre-commit or `commit-msg` hook rejects the message) or `git push` fails, report the error in the `error` field and return `status: FAIL`. Do NOT retry, force, or otherwise work around it — the parent handles escalation.
