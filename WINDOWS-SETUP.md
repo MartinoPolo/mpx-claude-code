@@ -51,6 +51,11 @@ mklink /J "%DEST%\templates"    "%REPO%\templates"
 mklink /J "%DEST%\output-styles" "%REPO%\plugins\mp\output-styles"
 mklink /J "%DEST%\scripts"       "%REPO%\plugins\mp\scripts"
 
+:: Personal skills outside the plugins (local/skills/) load as classic user-level
+:: skills — invoked by their own name (/mp-podcast), not the /mp: namespace.
+:: Personal account only; the work account intentionally goes without them.
+mklink /J "%DEST%\skills" "%REPO%\local\skills"
+
 :: File symlinks (or use mklink /H for hard links without admin)
 mklink "%DEST%\AGENTS.md"           "%REPO%\instructions\AGENTS.md"
 mklink "%DEST%\CLAUDE.md"           "%REPO%\instructions\CLAUDE.md"

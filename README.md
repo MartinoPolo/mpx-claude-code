@@ -215,7 +215,7 @@ Retired skills, agents, hooks and scripts are archived under [`deprecated/`](dep
 
 ## Local skills (not installed)
 
-`local/skills/` holds personal and example skills that live **outside** the plugin's `skills/` scan — installing `mp` via the marketplace does not install these. They're kept in the repo for reference and as a showcase of what's possible; cherry-pick by copying a folder into your own skill directory (classic `~/.claude/skills/`, a project's `.claude/skills/`, or a separate `--plugin-dir`). Their `SKILL.md` files keep the `mp-` prefix in their `name:` field, so once installed outside this plugin they invoke under their own name (e.g. `/mp-podcast`) rather than the `/mp:` namespace.
+`local/skills/` holds personal and example skills that live **outside** the plugin's `skills/` scan — installing `mp` via the marketplace does not install these. They're kept in the repo for reference and as a showcase of what's possible; cherry-pick by copying a folder into your own skill directory (classic `~/.claude/skills/`, a project's `.claude/skills/`, or a separate `--plugin-dir`), or junction the whole folder as `~/.claude/skills` (see WINDOWS-SETUP.md). Their `SKILL.md` files keep the `mp-` prefix in their `name:` field, so once installed outside this plugin they invoke under their own name (e.g. `/mp-podcast`) rather than the `/mp:` namespace.
 
 Several depend on the [machine-root environment variables](#machine-roots-mpx_) below, and a couple assume a Windows workstation.
 
