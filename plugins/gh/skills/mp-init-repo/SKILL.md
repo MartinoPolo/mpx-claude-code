@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Bash, Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: setup
 ---
 
@@ -23,7 +23,7 @@ project has no `.git/` yet.
 2. **Run the init script**: Execute the initialization script:
 
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/skills/mp-init-repo/scripts/init-repo.mjs
+   node ${CLAUDE_PLUGIN_ROOT}/../mp/scripts/init-repo.mjs
    ```
 
 3. **Create `.mpx/` structure**: Create the project documentation directory (see `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/DOCUMENTATION_STRATEGY.md` for format):
