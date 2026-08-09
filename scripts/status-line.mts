@@ -1350,17 +1350,32 @@ function launcherUrl(file: string): string {
 // state moved onto its own row and renumbered everything below it once already.
 
 /**
- * Title · id: what the session is about, how to refer to it. The account
- * (work vs personal) is conveyed by the pane background tint (see
- * account-color.mts), not repeated here as text. The id links to the
- * transcript `.jsonl` when its path is known, so the raw session log is one
- * click away from the very identifier that names it.
+ * Title · id: what the session is about, how to refer to it, badged with the
+ * account. The pane background tint (see account-color.mts) is the primary
+ * account signal, but it is dropped whenever Windows Terminal reloads its
+ * settings and is not re-emitted for a live pane — so a compact `P`/`W` badge
+ * in the account color leads the line as a tint-independent fallback. The id
+ * links to the transcript `.jsonl` when its path is known, so the raw session
+ * log is one click away from the very identifier that names it.
+ *
+ * `accountMarker` is a pre-colored badge (or "" to omit); it leads the line as a
+ * normal `·`-separated segment, the same separator the rest of the row uses. An
+ * empty line stays empty — a badge never renders alone.
  */
-export function buildSessionLine(sessionName: string, shortId: string, transcriptUrl: string): string {
-    return joinSegments([
+export function buildSessionLine(
+    sessionName: string,
+    shortId: string,
+    transcriptUrl: string,
+    accountMarker: string
+): string {
+    const body = joinSegments([
         sessionName === "" ? "" : `${SESSION}${sessionName}${RESET}`,
         shortId === "" ? "" : `${GRAY}${maybeLink(transcriptUrl, `#${shortId}`)}${RESET}`
     ]);
+    if (body === "" || accountMarker === "") {
+        return body;
+    }
+    return `${accountMarker}${SEPARATOR}${body}`;
 }
 
 export function buildModelLine(model: string, effortLevel: string): string {
@@ -1933,11 +1948,20 @@ function emitRow(expanded: { text: string; truncated: boolean }): string {
 const COLUMN_GAP = 2;
 
 /**
+ * Blank cells held clear at the terminal's right edge, past the pinned block. The
+ * ledger measures icons at the width the configured terminal draws them (single),
+ * so seats land exactly here; a terminal whose font draws them wider would measure
+ * short and push a seated row right, and this slack lets it drift into the margin
+ * instead of wrapping and breaking the layout.
+ */
+const RIGHT_MARGIN = 3;
+
+/**
  * Two-column layout. The left column (session, model, location … quota) keeps the
- * left edge; the right column — the finished-agent ledger — is pinned to the
+ * left edge; the right column — the finished-agent ledger — is pinned near the
  * terminal's right edge so the wide gutter beside a short bar is put to use. The
- * whole ledger block starts at one column (`columns - blockWidth`) so its table
- * stays vertically aligned, and it begins on the *first* row: when the bar fills
+ * whole ledger block starts at one column (`columns - blockWidth - RIGHT_MARGIN`)
+ * so its table stays vertically aligned, and it begins on the *first* row: when the bar fills
  * the width, Claude Code relocates its own right-aligned indicators (remote-control
  * `/rc`, queued-agent count) to their own rows below the bar, leaving the first
  * row's right edge free.
@@ -1963,7 +1987,7 @@ export function composeColumns(leftLines: string[], rightLines: string[], column
         const text = expandBackslashEscapes(line).text;
         return { text, width: visibleWidth(text) };
     });
-    const blockStart = columns - Math.max(...right.map((entry) => entry.width));
+    const blockStart = columns - Math.max(...right.map((entry) => entry.width)) - RIGHT_MARGIN;
     if (blockStart < COLUMN_GAP) {
         return stacked();
     }
@@ -2001,6 +2025,10 @@ function render(): string {
     const cwdTerminalUrl = fields.cwd === "" ? "" : launcherUrl(terminalTabShortcutFile(fields.cwd));
 
     const accountLabel = resolveAccountLabel(resolveConfigDir());
+    const accountMarker =
+        accountLabel === "Work"
+            ? `${BOLD}${PALETTE.work}W${RESET}`
+            : `${BOLD}${PALETTE.personal}P${RESET}`;
 
     const git = readGitStatus(fields.cwd);
     const branch = git?.branch ?? "";
@@ -2189,7 +2217,7 @@ function render(): string {
     // pinned to the right. A row with nothing to say is dropped rather than emitted
     // blank — outside a repo the branch state has no content at all.
     const leftLines = [
-        buildSessionLine(fields.sessionName, shortId, transcriptUrl),
+        buildSessionLine(fields.sessionName, shortId, transcriptUrl, accountMarker),
         buildModelLine(fields.model, fields.effortLevel),
         buildLocationLine({
             projectName: location.projectName,

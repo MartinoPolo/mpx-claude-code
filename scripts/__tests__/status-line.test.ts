@@ -352,27 +352,38 @@ describe("SEPARATOR", () => {
 
 describe("buildSessionLine", () => {
     it("leads with the title, then the short id", () => {
-        expect(buildSessionLine("my-session", "0123abcd", "")).toBe(
+        expect(buildSessionLine("my-session", "0123abcd", "", "")).toBe(
             `${SESSION}my-session${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
         );
     });
 
+    it("separates the account badge from the title with a dot, ahead of it", () => {
+        const badge = "PBADGE";
+        expect(buildSessionLine("my-session", "0123abcd", "", badge)).toBe(
+            `${badge}${SEPARATOR}${SESSION}my-session${RESET}${SEPARATOR}${GRAY}#0123abcd${RESET}`
+        );
+    });
+
+    it("never renders the badge alone when title and id are both absent", () => {
+        expect(buildSessionLine("", "", "", "PBADGE")).toBe("");
+    });
+
     it("links the short id to the transcript file when its URL is known", () => {
-        expect(buildSessionLine("", "0123abcd", "file:///c/t.jsonl")).toBe(
+        expect(buildSessionLine("", "0123abcd", "file:///c/t.jsonl", "")).toBe(
             `${GRAY}${hyperlink("file:///c/t.jsonl", "#0123abcd")}${RESET}`
         );
     });
 
     it("drops the title field when the session is unnamed", () => {
-        expect(buildSessionLine("", "0123abcd", "")).toBe(`${GRAY}#0123abcd${RESET}`);
+        expect(buildSessionLine("", "0123abcd", "", "")).toBe(`${GRAY}#0123abcd${RESET}`);
     });
 
     it("drops the id field when there is no session id", () => {
-        expect(buildSessionLine("my-session", "", "file:///c/t.jsonl")).toBe(`${SESSION}my-session${RESET}`);
+        expect(buildSessionLine("my-session", "", "file:///c/t.jsonl", "")).toBe(`${SESSION}my-session${RESET}`);
     });
 
     it("returns an empty string when both title and id are absent", () => {
-        expect(buildSessionLine("", "", "")).toBe("");
+        expect(buildSessionLine("", "", "", "")).toBe("");
     });
 });
 
@@ -1342,9 +1353,9 @@ describe("visibleWidth", () => {
         expect(visibleWidth(hyperlink("file:///some/long/path", "repo"))).toBe(4);
     });
 
-    it("counts a Private Use Area Nerd Font icon as two cells", () => {
-        expect(visibleWidth("")).toBe(2); // branch icon
-        expect(visibleWidth("\u{F0A1E}")).toBe(2); // VS Code icon, astral PUA
+    it("counts a Private Use Area Nerd Font icon as one cell", () => {
+        expect(visibleWidth("")).toBe(1); // branch icon
+        expect(visibleWidth("\u{F0A1E}")).toBe(1); // VS Code icon, astral PUA
     });
 
     it("counts an emoji as two cells", () => {
@@ -1369,24 +1380,24 @@ describe("composeColumns", () => {
     });
 
     it("pins the ledger from the first row", () => {
-        // columns 20, right "R" width 1 -> blockStart 19; row 0 gap 19-1 = 18.
-        expect(composeColumns(["S", "M"], ["R"], 20)).toBe(`S${" ".repeat(18)}R\nM\n`);
+        // columns 20, right "R" width 1, RIGHT_MARGIN 3 -> blockStart 16; row 0 gap 16-1 = 15.
+        expect(composeColumns(["S", "M"], ["R"], 20)).toBe(`S${" ".repeat(15)}R\nM\n`);
     });
 
     it("defers a ledger line past a left row too wide to share, onto the next", () => {
-        const wide = "x".repeat(18); // gap 18-18 = 0 < COLUMN_GAP, cannot seat "R2"
-        // Two ledger lines (widest width 2 -> blockStart 18): "R1" seats on "S",
-        // the wide row cannot share, so "R2" defers to "M".
+        const wide = "x".repeat(18); // gap 15-18 < COLUMN_GAP, cannot seat "R2"
+        // Two ledger lines (widest width 2, margin 3 -> blockStart 15): "R1" seats on
+        // "S", the wide row cannot share, so "R2" defers to "M".
         expect(composeColumns(["S", wide, "M"], ["R1", "R2"], 20)).toBe(
-            `S${" ".repeat(17)}R1\n${wide}\nM${" ".repeat(17)}R2\n`
+            `S${" ".repeat(14)}R1\n${wide}\nM${" ".repeat(14)}R2\n`
         );
     });
 
     it("pins leftover ledger lines to their own rows below", () => {
-        // One left row and two ledger lines; both width 2 -> blockStart 18. "R1"
-        // seats on "S"; "R2" has no left row left, so it pins to its own row.
+        // One left row and two ledger lines; both width 2, margin 3 -> blockStart 15.
+        // "R1" seats on "S"; "R2" has no left row left, so it pins to its own row.
         const out = composeColumns(["S"], ["R1", "R2"], 20);
-        expect(out).toBe(`S${" ".repeat(17)}R1\n${INDENT_GUARD}${" ".repeat(17)}R2\n`);
+        expect(out).toBe(`S${" ".repeat(14)}R1\n${INDENT_GUARD}${" ".repeat(14)}R2\n`);
     });
 
     it("falls back to stacking when the widest ledger line cannot fit", () => {

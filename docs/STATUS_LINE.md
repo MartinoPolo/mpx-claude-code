@@ -18,9 +18,12 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
 - **The directory name is the only white field.** It answers "where am I", asked most often and
   from furthest away; every other field on that row stays grey. In a worktree the white moves to
   the worktree half of `project/worktree`, the actual location.
-- **The first line is title · id** — what the session is about, how to refer to it. The account is
-  *not* named here: the pane background already answers "which account is this" (see
-  [Account background](#account-background)).
+- **The first line is `badge · title · id`** — what the session is about, how to refer to it, led by
+  a one-letter account badge (`P` personal red, `W` work blue). The pane background is the primary
+  "which account is this" signal (see [Account background](#account-background)), but it is wiped by
+  any Windows Terminal settings reload and never re-emitted for a live pane; the badge is the
+  tint-independent fallback, colored to echo the tint. It joins the title with the same `·` separator
+  the rest of the row uses, and never renders alone on an otherwise-empty line.
 - **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance; five slots for the five
   levels `low medium high xhigh max`, anything unrecognized falls back to `<level>` text.
 - **Dim grey is for context, not signal.** Fetch age, cache ages, quota countdowns, session cost
@@ -45,18 +48,22 @@ left rows instead of stacking below them. `composeColumns` does this after both 
 - **The block starts on the first row.** When the bar fills the width, Claude Code relocates its own
   right-aligned indicators (remote-control `/rc`, the queued-agent count) to their own rows below the
   bar, so the first row's right edge is free for the ledger.
-- **The whole block pins at one column** (`columns - widestLedgerLine`), so the ledger's table stays
-  vertically aligned; only its widest line reaches the right margin. A left row too wide to seat its
-  next ledger line beside it leaves that line for a later row, and any ledger lines with no left row
-  to share fall to their own pinned rows below — the ledger stays in order and contiguous either way.
+- **The whole block pins at one column** (`columns - widestLedgerLine - RIGHT_MARGIN`), so the
+  ledger's table stays vertically aligned; only its widest line reaches the reserved margin. A left row
+  too wide to seat its next ledger line beside it leaves that line for a later row, and any ledger lines
+  with no left row to share fall to their own pinned rows below — the ledger stays in order and
+  contiguous either way.
 - **A pinned row leads with the U+2800 guard**, not spaces, for the same reason the nested rows do:
   Claude Code trims leading whitespace off every row, and the guard survives it.
 - **Widths are measured with `visibleWidth`** (`lib/statusline-ansi.mts`), which strips SGR runs and
-  OSC-8 hyperlink wrappers and then counts cells. It counts Private Use Area Nerd Font icons and
-  emoji as **two** cells deliberately over-inclusively: a line measured too narrow would let the right
-  column run past the margin and wrap, breaking the layout, whereas measuring an icon row a cell too
-  wide only shifts that one row's right column left by a cell. When it cannot fit the block beside the
-  left column at all (`columns - widestLedgerLine < 2`), it falls back to stacking.
+  OSC-8 hyperlink wrappers and then counts cells. Private Use Area Nerd Font icons count as **one**
+  cell — Symbols Nerd Font draws them single-width in the configured terminal, and measuring them
+  exactly is what makes a ledger line seated after an icon-laden left row land on the same column as
+  one seated after a plain-text row. (An over-inclusive double-width guess used to shift the icon rows
+  left and break the ledger's alignment.) A terminal whose font drew those icons wider would measure
+  them short and drift the seated row *right*, which the reserved `RIGHT_MARGIN` (a few blank cells
+  kept clear past the block) absorbs rather than wraps. When it cannot fit the block beside the left
+  column at all (`columns - widestLedgerLine - RIGHT_MARGIN < 2`), it falls back to stacking.
 
 ## Data sources
 
@@ -418,8 +425,18 @@ answers it.
 `cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call [`scripts/account-color.mts`](../scripts/account-color.mts)
 before handing off to `claude`, and an `EXIT` trap calls it again with `reset` so the profile's own
 colors return however the session ends. The tints live in
-[`statusline-accounts.json`](../statusline-accounts.json): personal dark red, work dark blue. Pi (the
-third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`, in a different repo.
+[`statusline-accounts.json`](../statusline-accounts.json): personal near-black with a faint red cast,
+work dark blue. Pi (the third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`,
+in a different repo, painting dark green — so the three canvases read as personal (default-dark red),
+work (blue), pi (green).
+
+**The tint does not survive a settings reload.** OSC 11 repoints `DefaultBackground` in-memory only;
+any Windows Terminal settings.json reload re-seeds every pane from its profile's configured colors at
+once, and nothing re-emits OSC 11 for a shell already blocked on `claude` — so every tinted pane
+reverts together and stays reverted until a new shell launches. Dynamic profile generators (WSL,
+Azure, Visual Studio, PowerShell) rewrite settings.json when their source state changes, which is the
+usual unattended trigger; `disabledProfileSources` stops those rewrites. The line-1 `P`/`W` badge (see
+above) is the deliberate fallback for exactly this window, since it re-renders every status tick.
 
 - **OSC 11 sets the background, OSC 12 the cursor**; `reset` sends OSC 111/112. OSC 11 repoints the
   `DefaultBackground` alias, so a profile's configured `background` only *seeds* the value at startup
@@ -502,6 +519,11 @@ fall through to Symbols Nerd Font — the git-branch glyph U+E725, VS Code U+F0A
 pencil U+F03EB. The non-"Mono" Symbols Nerd Font is used deliberately: it keeps the icons' native
 double-cell proportions (a terminal can only render a glyph bigger if the font draws it into more of
 the cell), and the overflow paints into a space the layout guarantees to its right.
+
+`visibleWidth` nonetheless **measures** these icons as one cell (see [Two-column layout](#two-column-layout)):
+the configured terminal draws them single-width, and measuring them wider was drifting the pinned
+ledger's rows out of alignment. If a terminal genuinely renders them double, the seated ledger row
+drifts right into the reserved `RIGHT_MARGIN` instead of wrapping.
 
 Everything else stays within **plain** Cascadia Mono's cmap (parsed from the TTF), so a fallback to
 the non-NF font degrades exactly those pictograms and nothing else. Present: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░

@@ -218,7 +218,7 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 **Main bar** (`scripts/status-line.mts`) — every element is a clickable OSC 8 link:
 
-- Session name · session id (opens the transcript `.jsonl`) · model · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
+- Account badge (`P` personal / `W` work, colored to echo the pane tint) · session name · session id (opens the transcript `.jsonl`) · model · effort as a five-diamond gauge (`◆◆◆◇◇` = high)
 - `project/worktree · branch` on one row, with `ports · MR/PR + review state · CI state` indented on the next (the path and branch can each run long and would push the rest off the right edge) — folder names open Explorer, glyphs beside them open VS Code or duplicate the tab there, the branch opens its page on the remote host, and dev-server ports (declared in `statusline-projects.json`) link to `localhost` and turn green while the server answers
 - Branch state (`≡` in sync, `↑n`/`↓n`, staged/modified/untracked/conflicted counts, fetch age), indented and dim
 - Context tokens with escalating color · bar filling toward the auto-compaction limit · session cost — with compaction history rows (`└─ auto · 205k → 15k · 06:50`) appearing once a session compacts
@@ -229,7 +229,7 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
-**Account color** — `cc`/`ccw` repaint the terminal background before launching (`scripts/account-color.mts` + the tints in `statusline-accounts.json`), so personal and work accounts are distinguishable at a glance while tab color stays free to mean *project*. Both bars derive their whole palette from the Windows Terminal color scheme in `statusline-schemes.json`, with a contrast floor enforced per color — they follow scheme changes and invert correctly on a light theme.
+**Account color** — `cc`/`ccw` repaint the terminal background before launching (`scripts/account-color.mts` + the tints in `statusline-accounts.json`: personal near-black faint-red, work dark blue; pi paints green from its own repo), so personal and work accounts are distinguishable at a glance while tab color stays free to mean *project*. The tint is dropped by any Windows Terminal settings reload and not re-emitted for a live pane, so the line-1 `P`/`W` badge is the tint-independent fallback. Both bars derive their whole palette from the Windows Terminal color scheme in `statusline-schemes.json`, with a contrast floor enforced per color — they follow scheme changes and invert correctly on a light theme.
 
 ### Installing the status lines
 
