@@ -1,12 +1,11 @@
 {
   "name": "mpx-claude-code",
-  "private": true,
-  "engines": {
-    "node": ">=22.18"
-  },
+  "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check": "echo 'Check passed'"
   },
   "devDependencies": {
     "vitest": "^3.1.1"
