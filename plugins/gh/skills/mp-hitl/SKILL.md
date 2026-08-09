@@ -1,0 +1,164 @@
+---
+name: hitl
+description: "Resolves HITL-blocked issues into AFK-ready ones by grilling the human decisions out of them."
+argument-hint: "[epic issue URL or number] [lowest|most-blocking]"
+disable-model-invocation: true
+allowed-tools: Read, Bash(gh *), Agent
+metadata:
+  author: MartinoPolo
+  version: "0.6"
+  category: project-management
+---
+
+# HITL to AFK — Resolve Human Decisions
+
+Grill the user on open decisions in HITL-labeled GitHub issues, then flip resolved issues to AFK for autonomous execution. $ARGUMENTS
+
+## Parameters
+
+- Epic issue URL or number (optional) — target epic. If omitted, auto-detect.
+- Ordering mode (optional):
+  - `lowest` → process unblocked HITL issues by lowest issue number first
+  - `most-blocking` → process by transitive unblock count (highest-impact first)
+
+Default ordering: `lowest`
+
+## Workflow
+
+### Step 1: Identify Epic and Repo
+
+If an epic issue URL or number is provided, use it directly. Otherwise auto-detect:
+
+```bash
+gh repo view --json nameWithOwner --jq '.nameWithOwner'
+gh issue list --label "epic" --state open --json number,title
+```
+
+If multiple open epics found, show them and ask which one. If zero, report and exit.
+
+Fetch the epic body — it provides shared context (especially `## Implementation Decisions`):
+
+```bash
+gh issue view <EPIC_NUMBER> --json title,body
+```
+
+### Step 2: Fetch All Sub-Issues and Build Dependency Graph
+
+```bash
+gh issue list --label "task" --state open --json number,title,labels,body
+```
+
+For each issue, parse the `## Blocking Relationships` section to extract `Blocked by #N` references. Build a dependency graph.
+
+### Step 3: Find Unblocked HITL Issues
+
+An HITL issue is **unblocked** when all its blockers are either:
+- Closed (implemented)
+- Labeled `AFK` (will be resolved autonomously)
+
+Filter to only HITL-labeled issues that meet this criteria. If zero found:
+- "No HITL issues found" → exit
+- "All HITL resolved" → exit
+- "N HITL issues exist but all blocked by other HITL issues" → show which ones and their blockers, exit
+
+### Step 4: Order the Queue
+
+Sort unblocked HITL issues based on the ordering parameter:
+
+- `lowest` (default) → ascending by issue number
+- `most-blocking` → descending by **transitive unblock count** (how many downstream issues, direct + indirect, each one unblocks)
+
+Present the queue to the user.
+
+For `lowest`:
+
+```
+HITL issues to resolve (ordered by issue number):
+1. #3 — Dashboard + issue CRUD
+2. #6 — Session spawning
+```
+
+For `most-blocking`:
+
+```
+HITL issues to resolve (ordered by blocking impact):
+1. #3 — Dashboard + issue CRUD (unblocks 6 downstream)
+2. #6 — Session spawning (unblocks 4 downstream)
+```
+
+### Step 5: Grill Each Issue
+
+For each HITL issue, in priority order:
+
+#### 5a: Extract Decision Points
+
+1. Read the issue body — focus on `## Notes` for the HITL reason, `## Acceptance Criteria` for ambiguity, `## Description` for open questions
+2. Cross-reference against the epic's `## Implementation Decisions` section — remove anything already decided
+3. Spawn an `Explore` agent (breadth: medium) to scan the codebase for files relevant to this issue (components, patterns, configs mentioned in the issue). Use findings to pre-answer questions where possible
+
+#### 5b: Grill Decision Points
+
+Group the issue's decision points into thematic batches. Present each batch as a numbered list in one round. For each question, provide a recommended answer backed by codebase evidence or epic context.
+
+Only split into a follow-up round when earlier answers would change later questions.
+
+See [EXPLORATION.md](${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/EXPLORATION.md) — explore instead of asking.
+
+#### 5c: Record Outcome
+
+**If all decisions resolved:** Append a `## Resolved Decisions` section to the issue body:
+
+```markdown
+## Resolved Decisions
+
+- **Decision name**: Resolution with implementation context.
+- **Another decision**: Resolution with implementation context.
+```
+
+Then flip labels:
+
+```bash
+gh issue edit <NUMBER> --remove-label "HITL" --add-label "AFK"
+```
+
+**If some decisions require implementation to answer:** Append both sections, keep HITL label:
+
+```markdown
+## Resolved Decisions
+
+- **Decision name**: Resolution with implementation context.
+
+## Unresolved — Needs Implementation
+
+- **Decision name**: Why it needs experimentation first.
+```
+
+#### 5d: Continue or Stop
+
+After completing an issue, ask: "Continue to the next HITL issue?"
+
+If yes, proceed. If no, skip to Step 6.
+
+#### 5e: Re-check for Newly Unblocked HITL Issues
+
+After flipping issues to AFK, re-evaluate the dependency graph. Issues that were blocked solely by the just-resolved HITL issues are now unblocked. Add them to the queue and continue grilling.
+
+### Step 6: Session Summary
+
+```
+HITL Resolution Summary
+========================
+Resolved (flipped to AFK):
+  - #3 — Dashboard + issue CRUD
+  - #6 — Session spawning
+
+Partially resolved (still HITL):
+  - #7 — Embedded terminal (2 decisions unresolved)
+
+Still blocked (not grilled):
+  - #9 — Rich chat view (blocked by #6 HITL)
+
+Newly unblocked AFK issues (ready for execution):
+  - #4 — Git CLI integration (was blocked by #3)
+  - #10 — Worktree lifecycle (was blocked by #3)
+```

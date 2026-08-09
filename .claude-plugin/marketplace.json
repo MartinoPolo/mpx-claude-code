@@ -7,8 +7,13 @@
   "plugins": [
     {
       "name": "mp",
-      "source": "./",
-      "description": "Opinionated Claude Code toolkit: planning-to-ship skills (/mp:<name>), review/check agents, hooks, and a rich status line."
+      "source": "./plugins/mp",
+      "description": "Tracker-neutral Claude Code toolkit: planning-to-ship skills (/mp:<name>), review/check agents, hooks, and a rich status line."
+    },
+    {
+      "name": "mp-gh",
+      "source": "./plugins/gh",
+      "description": "GitHub layer for the mp toolkit: issue/PR/epic workflow skills and agents (/mp-gh:<name>). Personal account."
     }
   ]
 }
