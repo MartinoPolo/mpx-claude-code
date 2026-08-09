@@ -49,14 +49,16 @@ export function effortGauge(level: string): string {
  * cursor by — so a caller can right-align other content against it. Zero-cell
  * sequences are removed first: OSC-8 hyperlink wrappers (the visible label
  * between them is kept) and SGR color runs. Each surviving code point then counts
- * as one cell, except the ones this bar draws double-width — Private Use Area
- * Nerd Font icons (branch, VS Code, console, pencil) and real emoji (💬), which
- * Symbols Nerd Font / the emoji face draw into two cells.
+ * as one cell, except real emoji (💬), which the emoji face draws into two.
  *
- * The double-width set is deliberately over-inclusive rather than exact: a line
- * measured too *narrow* lets right-aligned content run past the margin and wrap,
- * which breaks the whole layout, while measuring an icon row a cell too *wide*
- * only shifts that row's right column left by a cell. Every non-PUA, non-emoji
+ * Private Use Area Nerd Font icons (branch, VS Code, console, pencil) are counted
+ * as one cell: Symbols Nerd Font renders them single-width in the configured
+ * terminal, so an exact measurement lets a ledger line seated after an icon-laden
+ * left row land on the same column as one seated after a plain-text row — the
+ * over-inclusive double-width guess used to shift the icon rows left and break the
+ * ledger's alignment. A terminal whose font draws those icons double would measure
+ * them a cell too narrow and drift the seated row *right*; the pinned block reserves
+ * a right margin (see `composeColumns`) to absorb that rather than wrap. Every other
  * glyph the bar uses (◆ ◇ █ ░ ≡ · ✓ × ⠀ Σ ↑ ↓ ±) is single-width and verified
  * against the terminal face, so the default of one is correct for them.
  */
@@ -74,14 +76,12 @@ export function visibleWidth(input: string): number {
     return width;
 }
 
-/** The code points this bar draws into two cells: PUA icons and emoji. */
+/**
+ * The code points this bar draws into two cells: real emoji only. Nerd Font PUA
+ * icons render single-width in the configured terminal and are measured as one.
+ */
 function isDoubleWidth(codePoint: number): boolean {
-    return (
-        (codePoint >= 0xe000 && codePoint <= 0xf8ff) || // BMP Private Use Area
-        (codePoint >= 0xf0000 && codePoint <= 0xffffd) || // Supplementary PUA-A
-        (codePoint >= 0x100000 && codePoint <= 0x10fffd) || // Supplementary PUA-B
-        codePoint >= 0x1f000 // emoji planes
-    );
+    return codePoint >= 0x1f000 && codePoint <= 0x1ffff; // emoji planes
 }
 
 /** Sanitizing the path is enough for a cache key; hashing would cost a process. */

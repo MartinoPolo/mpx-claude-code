@@ -516,14 +516,14 @@ scheme change shows on the next render.
 The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (`profiles.defaults.font.face`;
 WT walks the comma list per glyph). Text comes from Cascadia Mono; the Private Use Area pictograms
 fall through to Symbols Nerd Font — the git-branch glyph U+E725, VS Code U+F0A1E, console U+F018D and
-pencil U+F03EB. The non-"Mono" Symbols Nerd Font is used deliberately: it keeps the icons' native
-double-cell proportions (a terminal can only render a glyph bigger if the font draws it into more of
-the cell), and the overflow paints into a space the layout guarantees to its right.
+pencil U+F03EB.
 
-`visibleWidth` nonetheless **measures** these icons as one cell (see [Two-column layout](#two-column-layout)):
-the configured terminal draws them single-width, and measuring them wider was drifting the pinned
-ledger's rows out of alignment. If a terminal genuinely renders them double, the seated ledger row
-drifts right into the reserved `RIGHT_MARGIN` instead of wrapping.
+These pictograms render **single-width** in the configured terminal — one cell each, like the
+surrounding text — so `visibleWidth` measures them as one cell (see [Two-column layout](#two-column-layout)).
+An earlier version measured them as two, on the theory that Nerd Font draws icons into a double cell;
+that over-count drifted the pinned ledger out of alignment, seating a ledger line after an icon-laden
+left row a cell or two left of one seated after plain text. If a different terminal or font *did* draw
+them double, the seated row would drift right into the reserved `RIGHT_MARGIN` rather than wrap.
 
 Everything else stays within **plain** Cascadia Mono's cmap (parsed from the TTF), so a fallback to
 the non-NF font degrades exactly those pictograms and nothing else. Present: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░

@@ -229,6 +229,8 @@ Test suites for the guard hooks live in `hooks/__tests__/`.
 
 ![Sub-agent Status Line](assets/subagent-status-line.png)
 
+More scenarios (many agents, worktree, light theme, drift, narrow terminal) live in the [status-line gallery](assets/gallery/).
+
 **Account color** — `cc`/`ccw` repaint the terminal background before launching (`scripts/account-color.mts` + the tints in `statusline-accounts.json`: personal near-black faint-red, work dark blue; pi paints green from its own repo), so personal and work accounts are distinguishable at a glance while tab color stays free to mean *project*. The tint is dropped by any Windows Terminal settings reload and not re-emitted for a live pane, so the line-1 `P`/`W` badge is the tint-independent fallback. Both bars derive their whole palette from the Windows Terminal color scheme in `statusline-schemes.json`, with a contrast floor enforced per color — they follow scheme changes and invert correctly on a light theme.
 
 ### Installing the status lines
