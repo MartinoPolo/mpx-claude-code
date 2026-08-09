@@ -160,15 +160,12 @@ const statusLineFixtures: Fixture[] = [
         }),
         expect: [
             "Σ 3 agents",
-            "2×Explore",
-            "!fork", // the drift marker outlives the panel that first raised it
             "2×Sonnet",
             "95.7k", // 75746 + 20000, charged to sonnet alone
             "1×Fable",
             "77.6k",
-            // Three finished agents fit under the cap, so every one gets a row.
-            // The failed fork leads them however late it was spawned.
-            "!fable",
+            // Three finished agents fit under the cap, so every one gets its own
+            // row. The failed fork leads them however late it was spawned.
             "1m09s", // the fork's own elapsed time, frozen when it failed
             "3m30s",
             "75.7k",
@@ -177,8 +174,10 @@ const statusLineFixtures: Fixture[] = [
         // The running agent belongs to the tasks panel, so neither its type, its
         // tier, nor its half-million tokens may reach these rows.
         // `Opus` alone would collide with the model line's own "Opus 5", so the
-        // tier is rejected in the `N×` form only this block ever emits.
-        reject: ["mp-executor", "4 agents", "1×Opus", "673.4k", "173.4k", "more"]
+        // tier is rejected in the `N×` form only this block ever emits. And with
+        // every agent already on its own row, the per-type roll-call line is
+        // suppressed — `2×Explore` is the form only that line would emit.
+        reject: ["mp-executor", "4 agents", "1×Opus", "673.4k", "173.4k", "more", "2×Explore"]
     },
     {
         // Past the cap the block stops being a chronology and becomes a ranking:
@@ -216,6 +215,11 @@ const statusLineFixtures: Fixture[] = [
         }),
         expect: [
             "Σ 7 agents",
+            // Past the cap two agents get no row, so the per-type roll-call earns
+            // its second line: types by count, heaviest group first.
+            "3×Explore",
+            "3×mp-executor",
+            "1×fork",
             "880.0k", // the heaviest, spelled out first under the failure
             "770.0k",
             "660.0k",

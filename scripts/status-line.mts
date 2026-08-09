@@ -21,7 +21,8 @@ import {
     isNonNegativeInt,
     readFileOrEmpty,
     readStdin,
-    toNonNegativeInt
+    toNonNegativeInt,
+    visibleWidth
 } from "./lib/statusline-ansi.mts";
 import { loadPalette } from "./lib/terminal-theme.mts";
 import {
@@ -1389,19 +1390,19 @@ export interface LocationLineInput {
     branch: string;
     /** Web URL of the branch on its remote host; "" leaves the branch unlinked. */
     branchUrl: string;
-    /** Pre-colored, pre-linked `:port` segments for this project's dev servers. */
-    devServers: string[];
-    mrBlock: string;
 }
 
 /**
- * Where you are and what you are working on: project (slash worktree), branch,
- * dev servers, MR/PR and its CI. In a worktree the two path halves are separate
- * click targets — the project name opens the original folder, the worktree name
- * opens the worktree — and the worktree half takes WHITE because it, not the
- * project, answers "where am I". Each half carries its own icon pair — VS Code
- * and a terminal tab — so both the original checkout and the worktree are one
- * click away in either tool.
+ * Where you are and what you are working on: project (slash worktree) and branch.
+ * In a worktree the two path halves are separate click targets — the project name
+ * opens the original folder, the worktree name opens the worktree — and the
+ * worktree half takes WHITE because it, not the project, answers "where am I".
+ * Each half carries its own icon pair — VS Code and a terminal tab — so both the
+ * original checkout and the worktree are one click away in either tool.
+ *
+ * The dev-server ports and the MR/PR block are a separate row (see
+ * `buildServersAndReviewLine`): the worktree path and branch can each run long,
+ * and trailing that state behind them pushed it off the right edge.
  */
 export function buildLocationLine(input: LocationLineInput): string {
     // Every icon keeps a plain space behind it, the last one included: these
@@ -1429,10 +1430,19 @@ export function buildLocationLine(input: LocationLineInput): string {
     ).trimEnd();
     return joinSegments([
         name,
-        input.branch === "" ? "" : `${GRAY}${BRANCH_ICON} ${maybeLink(input.branchUrl, input.branch)}${RESET}`,
-        ...input.devServers,
-        input.mrBlock
+        input.branch === "" ? "" : `${GRAY}${BRANCH_ICON} ${maybeLink(input.branchUrl, input.branch)}${RESET}`
     ]);
+}
+
+/**
+ * The outward-facing state of this checkout, split off the location line and
+ * indented beneath it: dev-server ports (with their edit-the-config pencil) and
+ * the merge/pull request — its number, CI, review comments and age. "" when there
+ * is neither, so the row is dropped rather than emitted blank.
+ */
+export function buildServersAndReviewLine(devServers: readonly string[], mrBlock: string): string {
+    const line = joinSegments([...devServers, mrBlock]);
+    return line === "" ? "" : `${INDENT_GUARD}   ${line}`;
 }
 
 export interface BranchStateInput {
@@ -1445,8 +1455,8 @@ export interface BranchStateInput {
  * How the branch stands: upstream relation, uncommitted work, fetch age. Split
  * off the location line because those three counts grow without bound during a
  * working session and used to push the MR reference off the right edge.
- * Indented under the location line the way compaction rows nest under the
- * usage line: visually a detail *of* the row above, not a peer.
+ * Indented like the servers/review row above it, the way compaction rows nest
+ * under the usage line: both read as a detail *of* the location block, not a peer.
  */
 export function buildBranchStateLine(input: BranchStateInput): string {
     const line = joinSegments([input.gitSigns, ...input.gitDirt, input.fetchAge]);
@@ -1601,13 +1611,16 @@ const AGENT_DURATION_WIDTH = 6; // 1h06m
 const AGENT_TOKENS_WIDTH = 7; // 612.4k
 
 /**
- * Every sub-agent that has *finished* this session: a tally row — how many, of
- * which tiers, for how many tokens each tier cost, and which agent types they
- * were — followed by one row per agent for the handful worth spelling out.
+ * Every sub-agent that has *finished* this session: a tally row — how many agents
+ * and what each tier cost — then a row per agent for the handful worth spelling
+ * out. When those rows cannot list every agent, a roll-call row between the two
+ * names the types and how often each ran; while they can, it is dropped as a
+ * restatement of names already on screen.
  *
- * Rendered last, so it sits directly above the tasks panel: the ledger and the
- * live view read as one block, and the block grows downward into empty terminal
- * rather than pushing the quota bars around as agents accumulate.
+ * The right column of the bar (see `composeColumns`): the block is pinned to the
+ * terminal's right edge, filling the gutter beside the short left rows, and grows
+ * downward into empty terminal rather than pushing the quota bars around as
+ * agents accumulate.
  *
  * The tasks panel below this bar owns the live view and evicts a task 30s after
  * it ends, so before these rows a completed agent left no trace anywhere.
@@ -1637,31 +1650,34 @@ export function buildSubagentLine(input: SubagentLineInput): string[] {
         })
         .join(" ");
 
-    const shownTypes = summary.types.slice(0, AGENT_TYPE_ROWS);
-    const types = shownTypes.map((group) => {
-        const name = group.count === 1 ? group.label : countLabel(group.count, group.label);
-        // Same `!` the tasks panel prefixes a drifted cell with, and the same
-        // red — a rule broken means one thing on both renderers. Here it names
-        // the agent that broke it, which the tier tally beside it cannot.
-        const label = group.drifted ? `${DRIFT_MARKER}${name}` : name;
-        return `${group.drifted ? DRIFT : GRAY}${maybeLink(definitionUrl(input, group.label), label)}${RESET}`;
-    });
-    const hiddenTypes = summary.types.length - shownTypes.length;
-    if (hiddenTypes > 0) {
-        types.push(`${DIM}+${hiddenTypes}${RESET}`);
-    }
-
     // DIM throughout: this is a ledger you consult, never a state to act on —
     // the same weight the compaction history and the cost totals carry. The tier
     // counts keep their palette because that is the one comparison worth making
     // at a glance.
-    const lines = [
-        joinSegments([
-            `${DIM}Σ ${summary.agents} agent${summary.agents === 1 ? "" : "s"}${RESET}`,
-            tiers,
-            types.join(" ")
-        ])
-    ];
+    const lines = [joinSegments([`${DIM}Σ ${summary.agents} agent${summary.agents === 1 ? "" : "s"}${RESET}`, tiers])];
+
+    // A second row spelling out the types, but only when the detail rows below
+    // cannot list every agent: while all of them fit as their own rows, the names
+    // are already right there and repeating them as a tally says nothing. Past that
+    // the detail block is truncated, and this roll-call is the only place a hidden
+    // agent's type is named. Every count keeps its `N×`, one included, so the row
+    // reads as counts and matches the tier tally's own `1×Haiku`.
+    if (summary.hiddenRows > 0) {
+        const shownTypes = summary.types.slice(0, AGENT_TYPE_ROWS);
+        const types = shownTypes.map((group) => {
+            const name = countLabel(group.count, group.label);
+            // Same `!` the tasks panel prefixes a drifted cell with, and the same
+            // red — a rule broken means one thing on both renderers. Here it names
+            // the agent that broke it, which the tier tally beside it cannot.
+            const label = group.drifted ? `${DRIFT_MARKER}${name}` : name;
+            return `${group.drifted ? DRIFT : GRAY}${maybeLink(definitionUrl(input, group.label), label)}${RESET}`;
+        });
+        const hiddenTypes = summary.types.length - shownTypes.length;
+        if (hiddenTypes > 0) {
+            types.push(`${DIM}+${hiddenTypes}${RESET}`);
+        }
+        lines.push(types.join(" "));
+    }
 
     // Both columns size to the widest value actually on screen: an all-`Explore`
     // session should not be indented for the width of `mp-reviewer-security`,
@@ -1908,9 +1924,73 @@ function fetchUsdCzkRate(): string {
 
 // --- Render ------------------------------------------------------------------
 
-function emit(line: string): string {
-    const { text, truncated } = expandBackslashEscapes(line);
-    return truncated ? text : `${text}\n`;
+/** Renders one expanded line, honoring `\c` truncation (which ate its own newline). */
+function emitRow(expanded: { text: string; truncated: boolean }): string {
+    return expanded.truncated ? expanded.text : `${expanded.text}\n`;
+}
+
+/** Minimum blank cells kept between the left column and the pinned right block. */
+const COLUMN_GAP = 2;
+
+/**
+ * Two-column layout. The left column (session, model, location … quota) keeps the
+ * left edge; the right column — the finished-agent ledger — is pinned to the
+ * terminal's right edge so the wide gutter beside a short bar is put to use. The
+ * whole ledger block starts at one column (`columns - blockWidth`) so its table
+ * stays vertically aligned, and it begins on the *first* row: when the bar fills
+ * the width, Claude Code relocates its own right-aligned indicators (remote-control
+ * `/rc`, queued-agent count) to their own rows below the bar, leaving the first
+ * row's right edge free.
+ *
+ * The ledger stays in order and contiguous. A left row too wide to seat its next
+ * ledger line beside it leaves that line for a later row; any ledger lines with no
+ * left row to share fall to their own pinned rows below. It falls back to stacking
+ * the two columns (the layout before a width was known) when there is no ledger,
+ * `$COLUMNS` gave no width, or the widest ledger line cannot fit beside the left
+ * column at all.
+ *
+ * A pinned row would start with spaces, which Claude Code trims off every row, so
+ * its first cell is the same invisible U+2800 guard the ledger's own indent uses —
+ * it survives the trim and holds the block in place.
+ */
+export function composeColumns(leftLines: string[], rightLines: string[], columns: number): string {
+    const stacked = (): string => [...leftLines, ...rightLines].map((line) => emitRow(expandBackslashEscapes(line))).join("");
+    if (rightLines.length === 0 || columns <= 0) {
+        return stacked();
+    }
+
+    const right = rightLines.map((line) => {
+        const text = expandBackslashEscapes(line).text;
+        return { text, width: visibleWidth(text) };
+    });
+    const blockStart = columns - Math.max(...right.map((entry) => entry.width));
+    if (blockStart < COLUMN_GAP) {
+        return stacked();
+    }
+
+    const pinned = (text: string): string => `${INDENT_GUARD}${" ".repeat(blockStart - 1)}${text}`;
+
+    const out: string[] = [];
+    let next = 0; // the next ledger line still waiting for a row to sit on
+    leftLines.forEach((line) => {
+        const { text, truncated } = expandBackslashEscapes(line);
+        // A truncated line ate the rest of its own row, so nothing may follow it.
+        if (truncated || next >= right.length) {
+            out.push(truncated ? text : `${text}\n`);
+            return;
+        }
+        const gap = blockStart - visibleWidth(text);
+        if (gap >= COLUMN_GAP) {
+            out.push(`${text}${" ".repeat(gap)}${right[next]!.text}\n`);
+            next += 1;
+        } else {
+            out.push(`${text}\n`); // too wide to share — this ledger line waits
+        }
+    });
+    for (; next < right.length; next += 1) {
+        out.push(`${pinned(right[next]!.text)}\n`);
+    }
+    return out.join("");
 }
 
 function render(): string {
@@ -2105,7 +2185,10 @@ function render(): string {
     });
 
     const transcriptUrl = fields.transcriptPath === "" ? "" : toFileUrl(fields.transcriptPath);
-    const lines = [
+    // The left column is every bar row except the finished-agent ledger, which is
+    // pinned to the right. A row with nothing to say is dropped rather than emitted
+    // blank — outside a repo the branch state has no content at all.
+    const leftLines = [
         buildSessionLine(fields.sessionName, shortId, transcriptUrl),
         buildModelLine(fields.model, fields.effortLevel),
         buildLocationLine({
@@ -2118,19 +2201,19 @@ function render(): string {
             projectTerminalUrl,
             worktreeTerminalUrl,
             branch,
-            branchUrl: remote.branchUrl,
-            devServers,
-            mrBlock
+            branchUrl: remote.branchUrl
         }),
+        buildServersAndReviewLine(devServers, mrBlock),
         buildBranchStateLine({ gitSigns, gitDirt, fetchAge }),
         buildUsageLine({ sessionTokensIn: fields.sessionTokensIn, tokensK, ctxPct, usdDisplay, czkDisplay, compactLimit }),
         ...buildCompactionLines(compactions, `${INDENT_GUARD} `, COMPACTION_STYLE),
-        quotaLine,
-        ...subagentLines
-    ];
-    // A row with nothing to say is dropped rather than emitted blank — outside a
-    // repo the branch state has no content at all.
-    return lines.filter((line) => line !== "").map(emit).join("");
+        quotaLine
+    ].filter((line) => line !== "");
+
+    // Terminal width comes from $COLUMNS (Claude Code exports it for the status
+    // line); absent, composeColumns falls back to stacking the ledger below.
+    const columns = toNonNegativeInt(process.env.COLUMNS, 0);
+    return composeColumns(leftLines, subagentLines.filter((line) => line !== ""), columns);
 }
 
 /**

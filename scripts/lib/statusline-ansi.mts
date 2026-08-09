@@ -44,6 +44,46 @@ export function effortGauge(level: string): string {
     return "◆".repeat(rank) + "◇".repeat(EFFORT_SLOTS - rank);
 }
 
+/**
+ * Rendered column width of a status-line string — what the terminal advances the
+ * cursor by — so a caller can right-align other content against it. Zero-cell
+ * sequences are removed first: OSC-8 hyperlink wrappers (the visible label
+ * between them is kept) and SGR color runs. Each surviving code point then counts
+ * as one cell, except the ones this bar draws double-width — Private Use Area
+ * Nerd Font icons (branch, VS Code, console, pencil) and real emoji (💬), which
+ * Symbols Nerd Font / the emoji face draw into two cells.
+ *
+ * The double-width set is deliberately over-inclusive rather than exact: a line
+ * measured too *narrow* lets right-aligned content run past the margin and wrap,
+ * which breaks the whole layout, while measuring an icon row a cell too *wide*
+ * only shifts that row's right column left by a cell. Every non-PUA, non-emoji
+ * glyph the bar uses (◆ ◇ █ ░ ≡ · ✓ × ⠀ Σ ↑ ↓ ±) is single-width and verified
+ * against the terminal face, so the default of one is correct for them.
+ */
+export function visibleWidth(input: string): number {
+    const stripped = input
+        // OSC sequences (incl. the OSC-8 open `ESC]8;;URL BEL` and close
+        // `ESC]8;; BEL`), terminated by BEL or ST — the label between two of them
+        // is ordinary text and survives.
+        .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+        .replace(/\x1b\[[0-9;]*m/g, "");
+    let width = 0;
+    for (const character of stripped) {
+        width += isDoubleWidth(character.codePointAt(0)!) ? 2 : 1;
+    }
+    return width;
+}
+
+/** The code points this bar draws into two cells: PUA icons and emoji. */
+function isDoubleWidth(codePoint: number): boolean {
+    return (
+        (codePoint >= 0xe000 && codePoint <= 0xf8ff) || // BMP Private Use Area
+        (codePoint >= 0xf0000 && codePoint <= 0xffffd) || // Supplementary PUA-A
+        (codePoint >= 0x100000 && codePoint <= 0x10fffd) || // Supplementary PUA-B
+        codePoint >= 0x1f000 // emoji planes
+    );
+}
+
 /** Sanitizing the path is enough for a cache key; hashing would cost a process. */
 export function cacheKey(value: string): string {
     const key = value.replace(/[^a-zA-Z0-9]/g, "_");

@@ -15,9 +15,11 @@ import {
     buildModelLine,
     buildMrBlock,
     buildQuotaLine,
+    buildServersAndReviewLine,
     buildSessionLine,
     buildSubagentLine,
     buildUsageLine,
+    composeColumns,
     expandBackslashEscapes,
     extractPayloadFields,
     formatPct,
@@ -38,7 +40,7 @@ import {
     type SubagentLineInput
 } from "../status-line.mts";
 // Lives in the shared lib because both renderers draw the same gauge.
-import { effortGauge } from "../lib/statusline-ansi.mts";
+import { effortGauge, visibleWidth } from "../lib/statusline-ansi.mts";
 import { type FinishedAgent } from "../lib/subagent-history.mts";
 import { loadPalette } from "../lib/terminal-theme.mts";
 
@@ -426,9 +428,7 @@ describe("buildLocationLine", () => {
         projectTerminalUrl: "",
         worktreeTerminalUrl: "",
         branch: "",
-        branchUrl: "",
-        devServers: [] as string[],
-        mrBlock: ""
+        branchUrl: ""
     };
 
     it("shows only the project name outside a repo", () => {
@@ -511,25 +511,16 @@ describe("buildLocationLine", () => {
         );
     });
 
-    it("appends the MR block even when there is no branch section", () => {
-        expect(buildLocationLine({ ...empty, mrBlock: `${MR}#42${RESET}` })).toBe(
-            `${WHITE}repo${RESET}${SEPARATOR}${MR}#42${RESET}`
-        );
-    });
-
-    it("joins name+editor, branch, dev servers and MR block in that order", () => {
+    it("joins name+editor and branch in that order, and stops there", () => {
         expect(
             buildLocationLine({
                 ...empty,
                 branch: "main",
-                projectEditorUrl: "file:///c/open.url",
-                devServers: [`${DIM}:8100${RESET}`],
-                mrBlock: `${MR}#42${RESET}`
+                projectEditorUrl: "file:///c/open.url"
             })
         ).toBe(
             `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}` +
-                `${SEPARATOR}${GRAY}${BRANCH_ICON} main${RESET}` +
-                `${SEPARATOR}${DIM}:8100${RESET}${SEPARATOR}${MR}#42${RESET}`
+                `${SEPARATOR}${GRAY}${BRANCH_ICON} main${RESET}`
         );
     });
 
@@ -547,6 +538,22 @@ describe("buildLocationLine", () => {
 
     it("keeps the name readable when no URL could be built", () => {
         expect(buildLocationLine(empty)).not.toContain("\x1b]8");
+    });
+});
+
+describe("buildServersAndReviewLine", () => {
+    it("is empty when there are neither ports nor an MR block", () => {
+        expect(buildServersAndReviewLine([], "")).toBe("");
+    });
+
+    it("indents the ports and MR block under the location line", () => {
+        expect(buildServersAndReviewLine([`${DIM}:8100${RESET}`, `${DIM}:8101${RESET}`], `${MR}#42${RESET}`)).toBe(
+            `${INDENT_GUARD}   ${DIM}:8100${RESET}${SEPARATOR}${DIM}:8101${RESET}${SEPARATOR}${MR}#42${RESET}`
+        );
+    });
+
+    it("renders the MR block alone when there are no ports", () => {
+        expect(buildServersAndReviewLine([], `${MR}#42${RESET}`)).toBe(`${INDENT_GUARD}   ${MR}#42${RESET}`);
     });
 });
 
@@ -836,11 +843,10 @@ describe("buildSubagentLine", () => {
         expect(build({ summary: { ...summary, agents: 0 } })).toEqual([]);
     });
 
-    it("lays out the count, the per-tier tally and the agent types", () => {
+    it("lays out the count and the per-tier tally on the first line", () => {
         expect(build()[0]).toBe(
             `${DIM}Σ 3 agents${RESET}` +
-                `${SEPARATOR}${ACCENT}1×Opus ${DIM}95.2k${RESET} ${YELLOW}2×Sonnet ${DIM}99.0k${RESET}` +
-                `${SEPARATOR}${GRAY}2×Explore${RESET} ${GRAY}mp-executor${RESET}`
+                `${SEPARATOR}${ACCENT}1×Opus ${DIM}95.2k${RESET} ${YELLOW}2×Sonnet ${DIM}99.0k${RESET}`
         );
     });
 
@@ -852,28 +858,43 @@ describe("buildSubagentLine", () => {
         expect(build({ summary: { ...summary, agents: 1 } })[0]).toContain(`${DIM}Σ 1 agent${RESET}`);
     });
 
-    it("drops the multiplier for a type that ran once", () => {
-        const line = build({ summary: { ...summary, types: [group("Explore")] } })[0]!;
-        expect(line).toContain(`${GRAY}Explore${RESET}`);
-        expect(line).not.toContain("1×Explore");
+    it("rolls the agent types onto a second line when the detail rows cannot list them all", () => {
+        expect(build({ summary: { ...summary, hiddenRows: 1 } })[1]).toBe(
+            `${GRAY}2×Explore${RESET} ${GRAY}1×mp-executor${RESET}`
+        );
+    });
+
+    it("omits the type roll-call while every finished agent already has its own row", () => {
+        const lines = build({ summary: { ...summary, rows: [agent("a")], hiddenRows: 0 } });
+        expect(lines.some((line) => line.includes("2×Explore"))).toBe(false);
+    });
+
+    it("keeps the 1× multiplier for a type that ran once", () => {
+        const line = build({ summary: { ...summary, types: [group("Explore")], hiddenRows: 1 } })[1]!;
+        expect(line).toBe(`${GRAY}1×Explore${RESET}`);
     });
 
     it("marks a type with a detected policy drift in the panel's red", () => {
-        const line = build({ summary: { ...summary, types: [group("fork", 1, { drifted: true })] } })[0]!;
-        expect(line).toContain(`${RED}!fork${RESET}`);
+        const line = build({
+            summary: { ...summary, types: [group("fork", 1, { drifted: true })], hiddenRows: 1 }
+        })[1]!;
+        expect(line).toContain(`${RED}!1×fork${RESET}`);
     });
 
     it("collapses everything past the sixth type into a count", () => {
         const types = ["one", "two", "three", "four", "five", "six", "seven", "eight"].map((label) => group(label));
-        const line = build({ summary: { ...summary, types } })[0]!;
-        expect(line).toContain(`${GRAY}six${RESET}`);
+        const line = build({ summary: { ...summary, types, hiddenRows: 1 } })[1]!;
+        expect(line).toContain(`${GRAY}1×six${RESET}`);
         expect(line).toContain(`${DIM}+2${RESET}`);
         expect(line).not.toContain("seven");
     });
 
     it("links an agent type to the file that defines it", () => {
-        const line = build({ agentDefinition: (type) => (type === "mp-executor" ? "/agents/mp-executor.md" : "") })[0]!;
-        expect(line).toContain(hyperlink("file:///agents/mp-executor.md", "mp-executor"));
+        const line = build({
+            summary: { ...summary, hiddenRows: 1 },
+            agentDefinition: (type) => (type === "mp-executor" ? "/agents/mp-executor.md" : "")
+        })[1]!;
+        expect(line).toContain(hyperlink("file:///agents/mp-executor.md", "1×mp-executor"));
         expect(line).toContain(`${GRAY}2×Explore${RESET}`);
     });
 
@@ -924,8 +945,10 @@ describe("buildSubagentLine", () => {
     });
 
     it("counts the agents that got no row of their own", () => {
+        // hiddenRows > 0 also surfaces the type roll-call (line 1), so the tally is
+        // line 0, the roll-call line 1, the one detail row line 2, this line 3.
         const rows = build({ summary: { ...summary, rows: [agent("a")], hiddenRows: 7 } });
-        expect(rows[2]).toBe(`${INDENT_GUARD} ${DIM}+7 more${RESET}`);
+        expect(rows[3]).toBe(`${INDENT_GUARD} ${DIM}+7 more${RESET}`);
     });
 
     it("leaves a run unlinked when its transcript is not on disk", () => {
@@ -1303,5 +1326,70 @@ describe("extractPayloadFields", () => {
 
     it("flattens newlines so a field cannot break the line layout", () => {
         expect(extractPayloadFields(JSON.stringify({ session_name: "two\nlines" })).sessionName).toBe("two lines");
+    });
+});
+
+describe("visibleWidth", () => {
+    it("counts plain text one cell per character", () => {
+        expect(visibleWidth("abc def")).toBe(7);
+    });
+
+    it("ignores SGR color runs", () => {
+        expect(visibleWidth(`${WHITE}abc${RESET}`)).toBe(3);
+    });
+
+    it("keeps an OSC-8 hyperlink's label but not its wrappers", () => {
+        expect(visibleWidth(hyperlink("file:///some/long/path", "repo"))).toBe(4);
+    });
+
+    it("counts a Private Use Area Nerd Font icon as two cells", () => {
+        expect(visibleWidth("")).toBe(2); // branch icon
+        expect(visibleWidth("\u{F0A1E}")).toBe(2); // VS Code icon, astral PUA
+    });
+
+    it("counts an emoji as two cells", () => {
+        expect(visibleWidth("💬")).toBe(2);
+    });
+
+    it("counts the bar's own single-width glyphs as one cell each", () => {
+        // ◆ ◇ █ ░ ≡ · ✓ × ⠀ Σ ↑ ↓ — none may be treated as double-width.
+        expect(visibleWidth("◆◇█░≡·✓×⠀Σ↑↓")).toBe(12);
+    });
+});
+
+describe("composeColumns", () => {
+    // Plain-ASCII fixtures: visibleWidth then equals length, so the padding math
+    // is easy to read. `columns` is chosen per case to place the block.
+    it("stacks the columns when there is no ledger", () => {
+        expect(composeColumns(["a", "b"], [], 80)).toBe("a\nb\n");
+    });
+
+    it("stacks when no terminal width is known", () => {
+        expect(composeColumns(["a"], ["ledger"], 0)).toBe("a\nledger\n");
+    });
+
+    it("pins the ledger from the first row", () => {
+        // columns 20, right "R" width 1 -> blockStart 19; row 0 gap 19-1 = 18.
+        expect(composeColumns(["S", "M"], ["R"], 20)).toBe(`S${" ".repeat(18)}R\nM\n`);
+    });
+
+    it("defers a ledger line past a left row too wide to share, onto the next", () => {
+        const wide = "x".repeat(18); // gap 18-18 = 0 < COLUMN_GAP, cannot seat "R2"
+        // Two ledger lines (widest width 2 -> blockStart 18): "R1" seats on "S",
+        // the wide row cannot share, so "R2" defers to "M".
+        expect(composeColumns(["S", wide, "M"], ["R1", "R2"], 20)).toBe(
+            `S${" ".repeat(17)}R1\n${wide}\nM${" ".repeat(17)}R2\n`
+        );
+    });
+
+    it("pins leftover ledger lines to their own rows below", () => {
+        // One left row and two ledger lines; both width 2 -> blockStart 18. "R1"
+        // seats on "S"; "R2" has no left row left, so it pins to its own row.
+        const out = composeColumns(["S"], ["R1", "R2"], 20);
+        expect(out).toBe(`S${" ".repeat(17)}R1\n${INDENT_GUARD}${" ".repeat(17)}R2\n`);
+    });
+
+    it("falls back to stacking when the widest ledger line cannot fit", () => {
+        expect(composeColumns(["S", "M"], ["ledgerline"], 5)).toBe("S\nM\nledgerline\n");
     });
 });

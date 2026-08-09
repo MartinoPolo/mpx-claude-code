@@ -10,8 +10,11 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
 
 - **One separator.** ` · ` (U+00B7) means "next field" everywhere; there is no second rank of
   separator.
-- **Branch state has its own row.** Its counts grow without bound during a session and would push
-  the MR reference off the right edge if kept on the location row.
+- **The location row is only project/worktree and branch.** The dev-server ports and the MR/PR
+  block move to a row of their own (`buildServersAndReviewLine`), indented beneath it: the worktree
+  path and branch can each run long, and trailing that state behind them pushed it off the right edge.
+- **Branch state has its own row too.** Its counts grow without bound during a session; it is
+  indented beside the servers/review row, both reading as a detail of the location above.
 - **The directory name is the only white field.** It answers "where am I", asked most often and
   from furthest away; every other field on that row stays grey. In a worktree the white moves to
   the worktree half of `project/worktree`, the actual location.
@@ -28,6 +31,32 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
   toward white. It is the title of the thing you are looking at, found before anything else.
 - **An empty row is dropped, not emitted blank** — outside a repo the branch-state row has no
   content, so the rows below move up.
+
+## Two-column layout
+
+The left column (session, model, location, branch state, context/cost, compaction, quota) keeps the
+left edge; the finished-agent ledger is **pinned to the right**, filling the gutter beside the short
+left rows instead of stacking below them. `composeColumns` does this after both columns are built.
+
+- **Width comes from `$COLUMNS`**, which Claude Code exports for the status-line command (there is no
+  width in the stdin JSON — that field exists only in the *sub-agent* panel's payload). With no width
+  the composer falls back to stacking, which is the layout that existed before, so an older Claude
+  Code or an odd environment degrades rather than breaks.
+- **The block starts on the first row.** When the bar fills the width, Claude Code relocates its own
+  right-aligned indicators (remote-control `/rc`, the queued-agent count) to their own rows below the
+  bar, so the first row's right edge is free for the ledger.
+- **The whole block pins at one column** (`columns - widestLedgerLine`), so the ledger's table stays
+  vertically aligned; only its widest line reaches the right margin. A left row too wide to seat its
+  next ledger line beside it leaves that line for a later row, and any ledger lines with no left row
+  to share fall to their own pinned rows below — the ledger stays in order and contiguous either way.
+- **A pinned row leads with the U+2800 guard**, not spaces, for the same reason the nested rows do:
+  Claude Code trims leading whitespace off every row, and the guard survives it.
+- **Widths are measured with `visibleWidth`** (`lib/statusline-ansi.mts`), which strips SGR runs and
+  OSC-8 hyperlink wrappers and then counts cells. It counts Private Use Area Nerd Font icons and
+  emoji as **two** cells deliberately over-inclusively: a line measured too narrow would let the right
+  column run past the margin and wrap, breaking the layout, whereas measuring an icon row a cell too
+  wide only shifts that one row's right column left by a cell. When it cannot fit the block beside the
+  left column at all (`columns - widestLedgerLine < 2`), it falls back to stacking.
 
 ## Data sources
 
@@ -253,24 +282,29 @@ the built-in row.
 ## Sub-agent history on the main bar
 
 The tasks panel is a **live view**, never a ledger — it renders only agents still in the payload and
-evicts a terminal task shortly after it ends. The main bar carries the ledger: a tally row, then one
-row per agent for the handful worth spelling out.
+evicts a terminal task shortly after it ends. The main bar carries the ledger: a tally row, an
+optional type roll-call row, then one row per agent for the handful worth spelling out.
 
 ```
-Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
+Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k
+4×mp-executor 2×Explore !fork
 ⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
 ⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02s  231.4k  2×auto
 ⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
 ⠀ +3 more
 ```
 
-- **Tally columns**: count — tier tally each with its own tokens — agent types. Everything is dim
-  except the tier counts, which keep the panel's palette because tier mix is the one comparison
-  worth making at a glance. Tokens are charged per tier, not summed.
+- **Tally row**: count — tier tally, each tier carrying its own tokens (charged per tier, not
+  summed). Everything is dim except the tier counts, which keep the panel's palette because tier mix
+  is the one comparison worth making at a glance.
+- **Type roll-call row**: the agent types by count, heaviest group first — but *only* when the detail
+  rows below cannot list every agent (`hiddenRows > 0`). While every agent has its own row, the names
+  are already on screen and the roll-call is dropped as a restatement.
 - **Row columns**: status — agent type — tier — effort gauge — elapsed — tokens — compaction counts.
   The name and tier columns size to the widest value on screen; the gauges start at one column so
   they compare down the block.
-- **Rendered last**, below the quota bars, so ledger and live view read as one block.
+- **Pinned to the right** of the left column from the first row (see [Two-column
+  layout](#two-column-layout)); it stacks below the quota bars only when the terminal is too narrow.
 - **Which agents get a row.** `AGENT_DETAIL_ROWS`, plus *every* failure — a failed or killed agent
   is always spelled out and always first, however many there are. Within the cap, agents keep spawn
   order if they all fit, otherwise rank by tokens (largest first). The remainder become `+N more`.
@@ -279,7 +313,8 @@ row per agent for the handful worth spelling out.
 - **Only finished agents.** A running agent is already on the panel with more detail, so the two
   renderers split cleanly: **panel = running, main bar = finished.**
 - **`N×Name`, one idiom everywhere** — `2×Explore`, `1×Opus`, `2×High`, same meaning on both
-  renderers. A type that ran once drops the `1×`. `×` is U+00D7.
+  renderers, and the count is always shown, `1×` included, so the roll-call reads as counts and
+  matches the tier tally's own `1×Opus`. `×` is U+00D7.
 
 **Three files, none in the payload:**
 
@@ -294,13 +329,13 @@ ticks continuously while any agent runs. The sidecars are read by id (the TSV al
 agent) and read fresh, being small and immutable. An agent whose sidecar cannot be read still counts
 toward the tally; only its name goes `unknown`, so the count never disagrees with the panel.
 
-**The `!` marker outlives the panel.** A type on the tally is marked red when any of its agents ran
-on a banned tier (`!fork` = the fork ran on fable); on a spelled-out row the marker sits on the tier
-cell (`!fable`). Only the tier rule is reachable here — the state file records the *resolved* effort,
+**The `!` marker outlives the panel.** A type on the roll-call row is marked red when any of its
+agents ran on a banned tier (`!fork` = the fork ran on fable); on a spelled-out row the marker sits
+on the tier cell (`!fable`). Only the tier rule is reachable here — the state file records the *resolved* effort,
 not whether it was declared, so flagging an inherited level would accuse an agent of a choice it
 never made. Those effort rules stay with the panel, which knows the difference.
 
-**Two links:** an agent **type** (on the tally or at a row head) opens `.claude/agents/<type>.md`,
+**Two links:** an agent **type** (on the roll-call or at a row head) opens `.claude/agents/<type>.md`,
 the file that defines it (project-level over user-level; a built-in nobody overrode has no file and
 no link); a row's **status glyph** opens that run's own transcript, because that cell belongs to one
 run while a type name shared by four agents has four transcripts and no honest target.
