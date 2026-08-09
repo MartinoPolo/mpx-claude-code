@@ -26,7 +26,7 @@ the read skill's `allowed-tools` does not apply — the session's current permis
 Name the agent type at every spawn. Only a real `model` parameter selects a model; prose is
 ignored.
 
-Use model classes from `skills/shared/SUBAGENT_PROTOCOL.md`: advanced for analysis, design, and
+Use model classes from `plugins/mp/skills/shared/SUBAGENT_PROTOCOL.md`: advanced for analysis, design, and
 implementation; standard `medium` for review and `low` for exploration; mechanical for bounded
 work. Frontier (Fable `high`) is a deliberate manual escalation for large-task orchestration, not
 a routine sub-agent choice. Only a real `model` parameter selects a concrete model.
