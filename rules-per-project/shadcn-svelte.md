@@ -9,9 +9,10 @@ applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*_variants.ts'
 
 # shadcn-svelte
 
-Built on **Bits UI** primitives, Tailwind CSS 4, and TypeScript. Components live as source code under `$lib/components/shadcn/`.
+Built on **Bits UI** primitives, Tailwind CSS 4, and TypeScript. Components live as source code in the project's base tier — `$lib/components/base/` by default; some projects split direct shadcn installs into a separate `$lib/components/shadcn/`.
 
 > **Docs:** Fetch https://www.shadcn-svelte.com/llms.txt or use Context7 MCP for up-to-date API reference.
+> **Which component for which need:** see `$MPX_PROJECTS/mpx-claude-code/rules-per-project/references/shadcn-svelte-component-catalog.md` — consult it before writing custom markup.
 
 ## Component Layering System
 
@@ -19,7 +20,7 @@ Three tiers — every component belongs to exactly one:
 
 | Tier | Location | Storybook prefix | When to use |
 |------|----------|-------------------|-------------|
-| **Base** | `shadcn/` + `base/` | `Base/` | Direct shadcn-svelte installations + small custom primitives (HelpText, SearchField, StatCell) |
+| **Base** | `base/` (plus `shadcn/` in projects that split installs) | `Base/` | Direct shadcn-svelte installations + small custom primitives (HelpText, SearchField, StatCell) |
 | **Derived** | `derived/` | `Derived/` | Wraps Base components for a specific app concern. Create when a pattern is used **≥2 times** across the UI. |
 | **Blocks** | `blocks/<module>/` | `Blocks/<Module>/` | Feature-level composed UI: cards, panels, wizards, views. May depend on context stores. |
 
@@ -35,10 +36,10 @@ Three tiers — every component belongs to exactly one:
 **Single-component** (button, input, badge, …): named import.
 
 ```ts
-import * as Dialog from "$lib/components/shadcn/dialog/index.js";
-import * as Card from "$lib/components/shadcn/card/index.js";
-import { Button } from "$lib/components/shadcn/button/index.js";
-import { Input } from "$lib/components/shadcn/input/index.js";
+import * as Dialog from "$lib/components/base/dialog/index.js";
+import * as Card from "$lib/components/base/card/index.js";
+import { Button } from "$lib/components/base/button/index.js";
+import { Input } from "$lib/components/base/input/index.js";
 ```
 
 Derived components have no barrel — import the `.svelte` file directly.
@@ -111,34 +112,6 @@ Use path-based Lucide imports. Components handle sizing — **no `size-*` classe
 - **`ToggleGroup`** for 2–5 option sets — never manual `Button` loops with active state.
 - **`Field.FieldSet` + `Field.FieldLegend`** for grouping related checkboxes/radios.
 - **Validation**: `data-invalid` on `Field.Field`, `aria-invalid` on the control. **Disabled**: `data-disabled` on `Field.Field`, `disabled` on the control.
-
-## Prefer Built-in Components
-
-| Instead of | Use |
-|------------|-----|
-| `<hr>` or border div | `<Separator />` |
-| `animate-pulse` div | `<Skeleton class="h-4 w-3/4" />` |
-| Custom styled span | `<Badge variant="secondary">` |
-| Custom callout div | `<Alert>` with `Alert.Title` / `Alert.Description` |
-| Custom empty state | `<Empty.Root>` with sub-components |
-| Custom toast | `toast()` from `svelte-sonner` |
-
-## Component Selection
-
-| Need | Use |
-|------|-----|
-| Button/action | `Button` with variant |
-| Form inputs | `Input`, `Select`, `Combobox`, `Switch`, `Checkbox`, `RadioGroup`, `Textarea`, `InputOTP`, `Slider` |
-| Toggle 2–5 options | `ToggleGroup.Root` + `ToggleGroup.Item` |
-| Data display | `Table`, `Card`, `Badge`, `Avatar` |
-| Navigation | `Sidebar`, `Tabs`, `Breadcrumb`, `Pagination` |
-| Overlays | `Dialog` (modal), `Sheet` (side), `Drawer` (bottom), `AlertDialog` (confirm) |
-| Feedback | `svelte-sonner` (toast), `Alert`, `Progress`, `Skeleton`, `Spinner` |
-| Command palette | `Command` inside `Dialog` |
-| Layout | `Card`, `Separator`, `Resizable`, `ScrollArea`, `Accordion`, `Collapsible` |
-| Empty states | `Empty` |
-| Menus | `DropdownMenu`, `ContextMenu`, `Menubar` |
-| Tooltips/info | `Tooltip`, `HoverCard`, `Popover` |
 
 ## Theming
 

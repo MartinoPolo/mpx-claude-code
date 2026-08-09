@@ -3,13 +3,13 @@ paths:
   - "**/*.svelte"
   - "**/*.svelte.ts"
   - "**/*.svelte.js"
-  - "**/*.ts"
-applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*.ts"
+  - "**/src/routes/**/*.ts"
+applyTo: "**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/src/routes/**/*.ts"
 ---
 
 # SvelteKit Type-Safe Paths (≥ 2.26)
 
-Use the type-safe path helpers from `$app/paths` instead of manual string concatenation or deprecated exports.
+Use the type-safe path helpers from `$app/paths` instead of manual string concatenation or deprecated exports. Server-side usage (redirects, hooks, `match()`) is covered by the separate `sveltekit-paths-server.md` rule — link it only in projects with a SvelteKit server runtime.
 
 ## `resolve` — type-safe route navigation
 
@@ -27,17 +27,13 @@ Use `resolve()` instead of `base` for all internal links and programmatic naviga
 <a href="{base}/about">About</a>
 ```
 
-In `.ts` files (load functions, hooks, API routes):
+In `.ts` files (universal load functions, client-side navigation):
 
 ```ts
 import { resolve } from "$app/paths";
-import { redirect } from "@sveltejs/kit";
+import { goto } from "$app/navigation";
 
-// ✅ Server-side redirect with type-safe route
-throw redirect(303, resolve("/dashboard"));
-
-// ✅ Dynamic route in load function
-const url = resolve("/blog/[slug]", { slug });
+await goto(resolve("/blog/[slug]", { slug }));
 ```
 
 ## `asset` — type-safe static file references
@@ -54,16 +50,3 @@ Use `asset()` instead of `assets` for files in the `/static/` directory. It prov
 ```
 
 > **Note:** Files imported from `$lib/assets/` via Vite (e.g. `import logo from '$lib/assets/logo.svg'`) are processed by the bundler and do NOT need `asset()`. Use `asset()` only for files served from `/static/`.
-
-## `match` — runtime route matching (≥ 2.52)
-
-Use `match()` to identify which route a URL corresponds to and extract its parameters:
-
-```ts
-import { match } from "$app/paths";
-
-const route = await match("/blog/hello-world");
-if (route?.id === "/blog/[slug]") {
-  const { slug } = route.params;
-}
-```
