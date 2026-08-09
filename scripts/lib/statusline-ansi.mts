@@ -44,6 +44,46 @@ export function effortGauge(level: string): string {
     return "◆".repeat(rank) + "◇".repeat(EFFORT_SLOTS - rank);
 }
 
+/**
+ * Rendered column width of a status-line string — what the terminal advances the
+ * cursor by — so a caller can right-align other content against it. Zero-cell
+ * sequences are removed first: OSC-8 hyperlink wrappers (the visible label
+ * between them is kept) and SGR color runs. Each surviving code point then counts
+ * as one cell, except real emoji (💬), which the emoji face draws into two.
+ *
+ * Private Use Area Nerd Font icons (branch, VS Code, console, pencil) are counted
+ * as one cell: Symbols Nerd Font renders them single-width in the configured
+ * terminal, so an exact measurement lets a ledger line seated after an icon-laden
+ * left row land on the same column as one seated after a plain-text row — the
+ * over-inclusive double-width guess used to shift the icon rows left and break the
+ * ledger's alignment. A terminal whose font draws those icons double would measure
+ * them a cell too narrow and drift the seated row *right*; the pinned block reserves
+ * a right margin (see `composeColumns`) to absorb that rather than wrap. Every other
+ * glyph the bar uses (◆ ◇ █ ░ ≡ · ✓ × ⠀ Σ ↑ ↓ ±) is single-width and verified
+ * against the terminal face, so the default of one is correct for them.
+ */
+export function visibleWidth(input: string): number {
+    const stripped = input
+        // OSC sequences (incl. the OSC-8 open `ESC]8;;URL BEL` and close
+        // `ESC]8;; BEL`), terminated by BEL or ST — the label between two of them
+        // is ordinary text and survives.
+        .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+        .replace(/\x1b\[[0-9;]*m/g, "");
+    let width = 0;
+    for (const character of stripped) {
+        width += isDoubleWidth(character.codePointAt(0)!) ? 2 : 1;
+    }
+    return width;
+}
+
+/**
+ * The code points this bar draws into two cells: real emoji only. Nerd Font PUA
+ * icons render single-width in the configured terminal and are measured as one.
+ */
+function isDoubleWidth(codePoint: number): boolean {
+    return codePoint >= 0x1f000 && codePoint <= 0x1ffff; // emoji planes
+}
+
 /** Sanitizing the path is enough for a cache key; hashing would cost a process. */
 export function cacheKey(value: string): string {
     const key = value.replace(/[^a-zA-Z0-9]/g, "_");

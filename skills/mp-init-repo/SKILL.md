@@ -13,6 +13,9 @@ metadata:
 
 Initialize a new git repository with comprehensive .gitignore, Claude Code project structure, GitHub remote, and branch protection.
 
+Usually run automatically from `mp-project-register` step 3 (read-and-follow) when a
+project has no `.git/` yet.
+
 ## Instructions
 
 1. **Check for existing git repo**: If `.git/` already exists, inform the user and abort.

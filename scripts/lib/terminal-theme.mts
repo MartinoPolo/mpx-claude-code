@@ -288,6 +288,7 @@ export type Palette = {
     readonly contextOrange: string;
     readonly contextRed: string;
     readonly amber: string;
+    /** Line-1 account badge: personal `P` (red), work `W` (blue). */
     readonly personal: string;
     readonly work: string;
     readonly add: string;
@@ -324,6 +325,8 @@ function derive(scheme: Scheme, background: Rgb): Palette {
     const brightYellow = color("brightYellow", yellow);
     const cyan = color("cyan", [58, 150, 221]);
     const brightCyan = color("brightCyan", cyan);
+    const blue = color("blue", [0, 55, 218]);
+    const brightBlue = color("brightBlue", blue);
     const brightPurple = color("brightPurple", [180, 0, 158]);
 
     const toward = (from: Rgb, amount: number): Rgb => mix(from, background, amount);
@@ -362,8 +365,11 @@ function derive(scheme: Scheme, background: Rgb): Palette {
         // ramp's orange, so it is lifted toward brightYellow rather than mixed
         // toward red — the one direction that stays clear of the ramp entirely.
         amber: legible(mix(yellow, brightYellow, 0.35)),
-        personal: legible(green),
-        work: legible(mix(yellow, red, 0.3)),
+        // The line-1 account badge (P/W), tuned to echo the pane background tint:
+        // personal reddish, work blue. brightRed/brightBlue over the base tones so
+        // a single letter stays legible against a very dark tinted background.
+        personal: legible(brightRed),
+        work: legible(brightBlue),
         add: legible(green),
         del: legible(red),
         // Sand: "never left this machine". Pulled toward the foreground so it

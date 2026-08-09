@@ -10,14 +10,20 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
 
 - **One separator.** ` · ` (U+00B7) means "next field" everywhere; there is no second rank of
   separator.
-- **Branch state has its own row.** Its counts grow without bound during a session and would push
-  the MR reference off the right edge if kept on the location row.
+- **The location row is only project/worktree and branch.** The dev-server ports and the MR/PR
+  block move to a row of their own (`buildServersAndReviewLine`), indented beneath it: the worktree
+  path and branch can each run long, and trailing that state behind them pushed it off the right edge.
+- **Branch state has its own row too.** Its counts grow without bound during a session; it is
+  indented beside the servers/review row, both reading as a detail of the location above.
 - **The directory name is the only white field.** It answers "where am I", asked most often and
   from furthest away; every other field on that row stays grey. In a worktree the white moves to
   the worktree half of `project/worktree`, the actual location.
-- **The first line is title · id** — what the session is about, how to refer to it. The account is
-  *not* named here: the pane background already answers "which account is this" (see
-  [Account background](#account-background)).
+- **The first line is `badge · title · id`** — what the session is about, how to refer to it, led by
+  a one-letter account badge (`P` personal red, `W` work blue). The pane background is the primary
+  "which account is this" signal (see [Account background](#account-background)), but it is wiped by
+  any Windows Terminal settings reload and never re-emitted for a live pane; the badge is the
+  tint-independent fallback, colored to echo the tint. It joins the title with the same `·` separator
+  the rest of the row uses, and never renders alone on an otherwise-empty line.
 - **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance; five slots for the five
   levels `low medium high xhigh max`, anything unrecognized falls back to `<level>` text.
 - **Dim grey is for context, not signal.** Fetch age, cache ages, quota countdowns, session cost
@@ -28,6 +34,36 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
   toward white. It is the title of the thing you are looking at, found before anything else.
 - **An empty row is dropped, not emitted blank** — outside a repo the branch-state row has no
   content, so the rows below move up.
+
+## Two-column layout
+
+The left column (session, model, location, branch state, context/cost, compaction, quota) keeps the
+left edge; the finished-agent ledger is **pinned to the right**, filling the gutter beside the short
+left rows instead of stacking below them. `composeColumns` does this after both columns are built.
+
+- **Width comes from `$COLUMNS`**, which Claude Code exports for the status-line command (there is no
+  width in the stdin JSON — that field exists only in the *sub-agent* panel's payload). With no width
+  the composer falls back to stacking, which is the layout that existed before, so an older Claude
+  Code or an odd environment degrades rather than breaks.
+- **The block starts on the first row.** When the bar fills the width, Claude Code relocates its own
+  right-aligned indicators (remote-control `/rc`, the queued-agent count) to their own rows below the
+  bar, so the first row's right edge is free for the ledger.
+- **The whole block pins at one column** (`columns - widestLedgerLine - RIGHT_MARGIN`), so the
+  ledger's table stays vertically aligned; only its widest line reaches the reserved margin. A left row
+  too wide to seat its next ledger line beside it leaves that line for a later row, and any ledger lines
+  with no left row to share fall to their own pinned rows below — the ledger stays in order and
+  contiguous either way.
+- **A pinned row leads with the U+2800 guard**, not spaces, for the same reason the nested rows do:
+  Claude Code trims leading whitespace off every row, and the guard survives it.
+- **Widths are measured with `visibleWidth`** (`lib/statusline-ansi.mts`), which strips SGR runs and
+  OSC-8 hyperlink wrappers and then counts cells. Private Use Area Nerd Font icons count as **one**
+  cell — Symbols Nerd Font draws them single-width in the configured terminal, and measuring them
+  exactly is what makes a ledger line seated after an icon-laden left row land on the same column as
+  one seated after a plain-text row. (An over-inclusive double-width guess used to shift the icon rows
+  left and break the ledger's alignment.) A terminal whose font drew those icons wider would measure
+  them short and drift the seated row *right*, which the reserved `RIGHT_MARGIN` (a few blank cells
+  kept clear past the block) absorbs rather than wraps. When it cannot fit the block beside the left
+  column at all (`columns - widestLedgerLine - RIGHT_MARGIN < 2`), it falls back to stacking.
 
 ## Data sources
 
@@ -253,24 +289,29 @@ the built-in row.
 ## Sub-agent history on the main bar
 
 The tasks panel is a **live view**, never a ledger — it renders only agents still in the payload and
-evicts a terminal task shortly after it ends. The main bar carries the ledger: a tally row, then one
-row per agent for the handful worth spelling out.
+evicts a terminal task shortly after it ends. The main bar carries the ledger: a tally row, an
+optional type roll-call row, then one row per agent for the handful worth spelling out.
 
 ```
-Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k · 4×mp-executor 2×Explore !fork
+Σ 8 agents · 5×Opus 612.4k 3×Sonnet 183.1k
+4×mp-executor 2×Explore !fork
 ⠀ × fork           !fable ◆◆◆◇◇  1m09s   77.6k
 ⠀ ✓ mp-executor     opus   ◆◆◇◇◇  4m02s  231.4k  2×auto
 ⠀ ✓ Explore         sonnet ◆◇◇◇◇     12s   95.2k
 ⠀ +3 more
 ```
 
-- **Tally columns**: count — tier tally each with its own tokens — agent types. Everything is dim
-  except the tier counts, which keep the panel's palette because tier mix is the one comparison
-  worth making at a glance. Tokens are charged per tier, not summed.
+- **Tally row**: count — tier tally, each tier carrying its own tokens (charged per tier, not
+  summed). Everything is dim except the tier counts, which keep the panel's palette because tier mix
+  is the one comparison worth making at a glance.
+- **Type roll-call row**: the agent types by count, heaviest group first — but *only* when the detail
+  rows below cannot list every agent (`hiddenRows > 0`). While every agent has its own row, the names
+  are already on screen and the roll-call is dropped as a restatement.
 - **Row columns**: status — agent type — tier — effort gauge — elapsed — tokens — compaction counts.
   The name and tier columns size to the widest value on screen; the gauges start at one column so
   they compare down the block.
-- **Rendered last**, below the quota bars, so ledger and live view read as one block.
+- **Pinned to the right** of the left column from the first row (see [Two-column
+  layout](#two-column-layout)); it stacks below the quota bars only when the terminal is too narrow.
 - **Which agents get a row.** `AGENT_DETAIL_ROWS`, plus *every* failure — a failed or killed agent
   is always spelled out and always first, however many there are. Within the cap, agents keep spawn
   order if they all fit, otherwise rank by tokens (largest first). The remainder become `+N more`.
@@ -279,7 +320,8 @@ row per agent for the handful worth spelling out.
 - **Only finished agents.** A running agent is already on the panel with more detail, so the two
   renderers split cleanly: **panel = running, main bar = finished.**
 - **`N×Name`, one idiom everywhere** — `2×Explore`, `1×Opus`, `2×High`, same meaning on both
-  renderers. A type that ran once drops the `1×`. `×` is U+00D7.
+  renderers, and the count is always shown, `1×` included, so the roll-call reads as counts and
+  matches the tier tally's own `1×Opus`. `×` is U+00D7.
 
 **Three files, none in the payload:**
 
@@ -294,13 +336,13 @@ ticks continuously while any agent runs. The sidecars are read by id (the TSV al
 agent) and read fresh, being small and immutable. An agent whose sidecar cannot be read still counts
 toward the tally; only its name goes `unknown`, so the count never disagrees with the panel.
 
-**The `!` marker outlives the panel.** A type on the tally is marked red when any of its agents ran
-on a banned tier (`!fork` = the fork ran on fable); on a spelled-out row the marker sits on the tier
-cell (`!fable`). Only the tier rule is reachable here — the state file records the *resolved* effort,
+**The `!` marker outlives the panel.** A type on the roll-call row is marked red when any of its
+agents ran on a banned tier (`!fork` = the fork ran on fable); on a spelled-out row the marker sits
+on the tier cell (`!fable`). Only the tier rule is reachable here — the state file records the *resolved* effort,
 not whether it was declared, so flagging an inherited level would accuse an agent of a choice it
 never made. Those effort rules stay with the panel, which knows the difference.
 
-**Two links:** an agent **type** (on the tally or at a row head) opens `.claude/agents/<type>.md`,
+**Two links:** an agent **type** (on the roll-call or at a row head) opens `.claude/agents/<type>.md`,
 the file that defines it (project-level over user-level; a built-in nobody overrode has no file and
 no link); a row's **status glyph** opens that run's own transcript, because that cell belongs to one
 run while a type name shared by four agents has four transcripts and no honest target.
@@ -383,8 +425,18 @@ answers it.
 `cc`/`ccd`/`ccw`/`ccwd` in `~/.bashrc` call [`scripts/account-color.mts`](../scripts/account-color.mts)
 before handing off to `claude`, and an `EXIT` trap calls it again with `reset` so the profile's own
 colors return however the session ends. The tints live in
-[`statusline-accounts.json`](../statusline-accounts.json): personal dark red, work dark blue. Pi (the
-third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`, in a different repo.
+[`statusline-accounts.json`](../statusline-accounts.json): personal near-black with a faint red cast,
+work dark blue. Pi (the third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`,
+in a different repo, painting dark green — so the three canvases read as personal (default-dark red),
+work (blue), pi (green).
+
+**The tint does not survive a settings reload.** OSC 11 repoints `DefaultBackground` in-memory only;
+any Windows Terminal settings.json reload re-seeds every pane from its profile's configured colors at
+once, and nothing re-emits OSC 11 for a shell already blocked on `claude` — so every tinted pane
+reverts together and stays reverted until a new shell launches. Dynamic profile generators (WSL,
+Azure, Visual Studio, PowerShell) rewrite settings.json when their source state changes, which is the
+usual unattended trigger; `disabledProfileSources` stops those rewrites. The line-1 `P`/`W` badge (see
+above) is the deliberate fallback for exactly this window, since it re-renders every status tick.
 
 - **OSC 11 sets the background, OSC 12 the cursor**; `reset` sends OSC 111/112. OSC 11 repoints the
   `DefaultBackground` alias, so a profile's configured `background` only *seeds* the value at startup
@@ -407,6 +459,28 @@ third harness) uses a separate painter, `mpx-pi/scripts/terminal-color.mjs`, in 
 - **Failures are loud, success is silent.** A tint that cannot be applied must never stop Claude Code
   from starting, so nothing throws — but an unreadable accounts file or unknown account name prints
   to stderr. `--verbose` reports the colors sent and whether stdout is a tty.
+
+## Tab title
+
+Left to Claude Code. It drives the title from its own status: the session summary, prefixed by an
+animated spinner while a turn runs and by `✳` once the session stops and wants you. That is the one
+signal with the session's real state behind it, so nothing here competes with it, and the account
+stays readable from the pane tint above. Both glyphs are hardcoded in the bundle — `✳` (`U+2733`)
+and a two-frame braille spinner (`⠂⠐`, one frame per 960ms) — with no setting or env var to restyle
+them, so `/rename [P] project` is the supported way to put an account prefix in the tab: it sets the
+text half while Claude Code keeps prefixing the state glyph, and `terminalTitleFromRename` (default
+`true`) is what allows it.
+
+A custom titler was built and reverted — `[P] worktree · project`, set by `cc`/`ccw` behind
+`CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1`, with the state glyph rebuilt from
+`UserPromptSubmit`/`Stop`/`SessionStart` hooks driving a console-attaching C helper. It is kept,
+unwired, under `deprecated/scripts/terminal-title.mts` and `deprecated/hooks/terminal-title-state.c`
+for the Win32 console notes in them. What killed it: **hook events cannot reconstruct a session's
+state**. Interrupting a turn fires no `Stop`, so the tab stayed spinning; `/compact` runs with no
+event that separates a manual compaction from an automatic mid-turn one, so it was skipped and the
+tab read idle while the session worked. The summary was lost outright — it lives in memory alone,
+in no transcript or session file. Reviving it means a state source Claude Code does not currently
+expose, not another hook.
 
 ## The derived palette
 
@@ -442,9 +516,14 @@ scheme change shows on the next render.
 The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (`profiles.defaults.font.face`;
 WT walks the comma list per glyph). Text comes from Cascadia Mono; the Private Use Area pictograms
 fall through to Symbols Nerd Font — the git-branch glyph U+E725, VS Code U+F0A1E, console U+F018D and
-pencil U+F03EB. The non-"Mono" Symbols Nerd Font is used deliberately: it keeps the icons' native
-double-cell proportions (a terminal can only render a glyph bigger if the font draws it into more of
-the cell), and the overflow paints into a space the layout guarantees to its right.
+pencil U+F03EB.
+
+These pictograms render **single-width** in the configured terminal — one cell each, like the
+surrounding text — so `visibleWidth` measures them as one cell (see [Two-column layout](#two-column-layout)).
+An earlier version measured them as two, on the theory that Nerd Font draws icons into a double cell;
+that over-count drifted the pinned ledger out of alignment, seating a ledger line after an icon-laden
+left row a cell or two left of one seated after plain text. If a different terminal or font *did* draw
+them double, the seated row would drift right into the reserved `RIGHT_MARGIN` rather than wrap.
 
 Everything else stays within **plain** Cascadia Mono's cmap (parsed from the TTF), so a fallback to
 the non-NF font degrades exactly those pictograms and nothing else. Present: `≡ ◆ ◇ ● ○ ▪ ▫ ✓ • ◦ █ ░

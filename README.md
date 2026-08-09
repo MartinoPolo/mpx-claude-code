@@ -95,6 +95,7 @@ Everything below ships with the plugin (installed under `skills/`) and invokes a
 | Skill              | Description                                                                          |
 | ------------------ | ------------------------------------------------------------------------------------ |
 | `/mp:grill`        | Stress-test plan/design/requirements via relentless Q&A → CONTEXT.md + DECISIONS.md  |
+| `/mp:grill-voice`  | `mp-grill` over JSON round files for the mobile voice app — answer by voice on a walk |
 | `/mp:to-epic`      | CONTEXT.md → epic as GitHub issue                                                    |
 | `/mp:to-issues`    | Break epic into vertical-slice sub-issues (tasks)                                    |
 | `/mp:hitl`         | Resolve HITL issues into AFK-ready by grilling decisions                             |

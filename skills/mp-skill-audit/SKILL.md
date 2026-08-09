@@ -83,7 +83,7 @@ Flag implicit or missing tool references.
 
 ### Check 7: Vocabulary Confirmation Rule
 
-Applies only to skills that write to `.mpx/CONTEXT.md` § Domain Language (currently: `/mp:grill`, `/mp:vocabulary`, `/mp:harvest-decisions`).
+Applies only to skills that write to `.mpx/CONTEXT.md` § Domain Language.
 
 Verify the skill requires user confirmation with full proposed text before writing terms. Flag if missing.
 
