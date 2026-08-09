@@ -1,5 +1,5 @@
 ---
-name: mp-to-epic
+name: to-epic
 description: "Creates an epic (parent GitHub issue) from the requirements passed in; the epic's description is a spec written as user stories."
 argument-hint: "[milestone name]"
 disable-model-invocation: true

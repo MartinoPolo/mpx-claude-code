@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Performance
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
 
 Review changed scope for meaningful performance risks.
 

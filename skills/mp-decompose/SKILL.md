@@ -1,5 +1,5 @@
 ---
-name: mp-decompose
+name: decompose
 description: "Splits a large source file or a folder of them into logical modules while preserving behavior."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)

@@ -1,8 +1,8 @@
 ---
-name: mp-sync-base
+name: sync-base
 description: "Merges the target base branch into the current branch, resolving conflicts and pushing the result."
 disable-model-invocation: true
-allowed-tools: Bash(git *), Read, Edit, Bash(node $HOME/.claude/scripts/detect-base-branch.js*)
+allowed-tools: Bash(git *), Read, Edit, Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js*)
 metadata:
   author: MartinoPolo
   version: "1.4"
@@ -21,7 +21,7 @@ Merge a target branch into the current branch. $ARGUMENTS
 
 If `$ARGUMENTS` provides a branch → use it.
 
-Otherwise, run `node $HOME/.claude/scripts/detect-base-branch.js` to detect the target branch deterministically (priority: `dev > develop > main > master`, checked against `origin/<branch>`; falls back to `main`).
+Otherwise, run `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js` to detect the target branch deterministically (priority: `dev > develop > main > master`, checked against `origin/<branch>`; falls back to `main`).
 
 Display the returned branch to the user.
 

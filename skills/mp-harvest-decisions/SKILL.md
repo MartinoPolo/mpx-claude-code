@@ -1,5 +1,5 @@
 ---
-name: mp-harvest-decisions
+name: harvest-decisions
 description: "Scans recent Claude Code sessions for design discussions, folds the decisions into CONTEXT.md and DECISIONS.md, and flags redundant memory files."
 argument-hint: "[days back to scan, default 30]"
 disable-model-invocation: true
@@ -25,7 +25,7 @@ Scan Claude Code session transcripts for grilling and design-refinement discussi
 
 Spawn an `Explore` sub-agent (breadth: medium, no `model` param) to search session JSONL files for actual skill invocations — not just mentions in available-skills lists.
 
-**Primary signal** (high confidence): `"name":"Skill"` paired with `"mp-grill"` or `"mp-hitl"` or `"mp-architecture-review"` in the same file.
+**Primary signal** (high confidence): `"name":"Skill"` paired with a grill / hitl / architecture-review skill in the same file. Match either the current form (`grill`, `hitl`, `architecture-review`, or the `/mp:grill` plugin form) or the historical `mp-`-prefixed form (`mp-grill`, `mp-hitl`, `mp-architecture-review`), so transcripts recorded before the plugin rename still match.
 
 **Secondary signal** (check if primary yields <5 results): Look for `AskUserQuestion` tool calls with option arrays containing design/architecture decisions.
 

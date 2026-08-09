@@ -1,5 +1,5 @@
 ---
-name: mp-handoff
+name: handoff
 description: "Writes or updates HANDOFF.md with session progress and open threads."
 when_to_use: "User asks for a handoff or to save progress at the end of a session."
 allowed-tools: Read, Write, Glob, TaskList
@@ -120,7 +120,7 @@ Show the user what was created:
 ## Notes
 
 - HANDOFF.md persists in the project root — updated each session, not deleted
-- This skill only writes HANDOFF.md — use `/mp-grill` or `/mp-harvest-decisions` to persist decisions to `.mpx/DECISIONS.md`
+- This skill only writes HANDOFF.md — use `/mp:grill` or `/mp:harvest-decisions` to persist decisions to `.mpx/DECISIONS.md`
 - Focus on "why" not just "what" — reasoning is crucial
 - Capture implicit knowledge that isn't documented elsewhere
 - If HANDOFF.md already exists, it is read and merged with current session context (update-or-create)

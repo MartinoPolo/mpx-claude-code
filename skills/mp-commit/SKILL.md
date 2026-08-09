@@ -1,5 +1,5 @@
 ---
-name: mp-commit
+name: commit
 description: "Stages and commits changes in conventional commit format."
 disable-model-invocation: true
 allowed-tools: Agent, Read, Bash(git status *), Bash(git diff *), Bash(git log *), Bash(git add *), Bash(git commit *)

@@ -1,5 +1,5 @@
 ---
-name: mp-components-audit
+name: components-audit
 description: "Audits design-system component usage, flagging native elements, wrong variants, missed componentization opportunities, and hardcoded colors that bypass theme tokens."
 argument-hint: "[scan-path] [autofix|autofix=true|autofix=false]"
 disable-model-invocation: true

@@ -1,9 +1,9 @@
 ---
-name: mp-execute
+name: execute
 description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, opens a PR, and merges it once CI is green."
 when_to_use: "User asks to execute, implement, or work on an issue, milestone, or task list."
 argument-hint: '<#issue | milestone:"Version 1" | "inline task description or checklist">'
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(bash $HOME/.claude/scripts/detect-check-scripts.sh*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
   version: "2.7"
@@ -25,13 +25,13 @@ Use compressed output throughout execution: drop articles, filler, pleasantries,
 ## Usage
 
 ```
-/mp-execute #42                        # Single GitHub issue
-/mp-execute milestone:"Version 2"        # Pick one open, unblocked issue from milestone
-/mp-execute "add dark mode toggle"    # Inline task (no GitHub issue)
-/mp-execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
-/mp-execute --full-review #42         # Full reviewer set
-/mp-execute --no-review #42           # Simple task — skip reviewer sub-agents
-/mp-execute --no-auto-merge #42       # Stop after CI green; leave PR open
+/mp:execute #42                        # Single GitHub issue
+/mp:execute milestone:"Version 2"        # Pick one open, unblocked issue from milestone
+/mp:execute "add dark mode toggle"    # Inline task (no GitHub issue)
+/mp:execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
+/mp:execute --full-review #42         # Full reviewer set
+/mp:execute --no-review #42           # Simple task — skip reviewer sub-agents
+/mp:execute --no-auto-merge #42       # Stop after CI green; leave PR open
 ```
 
 ## Behavior Contract
@@ -78,7 +78,7 @@ Mockups are **inspiration, not source of truth.** When the issue links design fi
 
 ## Step 3: Detect Available Checks
 
-Run `bash $HOME/.claude/scripts/detect-check-scripts.sh` and parse the key=value output. Store static check commands (`CHECK_ALL`, `TYPECHECK`, `LINT`, `FORMAT`, `BUILD`) and test commands (`TEST`, `TEST_UNIT`, `TEST_E2E`) — passed verbatim to sub-agents in Steps 5, 8d, 9.
+Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs` and parse the key=value output. Store static check commands (`CHECK_ALL`, `TYPECHECK`, `LINT`, `FORMAT`, `BUILD`) and test commands (`TEST`, `TEST_UNIT`, `TEST_E2E`) — passed verbatim to sub-agents in Steps 5, 8d, 9.
 
 **Test commands are first-class checks** — the CI parity gate: if CI runs them, they must pass locally before push.
 

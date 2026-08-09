@@ -9,7 +9,7 @@ color: magenta
 
 # Reviewer: Test Quality
 
-First run `cat $HOME/.claude/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
+First run `cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/REVIEWER_PROTOCOL.md` (Bash) and follow it for scope and output format.
 
 Evaluate new/modified test files for correctness, anti-patterns, and redundancy.
 For each test file in scope, also read the corresponding source file to understand public API vs internals.

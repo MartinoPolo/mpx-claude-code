@@ -1,5 +1,5 @@
 ---
-name: mp-grill-voice
+name: grill-voice
 description: "Voice-enabled variant of mp-grill: publishes each interview round as a JSON file for the companion mobile voice app, waits for the spoken answers, and continues until the design is settled and recorded in project docs."
 argument-hint: "[topic, requirements text, or path to requirements file]"
 disable-model-invocation: true

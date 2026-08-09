@@ -43,6 +43,10 @@ skills/shared/KF_*.md
 # IDE
 .vscode/
 
+# Worktree hub artifacts
+.worktree-install.log
+.worktree-ports.json
+
 # Dependencies
 node_modules/
 package-lock.json

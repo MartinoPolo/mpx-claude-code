@@ -82,18 +82,18 @@ Rules:
 
 | Skill                    | Reads                        | Updates                           |
 | ------------------------ | ---------------------------- | --------------------------------- |
-| `mp-grill`               | CONTEXT.md, DECISIONS.md     | Both (after user confirmation)    |
-| `mp-vocabulary`          | CONTEXT.md                   | CONTEXT.md § Domain Language      |
-| `mp-to-epic`             | CONTEXT.md, DECISIONS.md     | —                                 |
-| `mp-epic-review`         | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)       |
-| `mp-consolidate-context` | CONTEXT.md                   | CONTEXT.md (cleanup)              |
-| `mp-harvest-decisions`   | Session JSONL files          | CONTEXT.md, DECISIONS.md          |
-| `mp-init-repo`           | —                            | Creates CONTEXT.md + DECISIONS.md |
-| `mp-setup-sveltekit`     | —                            | Creates CONTEXT.md + DECISIONS.md |
-| `mp-setup-react-native`  | —                            | Creates CONTEXT.md + DECISIONS.md |
-| `mp-handoff`             | CONTEXT.md, DECISIONS.md     | writes HANDOFF.md                 |
-| `mp-bug-report`          | CONTEXT.md § Domain Language | —                                 |
-| `mp-to-issues`           | CONTEXT.md § Domain Language | —                                 |
+| `/mp:grill`               | CONTEXT.md, DECISIONS.md     | Both (after user confirmation)    |
+| `/mp:vocabulary`          | CONTEXT.md                   | CONTEXT.md § Domain Language      |
+| `/mp:to-epic`             | CONTEXT.md, DECISIONS.md     | —                                 |
+| `/mp:epic-review`         | CONTEXT.md, DECISIONS.md     | CONTEXT.md (status updates)       |
+| `/mp:consolidate-context` | CONTEXT.md                   | CONTEXT.md (cleanup)              |
+| `/mp:harvest-decisions`   | Session JSONL files          | CONTEXT.md, DECISIONS.md          |
+| `/mp:init-repo`           | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `/mp:setup-sveltekit`     | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `/mp:setup-react-native`  | —                            | Creates CONTEXT.md + DECISIONS.md |
+| `/mp:handoff`             | CONTEXT.md, DECISIONS.md     | writes HANDOFF.md                 |
+| `/mp:bug-report`          | CONTEXT.md § Domain Language | —                                 |
+| `/mp:to-issues`           | CONTEXT.md § Domain Language | —                                 |
 
 ## Legacy Files
 

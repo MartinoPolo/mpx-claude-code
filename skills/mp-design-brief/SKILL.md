@@ -1,5 +1,5 @@
 ---
-name: mp-design-brief
+name: design-brief
 description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent GitHub issues with a Design needed label."
 when_to_use: "User asks for a design brief, design spec, component spec, or UI spec."
 argument-hint: "[component-name]"
@@ -70,7 +70,7 @@ Be specific: "use `Button variant='ghost'` size='icon'", not "add a button".
 
 For a needed pattern the inventory lacks, spawn `mp-context7-docs-fetcher` against the project's
 component library. List the result under *Components to Adopt* with the reason nothing existing
-suffices. Installation is deferred to `mp-design-refine`.
+suffices. Installation is deferred to `/mp:design-refine`.
 
 ## Step 5: Draft the brief
 
@@ -107,4 +107,4 @@ With no GitHub remote or no `gh`, skip this step and note it in the report.
 
 ## Step 7: Hand off
 
-Save the brief, then invoke `/mp-mockup` to generate variants.
+Save the brief, then invoke `/mp:mockup` to generate variants.

@@ -231,7 +231,7 @@ to the provider's list of runs (`<url>/checks` or `/pipelines`) — the tab is v
 still queued and shows earlier attempts.
 
 The render path is **network-free**: it reads a `$TMPDIR` cache and, when stale, spawns
-[`scripts/status-line-mr-refresh.sh`](../scripts/status-line-mr-refresh.sh) detached for one
+[`scripts/status-line-mr-refresh.mjs`](../scripts/status-line-mr-refresh.mjs) detached for one
 `glab api graphql` (GitLab) or `gh pr list` (GitHub) call. Rate limits are a non-issue at this
 call volume.
 
@@ -413,7 +413,7 @@ including `\c` truncating output — reachable from any branch or session name w
 `0x1F` Unit Separator survives in the on-disk cache formats only.
 
 The bash originals live in `deprecated/scripts/` (`status-line.sh`, `subagent-status-line.sh`), kept
-as reference. `status-line-mr-refresh.sh` is **not** deprecated — it is still the detached child that
+as reference. `status-line-mr-refresh.mjs` is **not** deprecated — it is still the detached child that
 refreshes MR/PR data.
 
 ## Account background

@@ -3,8 +3,9 @@
  * Triggers: git push, package install (npm/yarn/pnpm/bun), gh pr create.
  */
 
-const { readStdin } = require("./shared");
-const { execSync } = require("child_process");
+import { readStdin } from "./shared.mjs";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 /**
  * Determine context message to inject based on the command and its response.
@@ -14,7 +15,7 @@ const { execSync } = require("child_process");
  * @param {object} [options] - Dependency injection (e.g. { execSync })
  * @returns {string|null} Context message or null
  */
-function determineContext(command, response, cwd, options = {}) {
+export function determineContext(command, response, cwd, options = {}) {
   const exec = options.execSync || execSync;
   const exitCode = response.exit_code ?? null;
   const stdout = response.stdout ?? "";
@@ -77,5 +78,6 @@ async function main() {
   process.exit(0);
 }
 
-module.exports = { determineContext };
-if (require.main === module) main().catch(() => process.exit(0));
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch(() => process.exit(0));
+}

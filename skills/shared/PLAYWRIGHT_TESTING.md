@@ -1,12 +1,12 @@
 # Playwright Testing — Reliability Contract
 
-Single source of truth for **reliable** browser verification of UI changes. Referenced by [`mp-playwright-test`](../mp-playwright-test/SKILL.md) (scope-driven, on demand) and [`mp-batch-execute`](../mp-batch-execute/SKILL.md) (verify gate). Edit conventions here; the skills only add their own orchestration.
+Single source of truth for **reliable** browser verification of UI changes. Referenced by [`/mp:playwright-test`](../mp-playwright-test/SKILL.md) (scope-driven, on demand) and [`/mp:batch-execute`](../mp-batch-execute/SKILL.md) (verify gate). Edit conventions here; the skills only add their own orchestration.
 
 ## Approach: raw Playwright, not a browser MCP
 
 Drive the browser with **raw Playwright** — the project's own installed `playwright` dependency, run as a short Node script (e.g. `node scripts/shot.mjs`). A raw script is deterministic, reproducible, assertable, and works in headless / scheduled / remote runs where a browser MCP is unreliable or absent.
 
-**Boundary vs the MCP agent.** The `mp-chrome-devtools-tester` agent (chrome-devtools MCP, spawned by `mp-execute` step 6c) is for **interactive exploratory** testing only — a human-style click-through when e2e specs don't cover an interaction, plus performance traces and Lighthouse audits, which raw Playwright has no equivalent for. It is *not* the reliability path. Any check that must be trustworthy, repeatable, or run unattended uses raw Playwright per this file.
+**Boundary vs the MCP agent.** The `mp-chrome-devtools-tester` agent (chrome-devtools MCP, spawned by `/mp:execute` step 6c) is for **interactive exploratory** testing only — a human-style click-through when e2e specs don't cover an interaction, plus performance traces and Lighthouse audits, which raw Playwright has no equivalent for. It is *not* the reliability path. Any check that must be trustworthy, repeatable, or run unattended uses raw Playwright per this file.
 
 ## Discover project specifics first
 
@@ -21,7 +21,7 @@ If a helper script does not exist, write a minimal one under the project's scrip
 
 ## The five principles
 
-1. **Stale-worktree sanity-gate FIRST.** Before trusting any screenshot or assertion, prove the running dev server reflects *the code under test*: assert a computed style or DOM fact that this change just introduced. If it does not match, the server is serving a different checkout/worktree/old build — kill the stale PID, start a dev server bound to this checkout, confirm the port, and only then verify. This is the single most important safeguard: without it, checks silently pass against old code. (See [`mp-continue`](../mp-continue/SKILL.md) for the port-zombie kill/restart pattern.)
+1. **Stale-worktree sanity-gate FIRST.** Before trusting any screenshot or assertion, prove the running dev server reflects *the code under test*: assert a computed style or DOM fact that this change just introduced. If it does not match, the server is serving a different checkout/worktree/old build — kill the stale PID, start a dev server bound to this checkout, confirm the port, and only then verify. This is the single most important safeguard: without it, checks silently pass against old code. (See [`/mp:continue`](../mp-continue/SKILL.md) for the port-zombie kill/restart pattern.)
 2. **Assert, don't just eyeball.** Prefer computed-style / geometry assertions (`getComputedStyle`, `boundingBox()`) over screenshot inspection alone, so a PASS is *measured*, not guessed. Keep screenshots as evidence, not as the assertion.
 3. **Authenticate programmatically.** Sign in via the project's auth API (`context.request.post('/api/auth/...')`) rather than driving the login UI — faster and far less flaky. Reuse the storage state across checks.
 4. **Wait explicitly; never `networkidle`.** Use `page.goto(url, { waitUntil: 'load' })` plus explicit `waitForSelector` / short settle timeouts. **Never** `networkidle` — SSE / long-poll / websocket surfaces never go idle and it hangs.

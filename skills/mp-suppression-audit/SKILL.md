@@ -1,5 +1,5 @@
 ---
-name: mp-suppression-audit
+name: suppression-audit
 description: "Repo-wide audit of code-quality suppressions (eslint-disable, ts-ignore, fallow-ignore) that fixes unjustified ones and opens a PR."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash, Agent
@@ -28,7 +28,7 @@ Audit all code quality suppressions and lint config rule changes across the repo
 
 ### Step 1: Detect Check Commands
 
-Run `bash $HOME/.claude/scripts/detect-check-scripts.sh` (optionally pass a project dir as arg) to discover available check scripts. It prints `KEY=value` pairs (e.g. `CHECK_ALL=...`, `TYPECHECK=...`, `LINT=...`, `FORMAT=...`, `TEST=...`, `TEST_E2E=...`, plus `_DIR` companions and `MONOREPO=true` when applicable). Parse these and store the resulting command plan for Step 5.
+Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs` (optionally pass a project dir as arg) to discover available check scripts. It prints `KEY=value` pairs (e.g. `CHECK_ALL=...`, `TYPECHECK=...`, `LINT=...`, `FORMAT=...`, `TEST=...`, `TEST_E2E=...`, plus `_DIR` companions and `MONOREPO=true` when applicable). Parse these and store the resulting command plan for Step 5.
 
 ### Step 2: Scan for All Suppressions
 
@@ -87,7 +87,7 @@ After all individual fixes pass, run the full check suite once.
 
 ### Step 6: Create PR
 
-Use `/mp-commit-push-pr` skill to commit all changes and create a PR. Include the evaluation table in the PR body so reviewers can see the reasoning for each decision.
+Use `/mp:commit-push-pr` skill to commit all changes and create a PR. Include the evaluation table in the PR body so reviewers can see the reasoning for each decision.
 
 PR title format: `chore: audit and fix code quality suppressions`
 

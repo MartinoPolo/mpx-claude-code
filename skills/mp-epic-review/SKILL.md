@@ -1,5 +1,5 @@
 ---
-name: mp-epic-review
+name: epic-review
 description: "End-of-epic review covering code quality, architecture, cleanup, documentation, and unresolved items; optionally executes the resulting fixes."
 argument-hint: "<epic-number-or-URL>"
 disable-model-invocation: true
@@ -23,8 +23,8 @@ Use compressed output throughout: drop articles, filler, pleasantries. Fragments
 ## Usage
 
 ```
-/mp-epic-review #42
-/mp-epic-review https://github.com/owner/repo/issues/42
+/mp:epic-review #42
+/mp:epic-review https://github.com/owner/repo/issues/42
 ```
 
 ## Step 1: Gather Context
@@ -277,7 +277,7 @@ Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
 
 ## Architecture Promotion Candidates
 
-- [Title] — [brief description, recommended for `/mp-architecture-review`]
+- [Title] — [brief description, recommended for `/mp:architecture-review`]
 ```
 
 Each item's checkbox (`- [ ]`) is the execution tracking mechanism.
@@ -330,14 +330,14 @@ Link new issues as sub-issues of the epic using GraphQL `addSubIssue`.
 6. After all fixes: run static checks and tests to verify nothing broke
 
 ```bash
-bash $HOME/.claude/scripts/detect-check-scripts.sh
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-check-scripts.mjs
 ```
 
 Run all detected CHECK and TEST commands via `mp-checker`.
 
 ### If > 20 items or user defers:
 
-Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_EPIC_N.md`, and execute items manually or via `/mp-execute` for individual issues created from unresolved items.
+Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_EPIC_N.md`, and execute items manually or via `/mp:execute` for individual issues created from unresolved items.
 
 ## Step 6: Close-out
 

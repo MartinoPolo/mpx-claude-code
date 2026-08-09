@@ -1,5 +1,5 @@
 ---
-name: mp-code-clean
+name: code-clean
 description: "Deduplicates code, removes repetition, and deletes dead code in a given scope."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(git *), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *)

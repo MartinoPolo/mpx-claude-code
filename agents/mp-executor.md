@@ -15,7 +15,7 @@ Read the shared contract first — it defines the role boundary, what the parent
 pass, quality rules, blockers, and the output format:
 
 ```bash
-cat $HOME/.claude/skills/shared/EXECUTOR_CONTRACT.md
+cat ${CLAUDE_PLUGIN_ROOT}/skills/shared/EXECUTOR_CONTRACT.md
 ```
 
 ## Role

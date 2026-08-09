@@ -1,5 +1,5 @@
 ---
-name: mp-playwright-test
+name: playwright-test
 description: "Verifies UI changes with raw Playwright over a defined scope and reports a per-surface PASS/FAIL table with screenshots."
 when_to_use: "User asks to visually verify UI changes or run a Playwright test."
 argument-hint: "[uncommitted | pr | <area of the app>]"
@@ -47,4 +47,4 @@ The sanity-gate is load-bearing: if the running dev server does not reflect the 
 
 ## Step 5: Report
 
-Relay the sub-agent's per-surface table: surface, `PASS`/`FAIL`/`BLOCKED`, measured value vs expected, and the screenshot path. Call out any surface where the sanity-gate had to restart the server. Failures are reported, not fixed — hand them back to the caller (or to `/mp-execute`) to resolve.
+Relay the sub-agent's per-surface table: surface, `PASS`/`FAIL`/`BLOCKED`, measured value vs expected, and the screenshot path. Call out any surface where the sanity-gate had to restart the server. Failures are reported, not fixed — hand them back to the caller (or to `/mp:execute`) to resolve.

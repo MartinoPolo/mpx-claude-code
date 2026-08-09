@@ -29,7 +29,7 @@ You receive:
 If `base_branch` not provided:
 
 ```bash
-node $HOME/.claude/scripts/detect-base-branch.js
+node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js
 ```
 
 If script returns null or fails, use `main` as fallback.

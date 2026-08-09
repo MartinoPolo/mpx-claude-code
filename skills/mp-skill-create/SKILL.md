@@ -1,5 +1,5 @@
 ---
-name: mp-skill-create
+name: skill-create
 description: "Creates a new Claude Code skill following this repo's conventions, then audits it."
 when_to_use: "User asks to create, write, or add a new skill."
 argument-hint: "[skill name or description]"
@@ -23,7 +23,7 @@ If the skill will spawn sub-agents, read
 2. **Gather requirements** — ask user about purpose, use cases, scripts, references
 3. **Draft the skill** — create SKILL.md and supporting files
 4. **Validate against guidelines** — compare draft to fetched guidelines, fix mismatches
-5. **Audit** — run `/mp-skill-audit` on the new skill to catch convention drift
+5. **Audit** — run `/mp:skill-audit` on the new skill to catch convention drift
 6. **Review with user** — present draft, report any guideline-driven changes, iterate
 
 ### Step 1: Fetch Guidelines
@@ -157,10 +157,10 @@ If the guidelines suggest improvements beyond what this skill's conventions cove
 
 ### Step 5: Audit
 
-Run `mp-skill-audit` against the newly created skill to catch convention drift:
+Run `/mp:skill-audit` against the newly created skill to catch convention drift:
 
 > Spawn a `general-purpose` sub-agent with `model: "sonnet"` and the prompt:
-> "Run `/mp-skill-audit skills/<skill-name>/SKILL.md`"
+> "Run `/mp:skill-audit skills/<skill-name>/SKILL.md`"
 
 Apply any auto-fixes. Note remaining issues for user review in Step 6.
 

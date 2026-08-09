@@ -3,7 +3,7 @@
 // status text on stdout. It is re-run on every render tick, so the render path
 // stays cheap — a single git call, cache reads, and nothing else. Claude Code
 // cancels a status line that blocks, so every network touch is pushed into a
-// detached child (`--warm-usage`, `--warm-czk`, status-line-mr-refresh.sh) that
+// detached child (`--warm-usage`, `--warm-czk`, status-line-mr-refresh.mjs) that
 // only ever writes a cache for a *later* render to pick up.
 
 import { execFileSync, spawn } from "node:child_process";
@@ -235,7 +235,7 @@ const CACHE_DIR = process.env.TMPDIR || "/tmp";
 
 /**
  * ASCII Unit Separator. The on-disk caches (written here and by
- * status-line-mr-refresh.sh) are delimited with it despite the `.tsv` names, so
+ * status-line-mr-refresh.mjs) are delimited with it despite the `.tsv` names, so
  * a field that happens to contain a tab or a space can never shift a column.
  */
 const UNIT_SEPARATOR = "\x1f";
@@ -2161,9 +2161,9 @@ function render(): string {
                 } catch {
                     // Without the marker we just retry on the next render.
                 }
-                const refresher = path.join(path.dirname(SELF_PATH), "status-line-mr-refresh.sh");
+                const refresher = path.join(path.dirname(SELF_PATH), "status-line-mr-refresh.mjs");
                 if (existsSync(refresher)) {
-                    spawnDetached("bash", [refresher, fields.cwd, branch, mrCache]);
+                    spawnDetached("node", [refresher, fields.cwd, branch, mrCache]);
                 }
             }
         }

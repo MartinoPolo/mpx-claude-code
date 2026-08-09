@@ -1,6 +1,6 @@
 ---
-name: mp-ship
-description: "Ships finished work end to end: syncs the base branch, commits, pushes, opens a PR, waits for CI, then merges. Individual steps exist as /mp-commit, /mp-commit-push, /mp-commit-push-pr, /mp-pr and /mp-sync-base."
+name: ship
+description: "Ships finished work end to end: syncs the base branch, commits, pushes, opens a PR, waits for CI, then merges. Individual steps exist as /mp:commit, /mp:commit-push, /mp:commit-push-pr, /mp:pr and /mp:sync-base."
 when_to_use: "User asks to ship or merge work, or to commit, push, or open a PR."
 argument-hint: "[base-branch]"
 allowed-tools: Read, Write, Agent, Skill, Bash(git *), Bash(gh *), Bash(node *)
@@ -19,7 +19,7 @@ Full workflow from finished execution to merged PR. $ARGUMENTS
 ## Flow Overview
 
 1. **State detection** — skip completed steps
-2. **Sync base** — invoke `mp-sync-base` skill
+2. **Sync base** — invoke `/mp:sync-base` skill
 3. **Commit + push** — stage, commit, push
 4. **Create/update PR** — find issue, create PR
 5. **Watch CI** — `gh pr checks --watch` (do NOT merge yet)
@@ -54,7 +54,7 @@ gh pr list --head <current-branch> --json number,state,url --jq '.[0]'
 
 ## Step 2: Sync Base Branch
 
-Invoke the `mp-sync-base` skill (Skill tool), passing `$ARGUMENTS` as the base branch if provided. It detects the base deterministically via `node $HOME/.claude/scripts/detect-base-branch.js`, fetches, merges, resolves conflicts (asks the user on complex ones), and pushes.
+Invoke the `/mp:sync-base` skill (Skill tool), passing `$ARGUMENTS` as the base branch if provided. It detects the base deterministically via `node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-base-branch.js`, fetches, merges, resolves conflicts (asks the user on complex ones), and pushes.
 
 If it reports "already up-to-date" → continue to Step 3.
 
@@ -74,7 +74,7 @@ Spawn `mp-git-committer` sub-agent:
 
 **4a. Find linked issue:**
 
-Fast-path: `node $HOME/.claude/scripts/extract-branch-issue.js`
+Fast-path: `node ${CLAUDE_PLUGIN_ROOT}/scripts/extract-branch-issue.js`
 
 If no number extracted, spawn `mp-issue-finder` sub-agent with repo, branch, commits, diff summary.
 

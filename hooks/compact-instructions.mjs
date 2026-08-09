@@ -14,9 +14,12 @@
  * every failure path here stays silent and exits 0.
  */
 
-const fs = require("fs");
-const os = require("os");
-const path = require("path");
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // hooks/ is reached through a symlink at ~/.claude/hooks and Node resolves realpath
 // by default, so __dirname lands inside the repo checkout.
@@ -30,7 +33,7 @@ const SOURCE_PATHS = [
  * @param {string[]} [sourcePaths] - Candidate files, highest priority first
  * @returns {string} File contents, trimmed; empty string when nothing is available
  */
-function readCompactInstructions(sourcePaths = SOURCE_PATHS) {
+export function readCompactInstructions(sourcePaths = SOURCE_PATHS) {
   for (const sourcePath of sourcePaths) {
     try {
       const contents = fs.readFileSync(sourcePath, "utf8").trim();
@@ -57,8 +60,7 @@ function main() {
   process.exit(0);
 }
 
-module.exports = { readCompactInstructions };
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     main();
   } catch {

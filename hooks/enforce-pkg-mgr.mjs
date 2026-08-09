@@ -4,7 +4,7 @@
  * Exit 0 = allow, Exit 2 = block (stderr fed back to Claude)
  */
 
-const { readStdin, findPackageManager } = require("./shared");
+import { readStdin, findPackageManager } from "./shared.mjs";
 
 async function main() {
   const input = await readStdin();
@@ -59,7 +59,7 @@ function warnToolRedirects(command) {
   }
 }
 
-function getToolRedirectWarnings(command) {
+export function getToolRedirectWarnings(command) {
   const warnings = [];
   // Match commands at start of line or after && / ; but NOT after |
   // Split on pipes first, only check the first segment for "starts with" patterns
@@ -78,7 +78,5 @@ function getToolRedirectWarnings(command) {
   }
   return warnings;
 }
-
-module.exports = { getToolRedirectWarnings };
 
 main().catch(() => process.exit(0));

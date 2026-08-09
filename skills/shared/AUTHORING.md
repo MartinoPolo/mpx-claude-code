@@ -1,7 +1,7 @@
 # Authoring Conventions
 
-Rules shared by every skill and agent in this repo. `mp-skill-create`, `mp-agent-create`,
-and `mp-skill-audit` reference this file rather than each restating it.
+Rules shared by every skill and agent in this repo. `/mp:skill-create`, `/mp:agent-create`,
+and `/mp:skill-audit` reference this file rather than each restating it.
 
 For anything about spawning sub-agents or choosing models, see
 [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md).

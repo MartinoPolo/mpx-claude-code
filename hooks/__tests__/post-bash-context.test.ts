@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { determineContext } from "../post-bash-context.js";
+import { determineContext } from "../post-bash-context.mjs";
 
 describe("post-bash-context", () => {
   describe("git push", () => {

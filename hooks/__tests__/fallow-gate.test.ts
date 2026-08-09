@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// fallow-gate.js is a self-executing PreToolUse hook script (no exports), so it
+// fallow-gate.mjs is a self-executing PreToolUse hook script (no exports), so it
 // must be exercised as a real child process rather than imported and unit-tested
-// like pre-commit-gate.js / dangerous-command-guard.js.
-const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "fallow-gate.js");
+// like pre-commit-gate.mjs / dangerous-command-guard.mjs.
+const HOOK = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "fallow-gate.mjs");
 const scratch = mkdtempSync(path.join(tmpdir(), "fallow-gate-"));
 const mockBinDir = path.join(scratch, "bin");
 const mockFallowExe = path.join(mockBinDir, "fallow.exe");
@@ -17,7 +17,7 @@ const mockFallowExe = path.join(mockBinDir, "fallow.exe");
 // can only launch real PE executables (not .cmd/.bat shims — Node refuses those
 // without shell:true). A compiled stub is the only reliable stand-in, driven by
 // env vars so each test can control its version string, JSON verdict, stderr
-// line, and exit code without touching fallow-gate.js itself.
+// line, and exit code without touching fallow-gate.mjs itself.
 const MOCK_FALLOW_SOURCE = `
 using System;
 class MockFallow {

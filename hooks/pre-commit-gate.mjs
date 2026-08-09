@@ -8,15 +8,16 @@
  * Exit 0 = allow, Exit 2 = block (checks failed or secret detected)
  */
 
-const fs = require("fs");
-const path = require("path");
-const { execSync } = require("child_process");
-const {
+import fs from "node:fs";
+import path from "node:path";
+import { execSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import {
   readStdin,
   findProjectRoot,
   detectPackageManager,
   detectToolchain,
-} = require("./shared");
+} from "./shared.mjs";
 
 const CHECK_ALL_SCRIPTS = ["check:all", "check-all"];
 const TYPECHECK_SCRIPTS = [
@@ -77,7 +78,7 @@ function findCheckScript(projectRoot, toolchain) {
  * Only checks added lines (lines starting with +).
  * Returns array of { name, file } for each detected secret.
  */
-function scanForSecrets(diffContent, filename) {
+export function scanForSecrets(diffContent, filename) {
   const findings = [];
   const addedLines = diffContent
     .split("\n")
@@ -100,7 +101,7 @@ function scanForSecrets(diffContent, filename) {
  * Matches based on the opening quote character to handle apostrophes
  * inside double quotes and double quotes inside single quotes.
  */
-function extractCommitMessage(command) {
+export function extractCommitMessage(command) {
   // Try $(cat <<'EOF'...) pattern first (used in skills)
   const catHeredocMatch = command.match(/\$\(cat\s+<<-?['"]?EOF['"]?\s*\n([\s\S]*?)\nEOF/);
   if (catHeredocMatch) return catHeredocMatch[1].split("\n")[0].trim();
@@ -128,7 +129,7 @@ function extractCommitMessage(command) {
  * Validate commit message against conventional format.
  * Returns { valid, warnings } — never blocks, only warns.
  */
-function validateCommitFormat(message) {
+export function validateCommitFormat(message) {
   const warnings = [];
   const firstLine = message.split("\n")[0];
 
@@ -252,8 +253,6 @@ function validateAndWarn(command) {
   }
 }
 
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch(() => process.exit(0));
 }
-
-module.exports = { scanForSecrets, validateCommitFormat, extractCommitMessage };

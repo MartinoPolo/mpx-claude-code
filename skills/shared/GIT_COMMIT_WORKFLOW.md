@@ -1,6 +1,6 @@
 # Git Commit Workflow
 
-Canonical delegation workflow shared by `mp-commit`, `mp-commit-push`, `mp-commit-push-pr`, and `mp-pr`. This file defines the phases; each skill states which phases it runs and its parameter deltas.
+Canonical delegation workflow shared by `/mp:commit`, `/mp:commit-push`, `/mp:commit-push-pr`, and `/mp:pr`. This file defines the phases; each skill states which phases it runs and its parameter deltas.
 
 ## Phase A: Commit (and Optional Push) via `mp-git-committer`
 
@@ -25,7 +25,7 @@ Up to 2 retry attempts. If still failing → report error to user and stop.
 
 ## Phase B: Find Linked Issue
 
-**Fast-path:** First try `node $HOME/.claude/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
+**Fast-path:** First try `node ${CLAUDE_PLUGIN_ROOT}/scripts/extract-branch-issue.js`. If it returns a number, verify with `gh issue view <N> --json title`. Only use agent fallback if no number extracted.
 
 If agent fallback needed, spawn `mp-issue-finder` sub-agent with repo, branch name, commit messages, and diff summary.
 

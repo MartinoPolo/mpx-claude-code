@@ -1,6 +1,6 @@
 ---
 name: mp-tutorial-create
-description: "Compiles an interactive, self-contained HTML tutorial from a topic or code showcase into the OneDrive tutorials folder."
+description: "Compiles an interactive, self-contained HTML tutorial from a topic or code showcase into the MPX_AI_GENERATED assets root."
 when_to_use: "User asks to create or make a tutorial."
 argument-hint: "<topic or code-showcase description> [--type topic|code-showcase] [--format brief|standard|deep] [--category <name>]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(node *), Bash(npm install*), Bash(ls *), Bash(env*), Agent, WebSearch, WebFetch

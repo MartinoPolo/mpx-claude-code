@@ -1,5 +1,5 @@
 ---
-name: mp-fallow-fix
+name: fallow-fix
 description: "Diagnoses and fixes fallow dead-code audit failures, suppressing or baselining findings when justified."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash(*fallow*), Bash(pnpm *fallow*), Bash(pnpm remove*)

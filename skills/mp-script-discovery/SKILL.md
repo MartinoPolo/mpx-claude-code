@@ -1,9 +1,9 @@
 ---
-name: mp-script-discovery
+name: script-discovery
 description: "Discovers runnable scripts across package.json files and identifies the frontend, backend, and database run commands."
 argument-hint: "[project-dir]"
 disable-model-invocation: true
-allowed-tools: Bash(bash $HOME/.claude/scripts/detect-project-scripts.sh*)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs*)
 metadata:
   author: MartinoPolo
   version: "0.4"
@@ -12,7 +12,7 @@ metadata:
 
 # Script Discovery
 
-Wrap `$HOME/.claude/scripts/detect-project-scripts.sh`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
+Wrap `${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs`. Use this skill when agents need a reliable fallback reference for script discovery behavior.
 
 ## Goal
 
@@ -27,14 +27,14 @@ Wrap `$HOME/.claude/scripts/detect-project-scripts.sh`. Use this skill when agen
 Script path:
 
 ```bash
-SCRIPT_DETECTOR="$HOME/.claude/scripts/detect-project-scripts.sh"
-bash "$SCRIPT_DETECTOR"
+SCRIPT_DETECTOR="${CLAUDE_PLUGIN_ROOT}/scripts/detect-project-scripts.mjs"
+node "$SCRIPT_DETECTOR"
 ```
 
 Usage:
 
 ```bash
-bash "$SCRIPT_DETECTOR" [project_dir] [--recursive|-r] [--category|-c <name>] [--json]
+node "$SCRIPT_DETECTOR" [project_dir] [--recursive|-r] [--category|-c <name>] [--json]
 ```
 
 Category options:
@@ -58,7 +58,7 @@ Behavior:
 ## Step 1: Run detector (default wrapper mode)
 
 ```bash
-bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.}
+node "$SCRIPT_DETECTOR" ${ARGUMENTS:-.}
 ```
 
 Default output format:
@@ -72,19 +72,19 @@ If detector returns an error line, report it and stop.
 Recursive scan:
 
 ```bash
-bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive
+node "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive
 ```
 
 Category filtered scan:
 
 ```bash
-bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --category frontend
+node "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --category frontend
 ```
 
 JSON scan (automation/debugging):
 
 ```bash
-bash "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive --json
+node "$SCRIPT_DETECTOR" ${ARGUMENTS:-.} --recursive --json
 ```
 
 ## Example Outputs

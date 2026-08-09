@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scanForSecrets, validateCommitFormat, extractCommitMessage } from "../pre-commit-gate.js";
+import { scanForSecrets, validateCommitFormat, extractCommitMessage } from "../pre-commit-gate.mjs";
 
 describe("pre-commit-gate", () => {
   describe("scanForSecrets", () => {
