@@ -4,99 +4,67 @@ paths:
     - '**/*.svelte.ts'
     - '**/*.svelte.js'
     - '**/*_variants.ts'
-applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*_variants.ts'
+    - '**/*.stories.svelte'
+applyTo: '**/*.svelte,**/*.svelte.ts,**/*.svelte.js,**/*_variants.ts,**/*.stories.svelte'
 ---
 
 # shadcn-svelte
 
-Built on **Bits UI** primitives, Tailwind CSS 4, and TypeScript. Components live as source code in the project's base tier — `$lib/components/base/` by default; some projects split direct shadcn installs into a separate `$lib/components/shadcn/`.
+Built on **Bits UI** primitives, Tailwind CSS 4, TypeScript. Components live as source in the base tier — `$lib/components/base/`.
 
-> **Docs:** Fetch https://www.shadcn-svelte.com/llms.txt or use Context7 MCP for up-to-date API reference.
-> **Which component for which need:** see `$MPX_PROJECTS/mpx-claude-code/rules-per-project/references/shadcn-svelte-component-catalog.md` — consult it before writing custom markup.
+## When unsure or a bug appears — read the source, don't improvise
 
-## Component Layering System
+Any question about a component's API, props, or behaviour, and any fix for a broken interaction, must be grounded in how the library actually works. Before guessing:
 
-Three tiers — every component belongs to exactly one:
+- **Local clones** (authoritative, offline): `$MPX_CLONED/shadcn-svelte/docs/content/components/<name>.md` and `$MPX_CLONED/bits-ui/docs/content/components/<name>.md`. shadcn wraps Bits UI, so behaviour/props usually trace to the Bits UI page.
+- **Context7 MCP** (`mp-context7-docs-fetcher`) for anything the clones don't cover.
 
-| Tier | Location | Storybook prefix | When to use |
-|------|----------|-------------------|-------------|
-| **Base** | `base/` (plus `shadcn/` in projects that split installs) | `Base/` | Direct shadcn-svelte installations + small custom primitives (HelpText, SearchField, StatCell) |
-| **Derived** | `derived/` | `Derived/` | Wraps Base components for a specific app concern. Create when a pattern is used **≥2 times** across the UI. |
-| **Blocks** | `blocks/<module>/` | `Blocks/<Module>/` | Feature-level composed UI: cards, panels, wizards, views. May depend on context stores. |
+This overrides any convention below when they disagree.
 
-**Rules:**
-- Use shadcn-svelte base components before writing custom markup.
-- When the same component pattern appears ≥2 times, extract a Derived component.
-- Every component gets its own Storybook page (one `.stories.svelte` per component).
-- Composition demos (showing how components work together) are separate stories titled `Blocks/<Module>/Layout` or similar.
+## Layering — every component belongs to exactly one tier
+
+- **Base** — `base/` (`shadcn/` where installs are split), story `Base/`: direct shadcn installs + small custom primitives (HelpText, SearchField, StatCell).
+- **Derived** — `derived/`, story `Derived/`: wraps Base for one app concern. Extract once a pattern appears **≥2×**.
+- **Blocks** — `blocks/<module>/`, story `Blocks/<Module>/`: feature-level composed UI (cards, panels, wizards). May depend on context stores.
+
+Reach for a Base component before writing custom markup.
 
 ## Imports
 
-**Multi-part** (dialog, select, card, tabs, …): namespace import.
-**Single-component** (button, input, badge, …): named import.
+Multi-part (dialog, select, card, tabs…) → namespace. Single-component (button, input, badge…) → named. Derived have no barrel — import the `.svelte` directly.
 
 ```ts
 import * as Dialog from "$lib/components/base/dialog/index.js";
-import * as Card from "$lib/components/base/card/index.js";
 import { Button } from "$lib/components/base/button/index.js";
-import { Input } from "$lib/components/base/input/index.js";
 ```
-
-Derived components have no barrel — import the `.svelte` file directly.
 
 ## Styling
 
-- **Semantic color tokens only**: `bg-primary`, `text-muted-foreground`, `text-destructive` — never raw values like `bg-blue-500`.
-- **`class` for layout** (`max-w-md`, `mx-auto`), never for overriding component colors/typography.
-- **`flex` + `gap-*`** for spacing — never `space-x-*` / `space-y-*`.
-- **`size-*`** when width equals height (`size-10` not `w-10 h-10`).
-- **`truncate`** shorthand, not `overflow-hidden text-ellipsis whitespace-nowrap`.
-- **`cn()`** from `$lib/utils` for conditional class merging — no manual ternaries in class strings.
-- **No manual `dark:` overrides** — semantic tokens handle light/dark automatically.
-- **No manual `z-index`** on overlay components (Dialog, Sheet, Popover handle their own stacking).
-- **Built-in variants first** (`variant="outline"`, `size="sm"`) before custom styles.
+- **Semantic tokens only** — `bg-primary`, `text-muted-foreground`, `text-destructive`; never `bg-blue-500`, never manual `dark:`.
+- **`class` for layout only** (`max-w-md`, `mx-auto`) — not for overriding component colors/typography. Built-in variants first (`variant="outline"`, `size="sm"`).
+- **`flex` + `gap-*`** for spacing, not `space-x/y-*`. **`size-*`** when w == h. **`truncate`** shorthand.
+- **`cn()`** from `$lib/utils` for conditional classes — no ternaries in class strings.
+- **No manual `z-index`** on overlays (Dialog, Sheet, Popover self-stack).
 
 ## Icons
 
-Use path-based Lucide imports. Components handle sizing — **no `size-*` classes on icons inside components**.
+Path-based Lucide imports. Components size icons themselves — no `size-*` on icons inside components. Never Unicode glyphs (⌫ ⌘ ✓ ×), except keyboard labels inside `<Kbd>`.
 
 ```svelte
-<script>
-  import SearchIcon from '@lucide/svelte/icons/search';
-</script>
-
-<Button>
-  <SearchIcon data-icon="inline-start" />
-  Search
-</Button>
+<script>import SearchIcon from '@lucide/svelte/icons/search';</script>
+<Button><SearchIcon data-icon="inline-start" />Search</Button>
 ```
 
-- `data-icon="inline-start"` (prefix) or `data-icon="inline-end"` (suffix) on icons inside `Button`.
-- Never use Unicode characters as icons (⌫, ⌘, ✓, ×) — use Lucide components. Exception: keyboard labels inside `<Kbd>`.
+`data-icon="inline-start"` / `"inline-end"` for prefix/suffix icons in `Button`.
 
-## Composition Rules
+## Composition
 
-**Items always inside their Group:**
-- `Select.Item` → `Select.Group`, `DropdownMenu.Item` → `DropdownMenu.Group`, `Command.Item` → `Command.Group`
+- **Items inside their Group**: `Select.Item`→`Select.Group`, `DropdownMenu.Item`→`DropdownMenu.Group`, `Command.Item`→`Command.Group`.
+- **Overlays need a Title** (a11y): `Dialog.Title` / `Sheet.Title` / `Drawer.Title` — `class="sr-only"` if hidden.
+- **Card**: `Card.Header`/`Title`/`Description`/`Content`/`Footer`. **Tabs**: `Tabs.Trigger` inside `Tabs.List`. **Avatar**: always `Avatar.Fallback`.
+- **Button loading**: compose `Spinner` + `disabled` (no `isPending`/`isLoading` prop).
+- **Custom triggers** via Bits UI `child` snippet:
 
-**Overlays always need a Title** (a11y): `Dialog.Title`, `Sheet.Title`, `Drawer.Title` — use `class="sr-only"` if visually hidden.
-
-**Card structure**: Always use `Card.Header` / `Card.Title` / `Card.Description` / `Card.Content` / `Card.Footer` composition.
-
-**Tabs**: `Tabs.Trigger` must be inside `Tabs.List`.
-
-**Avatar**: Always include `Avatar.Fallback`.
-
-**Button loading**: Compose `Spinner` + `disabled` — no `isPending`/`isLoading` prop exists.
-
-```svelte
-<Button disabled>
-  <Spinner data-icon="inline-start" />
-  Saving...
-</Button>
-```
-
-**Custom triggers** use Bits UI snippet pattern:
 ```svelte
 <Dialog.Trigger>
   {#snippet child({ props })}
@@ -107,31 +75,26 @@ Use path-based Lucide imports. Components handle sizing — **no `size-*` classe
 
 ## Forms
 
-- **`Field.FieldGroup` + `Field.Field`** for form layout — never raw `div` with spacing classes.
-- **`InputGroup.Root` + `InputGroup.Input`** for input addons — never raw `Input` inside `InputGroup.Root`.
-- **`ToggleGroup`** for 2–5 option sets — never manual `Button` loops with active state.
-- **`Field.FieldSet` + `Field.FieldLegend`** for grouping related checkboxes/radios.
+- **`Field.FieldGroup` + `Field.Field`** for layout — not raw `div` + spacing. **`Field.FieldSet` + `Field.FieldLegend`** to group checkboxes/radios.
+- **`InputGroup.Root` + `InputGroup.Input`** for addons — never raw `Input` inside `InputGroup.Root`.
+- **`ToggleGroup`** for 2–5 option sets — not `Button` loops with active state.
 - **Validation**: `data-invalid` on `Field.Field`, `aria-invalid` on the control. **Disabled**: `data-disabled` on `Field.Field`, `disabled` on the control.
 
 ## Theming
 
-CSS variables in `:root` (light) and `.dark` (dark), OKLCH format. Dark mode via class toggle (`.dark` on `<html>`) using `mode-watcher`.
+CSS vars in `:root` (light) / `.dark` (dark), OKLCH. Dark mode by class toggle on `<html>` via `mode-watcher`. Custom colors: `@theme inline` block in `src/app.css`.
 
-Custom colors: add to `src/app.css` with `@theme inline` block.
+## Variant files (`*_variants.ts`)
 
-## Component Variant File Structure (`*_variants.ts`)
-
-The `*_variants.ts` file is the **single source of truth** — types and constants derived from the `tv()` definition.
+Single source of truth — types and constants derive from the `tv()` config.
 
 ```
 component/
   component_variants.ts   ← tv() config, types, constants
-  Component.svelte        ← imports from variants file
+  Component.svelte        ← imports from variants file; no <script module> re-exports
   index.ts                ← Root from .svelte, everything else from variants file
 ```
 
-**Types**: `keyof typeof myVariants.variants.variant` — not `VariantProps<...>` (adds `| undefined`).
-**Full arrays**: `Object.keys(myVariants.variants.variant) as MyVariant[]`.
-**Subset arrays**: `asExhaustiveArray<MyVariant>()([...])` from `$lib/utils/variants.js`.
-**`index.ts`**: import `Root` from `.svelte`, everything else directly from `*_variants.ts`.
-**`.svelte`**: no `<script module>` re-exports.
+- **Types**: `keyof typeof myVariants.variants.variant` — not `VariantProps<...>` (adds `| undefined`).
+- **Full arrays**: `Object.keys(myVariants.variants.variant) as MyVariant[]`.
+- **Subset arrays**: `asExhaustiveArray<MyVariant>()([...])` from `$lib/utils/variants.js`.
