@@ -148,8 +148,12 @@ let fields = "";
 
 if (provider === "gitlab") {
     if (!commandExists("glab")) process.exit(0);
+    // approvalsRequired/approvalsLeft are GitLab Premium fields; a self-hosted CE
+    // host (e.g. gitlab.verotel.cz) rejects the whole query with `undefinedField`.
+    // Dropped for cross-edition compatibility — the appr_req/appr_left cache slots
+    // below are pinned to 0.
     const query = `query($p:ID!,$b:[String!]){project(fullPath:$p){mergeRequests(state:opened,sourceBranches:$b){nodes{
-        iid draft conflicts approved approvalsRequired approvalsLeft detailedMergeStatus
+        iid draft conflicts approved detailedMergeStatus
         userNotesCount webUrl headPipeline{status} }}}}`;
     const response = runCommand("glab", ["api", "graphql", "-f", `query=${query}`, "-f", `p=${project}`, "-f", `b=${branch}`], {
         env: { ...process.env, GITLAB_HOST: host }
@@ -176,8 +180,8 @@ if (provider === "gitlab") {
             String(mr.draft ?? ""),
             String(mr.conflicts ?? ""),
             String(mr.approved ?? ""),
-            String(mr.approvalsRequired ?? 0),
-            String(mr.approvalsLeft ?? 0),
+            "0",
+            "0",
             String(mr.detailedMergeStatus ?? ""),
             String(mr.userNotesCount ?? 0),
             pipelineStatus,
