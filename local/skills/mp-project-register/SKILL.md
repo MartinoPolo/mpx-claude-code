@@ -41,7 +41,8 @@ Scripts live in `${CLAUDE_SKILL_DIR}/scripts/`:
 7. Write the VS Code Peacock block
 8. Register dev-server ports
 9. Hand the quicklinks to `mp-raycast-config`
-10. Offer the remaining setup skills
+10. Register the project in the Obsidian task overview
+11. Offer the remaining setup skills
 
 ### Step 1: Gate on the Raycast export
 
@@ -214,7 +215,43 @@ Registering several projects in one sitting is worth batching: collect every pro
 quicklinks first and hand them over together, so the user does one export/import
 round-trip instead of one per project.
 
-### Step 10: Offer the remaining setup skills
+### Step 10: Register the project in the Obsidian task overview
+
+The vault's `Tasks.md` (at `MPX_OBSIDIAN_VAULT`, resolve it from the environment) aggregates
+Tier-1 quick todos from daily notes into several top-level `#` **lenses** over one task pool.
+One of them, `# Projects`, holds a **foldable, tag-colored `###` section per project**. A newly
+registered project should get its own section there so its daily-note tasks surface. The
+convention — tag roles, the project→dashboard registry, the heading-level rule, and the exact
+block shape — is documented in `<vault>/task-system.md`; **read it first**, and treat the
+existing project blocks in `Tasks.md` as the copy source so this skill never restates (and
+drifts from) the query format.
+
+Do three edits, the first two inside the `# Projects` lens (the run of `### #<project>` sections
+between `### General` and the trailing `%%`-comment marker):
+
+1. **Add the project's section.** Duplicate an existing project block and swap three things:
+   the heading `#tag`, the dashboard wikilink, and the `filter by function` tag. The heading is
+   `### #<project> [[<Dashboard>|dashboard]]` (no inline count — headings carry no count).
+   Resolve `<Dashboard>` from the registry convention: a standalone repo project links to
+   `[[<Project>Dashboard]]`; a MiniProjekty sub-project links to an anchor,
+   `[[MiniProjektyDashboard#<Anchor>]]`. Ask with `AskUserQuestion` which of the two it is when
+   it isn't obvious, and note plainly if the dashboard note doesn't exist yet — the link is a
+   forward reference until it does. Place the new section among the others (active projects
+   first; on-hold ones last, and on-hold projects with no current work may be omitted entirely).
+   Use `###`, never `##` — `#` is reserved for lenses, and a `##` between the two levels would
+   make every following section fold as its child instead of as a peer.
+2. **Extend the registry list** so projectless tasks stop catching this new tag: add the tag to
+   the `reg` array in the `### General` block's `filter by function`.
+3. **Add the pill color** in `<vault>/.obsidian/snippets/tagColors.css`: mirror the project's
+   VS Code Peacock color (the `peacock.color` you wrote in Step 7). Add a `--tag-<project>-*`
+   variable trio and the matching `a.tag[href=…]` + `cm-hashtag` rules, following the existing
+   project-tag entries. This is what colors the `### #<project>` heading pill.
+
+Use the project's lowercase folder name as the tag unless the user already tags that project
+differently in their daily notes. Skip this step only if the user keeps no such vault, and
+say so in the report.
+
+### Step 11: Offer the remaining setup skills
 
 `mp-init-repo` is no longer in this list — step 3 already ran it if the project needed it.
 Name the ones that still apply and let the user pick — neither runs unless chosen:
@@ -228,6 +265,6 @@ invocation isn't blocked.
 
 ## Report
 
-Close with a table of surfaces touched — Windows Terminal, VS Code, status line, Raycast —
-each with the file written and the value used. Name the Windows Terminal backup path, and
+Close with a table of surfaces touched — Windows Terminal, VS Code, status line, Raycast,
+Obsidian `Tasks.md` — each with the file written and the value used. Name the Windows Terminal backup path, and
 state plainly which steps were skipped and why.
