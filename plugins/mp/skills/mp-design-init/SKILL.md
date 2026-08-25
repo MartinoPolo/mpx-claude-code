@@ -1,12 +1,11 @@
 ---
 name: design-init
-description: "Bootstraps a project's visual identity — derives a palette, font pairing, density, and motion language from the project's domain, then writes designs/tokens.css and designs/DESIGN_SYSTEM.md."
-when_to_use: "User asks to init or bootstrap a design system, set up design tokens, or establish a project's visual identity. Run once per project."
+description: "Bootstraps a project's visual identity — derives a palette, font pairing, density, and motion language from the project's domain, then writes designs/tokens.css and designs/DESIGN_SYSTEM.md. Use when asked to init or bootstrap a design system, set up design tokens, or establish a project's visual identity. Run once per project."
 argument-hint: ""
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: design
 ---
 

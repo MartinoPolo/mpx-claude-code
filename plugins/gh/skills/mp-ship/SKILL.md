@@ -1,12 +1,11 @@
 ---
 name: ship
-description: "Ships finished work end to end: syncs the base branch, commits, pushes, opens a PR, waits for CI, then merges. Individual steps exist as /mp:commit, /mp:commit-push, /mp:commit-push-pr, /mp:pr and /mp:sync-base."
-when_to_use: "User asks to ship or merge work, or to commit, push, or open a PR."
+description: "Ships finished work end to end by syncing the base, committing, pushing, opening a PR, waiting for CI, then merging. Use when asked to ship or merge completed work; use the dedicated commit, push, or PR skills for individual steps."
 argument-hint: "[base-branch]"
 allowed-tools: Read, Write, Agent, Skill, Bash(git *), Bash(gh *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.6"
+  version: "0.7"
   category: git-workflow
 ---
 

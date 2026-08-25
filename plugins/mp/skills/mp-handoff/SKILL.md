@@ -1,11 +1,10 @@
 ---
 name: handoff
-description: "Writes or updates HANDOFF.md with session progress and open threads."
-when_to_use: "User asks for a handoff or to save progress at the end of a session."
+description: "Writes or updates HANDOFF.md with session progress and open threads. Use for a handoff or to save progress at the end of a session."
 allowed-tools: Read, Write, Glob, TaskList
 metadata:
   author: MartinoPolo
-  version: "0.7"
+  version: "0.8"
   category: project-management
 ---
 

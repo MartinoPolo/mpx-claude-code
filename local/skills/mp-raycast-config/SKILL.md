@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Edit, Glob, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.2"
+  version: "0.3"
   category: utility
 ---
 
@@ -104,6 +104,8 @@ which alias wins the bare word in a family, which projects are in scope. Apply t
 existing config's own conventions where they are already consistent — the user's muscle
 memory outranks any scheme proposed here.
 
+**Gate:** Continue only when the user has approved the complete change set.
+
 ### Step 5: Edit the payload
 
 Edit the decoded JSON with a Node script written to the scratchpad, never by hand — the
@@ -150,8 +152,10 @@ Raycast, and the original export next to it is the way back.
 ### Step 7: Confirm and clean up
 
 Ask the user to confirm the import landed — spot-check two or three renamed entries and
-one new alias. On confirmation, delete the decoded payloads from the scratchpad; they
-hold clipboard history.
+one new alias. On confirmation, delete every clear-text decoded payload from the scratchpad;
+they hold clipboard history.
+
+**Gate:** Continue only when the user confirms the representative imported changes and every clear-text decoded payload has been deleted.
 
 ## Report
 

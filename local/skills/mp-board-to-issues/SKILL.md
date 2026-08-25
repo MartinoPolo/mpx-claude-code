@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, AskUserQuestion, Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: project-management
 ---
 
@@ -16,8 +16,8 @@ Turn board notes into well-formed GitHub issues. $ARGUMENTS
 
 First:
 
-1. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board format, content→type classification, and the four-lane pipeline (state lives in the lane, not the checkbox).
-2. Read `${CLAUDE_SKILL_DIR}/../shared/GITHUB_ISSUE_TEMPLATE.md` now — issue bodies and labels follow it.
+1. Resolve `MPX_SKILLS_DIR` and read `<resolved MPX_SKILLS_DIR>/mp/skills/shared/BOARD_CONVENTION.md` now — board format, content→type classification, and the four-lane pipeline (state lives in the lane, not the checkbox).
+2. Read `<resolved MPX_SKILLS_DIR>/gh/skills/shared/GITHUB_ISSUE_TEMPLATE.md` now — issue bodies and labels follow it.
 
 ## Rules
 
@@ -50,6 +50,8 @@ For each proposed issue:
 
 Present the full plan with `AskUserQuestion`: each board bullet → proposed issue(s), labels, size, AFK/HITL, and any duplicates being skipped. Only create issues after the user confirms the plan (they may edit it).
 
+**Gate:** Continue only when the user has confirmed or amended the full mapping, including every skip.
+
 ## Step 6: Create issues
 
 Create each confirmed issue:
@@ -63,7 +65,7 @@ EOF
 
 ## Step 7: Write back to the board
 
-For each created issue, `Edit` `.mpx/BOARD.md` to **move** its item from `# To Process` to `# Ready to implement` and append ` → #<N>` (the issue number) to the item text. **Leave the checkbox marker as `- [ ]` — never write `- [x]` or `- [/]`; the checkbox is the user's alone.** The `→ #<N>` annotation is what `mp-batch-execute` uses to close the loop. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.)
+For each created issue, `Edit` `.mpx/BOARD.md` to **move** its item from `# To Process` to `# Ready to implement` and append ` → #<N>` (the issue number) to the item text. **Leave the checkbox marker as `- [ ]` — never write `- [x]` or `- [/]`; the checkbox is the user's alone.** The `→ #<N>` annotation is what `mp-batch-execute` uses to close the loop. (`.mpx/BOARD.md` is a symlink — if Edit/Write refuses it, resolve to the real vault path and edit that; see BOARD_CONVENTION.) Verify that every created issue's item appears exactly once in `# Ready to implement`, has its matching annotation, and no longer appears in intake.
 
 ## Step 8: Offer to resolve HITL
 

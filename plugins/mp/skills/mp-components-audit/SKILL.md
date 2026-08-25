@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Agent, AskUserQuestion, Bash(npm run *), Bash(pnpm *)
 metadata:
   author: MartinoPolo
-  version: "0.1.5"
+  version: "0.1.6"
   category: code-review
 ---
 
@@ -72,13 +72,15 @@ Report shape:
 - `path:line` — current → suggested fix
 ```
 
+Reconcile every raw finding into the report exactly once or record its exclusion or skip reason.
+
 ### Step 4: Autofix phase (conditional)
 
 Run only when `autofix` is ON and actionable findings exist. Apply **A, B, D, and C-clear**. Leave **C-judgment** as recommendations in the report — those are debatable abstractions for the user to decide.
 
 1. **Pre-analyze each fix** — resolve exact file path, current code, and the precise change (the executor applies; it does not diagnose). For a C-clear variant addition, specify both the edit to the component's variants file and every call-site migration.
 2. Spawn `mp-executor` sub-agent with the concrete per-finding instructions plus the requirement to fix only in-scope findings and preserve each component's public API when refactoring internals.
-3. After the executor completes, **re-read the changed files on disk** (a concurrent rebase/hook can silently revert edits — verify the final on-disk state directly, rather than trusting an earlier diff), then run the project's typecheck (`npm run check`/`pnpm check`/`tsc`). Distinguish pre-existing errors from new ones.
+3. After the executor completes, **re-read the changed files on disk** (a concurrent rebase/hook can silently revert edits — verify the final on-disk state directly, rather than trusting an earlier diff), then run the project's typecheck (`npm run check`/`pnpm check`/`tsc`). Distinguish pre-existing errors from new ones, and account for every actionable finding as applied or with a recorded reason.
 4. In the output, list any new component variants added so the user can review the design changes.
 
 ### Skip list

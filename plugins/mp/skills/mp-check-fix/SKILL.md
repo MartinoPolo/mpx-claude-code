@@ -1,12 +1,11 @@
 ---
 name: check-fix
-description: "Detects the project's check scripts, runs them, and fixes what fails."
-when_to_use: "User asks to run checks, fix lint or type errors, or get the build green."
+description: "Detects the project's check scripts, runs them, and fixes what fails. Use when asked to run checks, fix lint or type errors, or get the build green."
 compatibility: Requires package.json scripts for check:all/check-all or typecheck/lint/format/build
 allowed-tools: Bash(bash *detect-check-scripts*), Bash(*run build*), Bash(*run check*), Bash(*run check:all*), Bash(*run check-all*), Bash(*run typecheck*), Bash(*run type-check*), Bash(*run tsc*), Bash(*run check:types*), Bash(*run lint*), Bash(*run eslint*), Bash(*run lint:check*), Bash(*run lint:css*), Bash(*run format*), Bash(*run fmt*), Bash(*run format:check*), Bash(*run prettier*), Bash(cd * && *run build*), Bash(cd * && *run check*), Bash(cd * && *run check:all*), Bash(cd * && *run check-all*), Bash(cd * && *run typecheck*), Bash(cd * && *run type-check*), Bash(cd * && *run tsc*), Bash(cd * && *run check:types*), Bash(cd * && *run lint*), Bash(cd * && *run eslint*), Bash(cd * && *run lint:check*), Bash(cd * && *run lint:css*), Bash(cd * && *run format*), Bash(cd * && *run fmt*), Bash(cd * && *run format:check*), Bash(cd * && *run prettier*), Read, Edit, Glob, Grep, Bash(yarn *), Bash(npm *), Bash(pnpm *), Bash(bun *)
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: code-review
 ---
 

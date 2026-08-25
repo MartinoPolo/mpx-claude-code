@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Agent, AskUserQuestion, Bash(gh *), Bash(git diff *), Bash(git log *), Bash(git fetch *), Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "1.8"
+  version: "1.9"
   category: project-management
 ---
 
@@ -23,8 +23,8 @@ Use compressed output throughout: drop articles, filler, pleasantries. Fragments
 ## Usage
 
 ```
-/mp:epic-review #42
-/mp:epic-review https://github.com/owner/repo/issues/42
+/mp-gh:epic-review #42
+/mp-gh:epic-review https://github.com/owner/repo/issues/42
 ```
 
 ## Step 1: Gather Context
@@ -112,88 +112,11 @@ Prompt each with:
 >
 > [context slice per agent table above]
 
-### Agent 7: Architecture Scanner (Standalone Agent)
+### Agents 7–10: Specialized branches
 
-Spawn `mp-scanner-architecture` sub-agent:
+Read and dispatch every branch in [ANALYSIS_BRANCHES.md](ANALYSIS_BRANCHES.md): architecture, cleanup, documentation, and unresolved-items scanning.
 
-> Scan these files changed during Epic #N: "[title]".
-> Focus on structural concerns introduced or worsened across the full epic scope.
->
-> Changed files: [list with stats]
-> Architectural decisions from discussions: [filtered comments]
-
-The agent reads its own reference files (`deep-modules.md`, `interface-design.md`, `REFERENCE.md`).
-
-### Agent 8: Dead Code / Cleanup Scanner (Inline)
-
-Spawn `Explore` sub-agent (breadth: medium):
-
-> Scan files changed during Epic #N for cleanup opportunities introduced across multiple PRs:
->
-> - Unused exports, types, or functions added in one PR but never consumed
-> - Stale imports left after refactoring across PRs
-> - Duplicated logic across files that should be a shared utility
-> - Redundant code where one PR's implementation superseded another's
-> - Orphaned test helpers or fixtures no longer referenced
->
-> Changed files: [list with stats]
-> Diff: [full diff]
->
-> Verify each finding: grep for usages before flagging as unused. Only report HIGH confidence.
->
-> Output format per finding:
-> `[Critical|Important|Minor] title — file:line`
-> `What & Why` + `Suggested fix`
-
-### Agent 9: Documentation Scanner (Inline)
-
-Spawn `Explore` sub-agent (breadth: medium):
-
-> Check if project documentation is stale relative to changes made in Epic #N: "[title]".
->
-> For each file below, check only the ones that exist; treat missing files as out of scope.
->
-> - `.mpx/CONTEXT.md` — are there new domain terms not in § Domain Language? Are features in § Core Features still marked as pending when implemented?
-> - `.mpx/DECISIONS.md` — do structural changes warrant new decision entries?
-> - `README.md` — are setup steps, features, or usage instructions outdated?
->
-> Changed files: [list with stats]
-> PR/issue context: [full comments — to understand what was built]
->
-> Output format per finding:
-> `[Important|Minor] title — file`
-> `What needs updating` + `Specific content to add/change`
-
-### Agent 10: Unresolved Items Scanner (Inline)
-
-Spawn a `general-purpose` sub-agent with `model: "sonnet"`:
-
-> Scan all PR bodies and comments + issue bodies and comments from Epic #N for deferred, unfinished, or incomplete work.
->
-> Look for: "deferred", "TODO", "left for later", "unresolved", "out of scope", "follow-up", "nice to have", "future work", "skipped", "punted", "not implemented yet", "known issue", "hack", "workaround", "temporary".
->
-> For each candidate found:
->
-> 1. Read the relevant source files to check if it was actually implemented in a later PR within the epic
-> 2. Search open GitHub issues to check if it's already tracked:
->    ```bash
->    gh issue list --state open --search "<keywords>" --json number,title --limit 5
->    ```
-> 3. Classify:
->    - **Complete** — verified implemented in code → omit from findings
->    - **Tracked** — open issue exists → report with issue link, no action needed
->    - **Needs AFK issue** — clear scope, ready to implement → report with suggested issue title
->    - **Needs HITL issue** — uncertain scope, needs human decision → report with open questions
->
-> PR bodies and comments: [full content]
-> Issue bodies and comments: [full content]
-> Changed files: [list for code verification]
->
-> Output format per finding:
-> `[Critical|Important|Minor] title`
-> `Source: PR #N comment by @user` or `Issue #N body`
-> `Status: Complete|Tracked (#N)|Needs AFK issue|Needs HITL issue`
-> `Details` + [for HITL: `Open questions`]
+**Gate:** Continue only when all 10 agents have returned a result in their required format.
 
 ## Step 3: Synthesis
 
@@ -222,65 +145,9 @@ Multiple agents may flag the same issue (e.g., code-quality and dead-code scanne
 
 ### 3c. Write PHASE_END Document
 
-Write to `.mpx/reviews/PHASE_END_EPIC_<N>.md`:
+Write `.mpx/reviews/PHASE_END_EPIC_<N>.md` from [PHASE_END_TEMPLATE.md](PHASE_END_TEMPLATE.md). Use each item's checkbox (`- [ ]`) as the execution tracking mechanism.
 
-```markdown
-# Epic Review: Epic #<N> — [Title]
-
-Generated: [date] | Sub-issues: #1, #2, #3 | PRs: #4, #5, #6
-
-## Summary
-
-[2-3 sentences on overall epic health, total findings count by severity]
-
-## Critical
-
-### [Category] — [Title]
-
-- [ ] **File:** path/to/file.ts:42
-- **Finding:** [what's wrong]
-- **Action:** [what to do]
-
-## Important
-
-### [Category] — [Title]
-
-- [ ] **File:** path/to/file.ts:99
-- **Finding:** [what's wrong]
-- **Action:** [what to do]
-
-## Minor
-
-### [Category] — [Title]
-
-- [ ] **File:** path/to/file.ts:10
-- **Finding:** [what's wrong]
-- **Action:** [what to do]
-
-## Unresolved Items
-
-### Needs AFK Issue
-
-- [ ] [Title] — [details, suggested issue title]
-
-### Needs HITL Issue
-
-- [ ] [Title] — [details, open questions]
-
-### Already Tracked
-
-- #N — [title] (no action needed)
-
-## Documentation Updates
-
-- [ ] [file] — [specific update needed]
-
-## Architecture Promotion Candidates
-
-- [Title] — [brief description, recommended for `/mp:architecture-review`]
-```
-
-Each item's checkbox (`- [ ]`) is the execution tracking mechanism.
+**Gate:** Continue only when every finding appears exactly once, severity totals match the summary, unresolved items have a disposition, and every actionable item has a checkbox.
 
 ## Step 4: HITL Gate
 
@@ -299,63 +166,8 @@ Present the synthesized action list to the user:
 
 Wait for user response before proceeding.
 
-## Step 5: Execution
+## Step 5: Execute and close out
 
-Count actionable items (excluding "Already Tracked" and dropped items).
+After the user responds at the HITL gate, read and follow [EXECUTION.md](EXECUTION.md) for the confirmed/deferred branch and epic close-out.
 
-### If ≤ 20 items and user confirms execution:
-
-Execute using `mp-executor` sub-agents. The orchestrator:
-
-1. Analyzes each item and determines the concrete fix (exact file, line, change)
-2. Groups items by parallelizability:
-   - **Parallel group**: items touching different files or independent code paths
-   - **Sequential group**: items where one fix affects another (e.g., extracting a shared utility before deduplicating callers)
-3. Spawns `mp-executor` sub-agents with pre-analyzed fix instructions for each parallel group
-4. After each group completes, update PHASE_END.md checkboxes (`- [x]`)
-5. For unresolved items needing issues:
-
-```bash
-gh issue create --title "[title]" --label "task,AFK" --body "[body]"
-```
-
-or for HITL items:
-
-```bash
-gh issue create --title "[title]" --label "task,HITL" --body "[body with open questions]"
-```
-
-Link new issues as sub-issues of the epic using GraphQL `addSubIssue`.
-
-6. After all fixes: run static checks and tests to verify nothing broke
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/../mp/scripts/detect-check-scripts.mjs
-```
-
-Run all detected CHECK and TEST commands via `mp-checker`.
-
-### If > 20 items or user defers:
-
-Document is saved. User can return in a new session, read `.mpx/reviews/PHASE_END_EPIC_N.md`, and execute items manually or via `/mp:execute` for individual issues created from unresolved items.
-
-## Step 6: Close-out
-
-After all items are resolved (or explicitly deferred):
-
-1. Update PHASE_END.md with final status
-2. Check if all sub-issues of the epic are closed:
-
-```bash
-gh issue list --search "parent:<epic_number>" --state open --json number,title --limit 100
-```
-
-3. If all closed and all critical/important items resolved:
-
-> All items resolved. Close Epic #N: "[title]"?
-
-Wait for user confirmation before closing:
-
-```bash
-gh issue close <epic_number> --reason completed
-```
+**Gate:** Continue only when every accepted finding is checked off or explicitly deferred and the epic state is reported.
