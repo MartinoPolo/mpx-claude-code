@@ -12,6 +12,13 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 
+echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${RESET}"
+echo -e "${BOLD}${CYAN}║                                          ║${RESET}"
+echo -e "${BOLD}${CYAN}║              WORKTREE SETUP              ║${RESET}"
+echo -e "${BOLD}${CYAN}║                                          ║${RESET}"
+echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${RESET}"
+echo ""
+
 NAME=""
 WORKTREE_COLOR=""
 
@@ -204,9 +211,6 @@ if git -C "$SOURCE_DIR" check-ignore -q .mpx 2>/dev/null && [ -d "$SOURCE_DIR/.m
 elif [ -d "$SOURCE_DIR/.mpx" ]; then
   echo -e "${DIM}  Skipped .mpx/ (tracked — the worktree already has it)${RESET}"
 fi
-
-echo -e "${CYAN}→${RESET} Opening VSCode..."
-code .
 
 echo -e "${CYAN}→${RESET} Installing dependencies..."
 if [ -f "pnpm-lock.yaml" ]; then

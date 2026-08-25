@@ -18,12 +18,13 @@ Windows parity; the deprecated bash creators remain in [`plugins/mp/scripts/depr
 ## Usage
 
 ```bash
-node plugins/mp/scripts/setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--no-open] [--reconcile]
+node plugins/mp/scripts/setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--reconcile]
 node plugins/mp/scripts/remove-worktree.mts [--skip-confirmation] [--reconcile] [name...]
 ```
 
-`<name>` is the new branch name (slashes nest under the worktree root). `--reconcile` on either
-CLI prunes the port registry and exits without creating/removing anything.
+`<name>` is the new branch name (slashes nest under the worktree root). Creation starts with a
+prominent `WORKTREE SETUP` terminal banner and never opens an editor automatically. `--reconcile`
+on either CLI prunes the port registry and exits without creating/removing anything.
 
 ## Path convention
 

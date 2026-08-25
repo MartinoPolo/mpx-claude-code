@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Cross-platform worktree creator (Phase 1 + 2 of the worktree hub). Replaces
-// setup-worktree.sh: derives the path from the repo location, auto-detects the
-// base branch, copies editor config + `.worktreeinclude` matches, allocates
-// per-worktree dev-server ports, and installs dependencies in the background.
+// Cross-platform worktree creator: derives the path from the repo location,
+// auto-detects the base branch, copies editor config + `.worktreeinclude`
+// matches, allocates per-worktree dev-server ports, and installs dependencies
+// in the background.
 //
 // Usage: node setup-worktree.mts <name> [--base <ref>] [--color <hex>]
-//                                        [--no-open] [--reconcile]
+//                                        [--reconcile]
 
 import { spawn } from "node:child_process";
 import {
@@ -44,6 +44,15 @@ const RED = "\x1b[0;31m";
 const GREEN = "\x1b[0;32m";
 const CYAN = "\x1b[0;36m";
 
+function printBanner(): void {
+  console.log(`${BOLD}${CYAN}╔══════════════════════════════════════════╗${RESET}`);
+  console.log(`${BOLD}${CYAN}║                                          ║${RESET}`);
+  console.log(`${BOLD}${CYAN}║              WORKTREE SETUP              ║${RESET}`);
+  console.log(`${BOLD}${CYAN}║                                          ║${RESET}`);
+  console.log(`${BOLD}${CYAN}╚══════════════════════════════════════════╝${RESET}`);
+  console.log("");
+}
+
 const info = (msg: string) => console.log(`${CYAN}→${RESET} ${msg}`);
 const detail = (msg: string) => console.log(`  ${DIM}${msg}${RESET}`);
 const fail = (msg: string): never => {
@@ -55,7 +64,6 @@ interface Args {
   name: string;
   base: string | null;
   color: string | null;
-  open: boolean;
   reconcile: boolean;
 }
 
@@ -65,7 +73,7 @@ function normalizeHex(raw: string): string | null {
 }
 
 function parseArgs(argv: readonly string[]): Args {
-  const args: Args = { name: "", base: null, color: null, open: true, reconcile: false };
+  const args: Args = { name: "", base: null, color: null, reconcile: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     switch (arg) {
@@ -79,15 +87,12 @@ function parseArgs(argv: readonly string[]): Args {
         args.color = normalizeHex(raw) ?? fail(`Invalid color '${raw}'. Use 6-char hex like 7C3AED.`);
         break;
       }
-      case "--no-open":
-        args.open = false;
-        break;
       case "--reconcile":
         args.reconcile = true;
         break;
       case "-h":
       case "--help":
-        console.log("Usage: node setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--no-open] [--reconcile]");
+        console.log("Usage: node setup-worktree.mts <name> [--base <ref>] [--color <hex>] [--reconcile]");
         process.exit(0);
         break;
       default:
@@ -136,6 +141,7 @@ function setPeacockColor(worktreeDir: string, color: string): void {
 }
 
 async function main(): Promise<void> {
+  printBanner();
   const args = parseArgs(process.argv.slice(2));
   const cwd = process.cwd();
   const sourceRoot = cwd;
@@ -215,20 +221,6 @@ async function main(): Promise<void> {
     registry[worktreePath] = slot;
     writeRegistry(worktreeRoot, registry);
     Object.entries(ports).forEach(([name, port]) => detail(`${name}: ${port}`));
-  }
-
-  if (args.open) {
-    info("Opening editor...");
-    try {
-      spawn(process.platform === "win32" ? "code.cmd" : "code", ["."], {
-        cwd: worktreePath,
-        stdio: "ignore",
-        detached: true,
-        shell: true,
-      }).unref();
-    } catch {
-      detail("Editor launch skipped (no `code` on PATH).");
-    }
   }
 
   const manager = detectPackageManager(worktreePath, config);
