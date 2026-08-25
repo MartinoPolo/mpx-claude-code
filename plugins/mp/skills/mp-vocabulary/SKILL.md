@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "1.2"
+  version: "1.3"
   category: planning
 ---
 
@@ -71,7 +71,7 @@ If updating: merge new terms into existing structure, update changed definitions
 
 **Step 6: Summary**
 
-- Output inline: number of terms added, updated, and unchanged
+- Output inline: number of terms added, updated, and unchanged; reconcile these counts with the final file
 - List any unresolved ambiguities for future discussion
 
 ### Rules

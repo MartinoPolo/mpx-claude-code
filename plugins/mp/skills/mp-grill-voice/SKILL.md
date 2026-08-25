@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Agent, Bash(node *)
 metadata:
   author: MartinoPolo
-  version: "0.1"
+  version: "0.2"
   category: planning
 ---
 
@@ -90,6 +90,8 @@ Then close the session so it leaves the app's active list:
 ```bash
 node "${CLAUDE_SKILL_DIR}/scripts/grill-voice.js" complete <sessionId>
 ```
+
+**Gate:** Continue only when the completion command succeeds and the session is absent from the app's active list.
 
 ## Report
 

@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *), Bash(pnpm *), Bash(npx *), Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: setup
 ---
 
@@ -62,7 +62,7 @@ gh api repos/{owner}/{repo}/branches/main/protection -X PUT \
 EOF
 ```
 
-Repeat for `dev`. If protection fails (e.g., free plan limitations), warn but continue.
+Repeat for `dev`. If protection fails (e.g., free plan limitations), record the failing branch, complete `gh` error, and resulting unprotected state for the final report, then continue with the remaining setup.
 
 ### Step 5: Verify template works
 
@@ -72,7 +72,9 @@ pnpm -C <path> run check:all
 pnpm -C <path> run test
 ```
 
-If checks fail, report errors and continue.
+If checks fail, preserve every failing command and its complete output, confirm whether the failure prevents setup, and add all failures to the final report.
+
+**Gate:** Continue only when all checks pass or every failure is recorded and confirmed not to prevent setup.
 
 ### Step 6: Optional Svelte MCP setup
 
@@ -86,31 +88,7 @@ npx -C <path> sv add mcp
 
 ### Step 7: Initialize .mpx structure
 
-Create `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md` (see `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/DOCUMENTATION_STRATEGY.md` for format):
-
-`.mpx/CONTEXT.md`:
-```markdown
-# [Project Name] Context
-
-## What This Is
-[3-sentence project summary]
-
-## Domain Language
-[Terms added via `/mp:grill` or `/mp:vocabulary`]
-
-## Core Features
-[Feature index: name + status + epic#]
-
-## Key Constraints
-[Settled facts about the system]
-```
-
-`.mpx/DECISIONS.md`:
-```markdown
-# Decisions
-
-Settled architectural and design decisions. Updated via `/mp:grill` and `/mp:harvest-decisions`.
-```
+Read `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/PROJECT_DOC_TEMPLATES.md` and reproduce its two canonical scaffolds exactly in `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md`, replacing the project-name placeholder.
 
 ### Step 8: Verify Framework Rules
 
@@ -154,6 +132,6 @@ Svelte rules: [found at ~/.claude/rules/ | missing — see instructions above]
 - Always use `pnpm` as the package manager
 - Template repo name is always `template-sveltekit` under the user's GitHub account
 - Svelte MCP setup is optional -- always ask before adding
-- If checks fail, report errors and continue the setup
+- Handle check failures according to Step 5
 - Branch protection requires PR reviews (0 required reviewers) and CI checks
 - Use `git -C <path>` for all git commands

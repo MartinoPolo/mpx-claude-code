@@ -1,12 +1,11 @@
 ---
 name: playwright-test
-description: "Verifies UI changes with raw Playwright over a defined scope and reports a per-surface PASS/FAIL table with screenshots."
-when_to_use: "User asks to visually verify UI changes or run a Playwright test."
+description: "Verifies UI changes with raw Playwright over a defined scope and reports a per-surface PASS/FAIL table with screenshots. Use when asked to visually verify UI changes or run a Playwright test."
 argument-hint: "[uncommitted | pr | <area of the app>]"
 allowed-tools: Read, Grep, Glob, Agent, Bash(git *), Bash(gh *)
 metadata:
   author: MartinoPolo
-  version: "0.4"
+  version: "0.5"
   category: testing
 ---
 

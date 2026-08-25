@@ -1,12 +1,11 @@
 ---
 name: issue-create
-description: "Creates GitHub issues in the repo's standard format, optionally linked to an epic."
-when_to_use: "User asks to create or file a GitHub issue."
+description: "Creates or files a GitHub issue in the repo's standard format, optionally linked to an epic."
 argument-hint: "<description> [--epic <number>]"
 allowed-tools: Bash(gh issue create *), Bash(gh label *), Bash(gh issue view *), Bash(gh issue list *), Bash(gh repo view *), Bash(gh api *), Read, Agent
 metadata:
   author: MartinoPolo
-  version: "0.10"
+  version: "0.11"
   category: utility
 ---
 

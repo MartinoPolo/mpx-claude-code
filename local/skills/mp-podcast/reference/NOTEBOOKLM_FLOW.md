@@ -4,7 +4,7 @@ The generation path, validated end to end on 2026-07-24 (Shadow DOM, 33.5 min, z
 browser steps) with `notebooklm-py` 0.7.3.
 
 Full CLI surface — every command, flag and JSON schema — lives in
-[`../../notebooklm/SKILL.md`](../../notebooklm/SKILL.md). This file covers only the podcast
+`<resolved MPX_SKILLS_DIR>/mp/skills/notebooklm/SKILL.md`. This file covers only the podcast
 path and the quirks the test run exposed.
 
 Pass `-n <notebook_id>` (or `--notebook`) on every command. Relying on the CLI's implicit
@@ -39,8 +39,7 @@ Step 5 returns immediately with `status: pending`. Audio takes 10-20 minutes.
 ## Waiting without blocking
 
 Hand the wait to a background `general-purpose` sub-agent with `model: "haiku"` — it declares
-no model of its own ([`../../shared/SUBAGENT_PROTOCOL.md`](../../shared/SUBAGENT_PROTOCOL.md)
-§ 1). Give it the notebook id, the task id, the output path, and this instruction:
+no model of its own — resolve `MPX_SKILLS_DIR` and read `<resolved MPX_SKILLS_DIR>/mp/skills/shared/SUBAGENT_PROTOCOL.md` section 1. Give it the notebook id, the task id, the output path, and this instruction:
 
 > Run `notebooklm artifact wait <task_id> -n <nb> --timeout 1200`. Exit code 2, or stderr
 > saying `Timeout after Ns`, means still rendering — re-check with

@@ -193,7 +193,7 @@ Run in order: `init` (once) → `brief` → `mockup` → `refine`. Output under 
 | ------------------------ | ----------------------------------------------------------------------- |
 | `/mp-gh:setup-sveltekit`    | SvelteKit project from template with GitHub setup                  |
 | `/mp-gh:setup-react-native` | React Native monorepo from template with GitHub setup              |
-| `/mp-gh:init-repo`          | Init git repo with .gitignore and .claude/ structure               |
+| `/mp-gh:init-repo`          | Init git repo with config plus AGENTS/CLAUDE instruction pointers  |
 | `/mp:handoff`            | Save session progress to `HANDOFF.md`                                 |
 | `/mp:continue`           | Recover interrupted sub-agent/background work, then continue          |
 | `/mp:skill-create`       | Create new skills with structured conventions                         |

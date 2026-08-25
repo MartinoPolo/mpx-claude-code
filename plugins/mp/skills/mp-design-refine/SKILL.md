@@ -1,12 +1,11 @@
 ---
 name: design-refine
-description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the tracker issues/tasks that were gated on the design."
-when_to_use: "User asks to refine a design, accept or select a variant, polish a mockup, or refine all pending designs."
+description: "Applies refinement requirements to a chosen mockup variant, producing refined.html and SUMMARY.md, updating the brief, and unblocking the tracker issues/tasks that were gated on the design. Use when asked to refine a design, accept or select a variant, polish a mockup, or refine all pending designs."
 argument-hint: "all | <variant-letter> [refinement requirements...]"
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(kf *), Bash(glab *), Bash(npx *), Bash(pnpm *), Bash(yarn *), Bash(bunx *), mcp__chrome-devtools__new_page
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: design
 ---
 

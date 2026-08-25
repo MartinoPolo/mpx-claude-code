@@ -3,8 +3,9 @@
 Rules shared by every skill and agent in this repo. `/mp:skill-create`, `/mp:agent-create`,
 and `/mp:skill-audit` reference this file rather than each restating it.
 
-For anything about spawning sub-agents or choosing models, see
-[SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md).
+For agent-facing writing structure, context pointers, semantic completion, disclosure,
+and pruning, read [WRITING_FOR_AGENTS.md](WRITING_FOR_AGENTS.md). For spawning
+sub-agents or choosing models, see [SUBAGENT_PROTOCOL.md](SUBAGENT_PROTOCOL.md).
 
 ## Where things live
 
@@ -17,26 +18,25 @@ For anything about spawning sub-agents or choosing models, see
 Custom agents are named `mp-<role>`. An agent that overrides a built-in instead matches
 the built-in's name and capitalisation exactly — see SUBAGENT_PROTOCOL.md § 4.
 
-The two identities work differently. For a skill, the invocable command comes from the
-**directory name**; frontmatter `name` is only a display label. For an agent, `name` **is**
-the identity, and the filename need not match. Keep both aligned anyway — a mismatch
-reads as a bug to everyone who meets it later.
+The identities differ by harness. Claude plugin commands are keyed by plugin and skill
+directory; Pi and Codex derive explicit invocation from frontmatter `name`. Claude invokes
+a plugin skill as `/plugin:skill`, Pi as `/skill:name`, and Codex as `$name`. An agent's
+`name` is its identity, while its filename can differ. Keep names and paths aligned so
+discovery and explicit invocation remain predictable across harnesses.
 
 ## Descriptions and discoverability
 
-A skill's `description` and `when_to_use` are the only parts of it that sit in every
-session's context. Treat them as a context budget, not as a place to explain the skill.
+A skill's `description` is its canonical portable context pointer. Pi and Codex route
+only from it; Claude Code also appends optional `when_to_use`. Follow
+[WRITING_FOR_AGENTS.md](WRITING_FOR_AGENTS.md) § Context pointers and invocation.
 
-- **`description`** — 1–2 sentences on what the skill does. Third person.
-- **`when_to_use`** — 1–3 short sentences of trigger phrasing. Omit it on a skill that
-  is not model-invocable, where nothing reads it.
-- The two are concatenated in the skill listing and truncated **together** at 1,536
-  characters, so put the use case first.
-- **Agents** — one line, max 250 chars, front-loading the use cases.
-- Describe what the thing *does*, not how it works internally.
-
-Triggers belong in `when_to_use`. Do not stuff them into `description` as
-`Use when: "..."` — that was this repo's old convention and it wasted the field.
+- **`description`** — 1–2 concise sentences, third person, stating what it does and every
+  distinct trigger branch. It must route correctly by itself.
+- **`when_to_use`** — optional Claude-only enrichment with no unique routing information.
+  Prefer omission when the description already carries the triggers.
+- Claude concatenates the fields and truncates them together at 1,536 characters.
+- **Agents** — one line, max 250 chars, front-loading delegation branches.
+- Describe observable purpose and triggers rather than internal implementation.
 
 ### Default to `disable-model-invocation: true`
 
@@ -53,22 +53,21 @@ For a skill whose file you cannot edit, the settings-side equivalent is
 `skillOverrides: { "<name>": "user-invocable-only" }`. Plugin skills are unaffected by
 `skillOverrides` — manage those through `/plugin`.
 
-### Valid frontmatter fields
+### Frontmatter portability
 
-`name`, `description`, `when_to_use`, `argument-hint`, `arguments`,
+Claude Code supports `name`, `description`, `when_to_use`, `argument-hint`, `arguments`,
 `disable-model-invocation`, `user-invocable`, `allowed-tools`, `disallowed-tools`,
-`model`, `effort`, `context`, `agent`, `background`, `hooks`, `paths`, `shell`.
+`model`, `effort`, `context`, `agent`, `background`, `hooks`, `paths`, and `shell`.
+Pi and the Agent Skills standard also recognize `license`, `compatibility`, and `metadata`;
+Codex routing depends on `name` and `description`. This repo uses `metadata` for
+bookkeeping, not behavior. Treat every other harness-specific field as optional packaging:
+the portable routing contract remains `name` plus `description`.
 
-`metadata` and `compatibility` are **not** platform fields; Claude Code ignores them.
-This repo keeps `metadata` as its own bookkeeping — do not expect it to change behaviour.
+## Agent-facing prose
 
-## Positive instructions
-
-Say what to do. When the positive instruction is clear, its negative counterpart is
-noise that costs tokens and attention.
-
-Reserve a negative for a genuinely surprising constraint or an irreversible action —
-"deprecate means move to `deprecated/`, never delete" earns its `never`.
+Use the positive targets, hierarchy, branch-based disclosure, semantic completion, and
+pruning pass in [WRITING_FOR_AGENTS.md](WRITING_FOR_AGENTS.md). The local irreversible
+guardrail remains: deprecating means moving to `deprecated/`, never deleting.
 
 ## Explicit references
 
@@ -109,6 +108,9 @@ per run holding the sources, the prompt and the finished asset together. Interme
 stay in the session scratchpad; only the files the user would open get promoted.
 
 ## Size and progressive disclosure
+
+Use branch or sequence boundaries from
+[WRITING_FOR_AGENTS.md](WRITING_FOR_AGENTS.md), not line count alone.
 
 | File | Limit | On exceeding |
 | ------------- | --------- | ------------------------------------------------ |

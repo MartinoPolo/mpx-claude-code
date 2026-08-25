@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Edit, Agent, AskUserQuestion, TaskCreate, TaskUpdate, Bash(gh *), Bash(git *), Bash(node ${CLAUDE_PLUGIN_ROOT}/../mp/scripts/detect-check-scripts.mjs*)
 metadata:
   author: MartinoPolo
-  version: "0.10"
+  version: "0.11"
   category: project-management
 ---
 
@@ -31,7 +31,7 @@ Parse `$ARGUMENTS`:
 
 ## Step 2: Build the work list
 
-**Issue mode** — mirror the `/mp:hitl` fetch-broad-then-filter pattern:
+**Issue mode** — mirror the `/mp-gh:hitl` fetch-broad-then-filter pattern:
 
 ```bash
 gh issue list --state open --json number,title,labels,body,url
@@ -65,7 +65,7 @@ Spawn the next item's agent only after the current commit is confirmed.
 
 ## Step 5: Verify gate
 
-Runs **once** on the integrated batch branch, orchestrated at this level (not nested inside a single fix agent). Mirrors `/mp:execute`'s Step 5/6: static checks + tests, then code review, then visual.
+Runs **once** on the integrated batch branch, orchestrated at this level (not nested inside a single fix agent). Mirrors `/mp-gh:execute`'s Step 5/6: static checks + tests, then code review, then visual.
 
 ### 5a. Static checks + tests
 

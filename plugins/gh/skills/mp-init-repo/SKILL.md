@@ -2,16 +2,16 @@
 name: init-repo
 description: "Initializes a git repo, pushes it to GitHub, and sets up branch protection."
 disable-model-invocation: true
-allowed-tools: Bash, Write, AskUserQuestion
+allowed-tools: Bash, Read, Write, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: setup
 ---
 
 # Initialize Repository
 
-Initialize a new git repository with comprehensive .gitignore, Claude Code project structure, GitHub remote, and branch protection.
+Initialize a new git repository with comprehensive .gitignore, root shared agent instructions, GitHub remote, and branch protection.
 
 Usually run automatically from `mp-project-register` step 3 (read-and-follow) when a
 project has no `.git/` yet.
@@ -26,38 +26,14 @@ project has no `.git/` yet.
    node ${CLAUDE_PLUGIN_ROOT}/../mp/scripts/init-repo.mjs
    ```
 
-3. **Create `.mpx/` structure**: Create the project documentation directory (see `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/DOCUMENTATION_STRATEGY.md` for format):
+3. **Create `.mpx/` structure**: Use `${CLAUDE_PLUGIN_ROOT}/../mp/skills/shared/PROJECT_DOC_TEMPLATES.md` as the single source for `.mpx/CONTEXT.md` and `.mpx/DECISIONS.md`. Preserve any existing file that already contains substantive planning, research, or prior grilling output. Create only files that are missing or still untouched placeholders, reproducing the canonical scaffold exactly and replacing the project-name placeholder in newly created files. Before committing, verify that each file contains either preserved substantive content or a newly created canonical scaffold. Then run exactly:
 
-   ```
-   .mpx/CONTEXT.md      # Project context: domain language, feature index, constraints
-   .mpx/DECISIONS.md    # Settled architectural and design decisions
-   ```
-
-   `CONTEXT.md` template:
-   ```markdown
-   # [Project Name] Context
-
-   ## What This Is
-   [3-sentence project summary]
-
-   ## Domain Language
-   [Terms added via `/mp:grill` or `/mp:vocabulary`]
-
-   ## Core Features
-   [Feature index: name + status + epic#]
-
-   ## Key Constraints
-   [Settled facts about the system]
+   ```bash
+   git add .mpx/CONTEXT.md .mpx/DECISIONS.md
+   git commit -m "docs: initialize project documentation"
    ```
 
-   `DECISIONS.md` template:
-   ```markdown
-   # Decisions
-
-   Settled architectural and design decisions. Updated via `/mp:grill` and `/mp:harvest-decisions`.
-   ```
-
-   Commit the `.mpx/` files.
+   This separate commit is needed because `init-repo.mjs` commits before `.mpx/` exists.
 
 4. **Ask repo visibility**: Ask the user whether the GitHub repo should be **private** (default/recommended) or **public**.
 
@@ -89,8 +65,8 @@ project has no `.git/` yet.
    ```
    - If protection fails with HTTP 403 (GitHub Free plan limitation on private repos), **warn the user** but continue without aborting. Suggest they upgrade to Pro or make the repo public to enable branch protection later.
 
-7. **Report results**: Show the user what was created:
-   - Local structure (`.git/`, `.gitignore`, `.claude/`, `.mpx/`)
+7. **Report results**: Show the user what was created or preserved:
+   - Local structure (`.git/`, `.gitignore`, `.gitattributes`, `.editorconfig`, `AGENTS.md` when absent and otherwise preserved, `CLAUDE.md` when absent and otherwise preserved, `.mpx/`)
    - GitHub repo URL
    - Branch setup (`main` + `dev`, default = `dev`)
    - Branch protection status (applied or skipped)
@@ -101,8 +77,10 @@ project has no `.git/` yet.
 project/
 ├── .git/
 ├── .gitignore              # Comprehensive multi-language
-├── .claude/
-│   └── CLAUDE.md           # Project context template
+├── .gitattributes          # Line ending normalization
+├── .editorconfig           # Editor consistency settings
+├── AGENTS.md               # Created when absent; otherwise preserved
+├── CLAUDE.md               # Created when absent; otherwise preserved
 └── .mpx/
     ├── CONTEXT.md          # Domain language, feature index, constraints
     └── DECISIONS.md        # Settled architectural decisions

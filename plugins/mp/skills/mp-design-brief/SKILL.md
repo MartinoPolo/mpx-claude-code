@@ -1,12 +1,11 @@
 ---
 name: design-brief
-description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent tracker issues/tasks with a Design needed label."
-when_to_use: "User asks for a design brief, design spec, component spec, or UI spec."
+description: "Writes a standalone design brief for a UI component — surrounding context, exhaustive requirements and states, and a component reuse map — then gates dependent tracker issues/tasks with a Design needed label. Use for a design brief, design spec, component spec, or UI spec."
 argument-hint: "[component-name]"
 allowed-tools: Read, Write, Glob, Grep, Agent, Bash(gh *), Bash(kf *), Bash(glab *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: design
 ---
 

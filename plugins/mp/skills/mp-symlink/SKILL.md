@@ -1,12 +1,11 @@
 ---
 name: symlink
-description: "Creates and verifies Windows symlinks and directory junctions through PowerShell New-Item."
-when_to_use: "Any symlink or junction work on Windows. Git Bash ln -s and cmd mklink silently create the wrong thing here."
+description: "Creates and verifies Windows symlinks and directory junctions through PowerShell New-Item. Any symlink or junction work on Windows. Git Bash ln -s and cmd mklink silently create the wrong thing here."
 argument-hint: "[link-path] [target-path]"
 allowed-tools: Bash, PowerShell
 metadata:
   author: MartinoPolo
-  version: "0.1.2"
+  version: "0.1.3"
   category: utility
 ---
 

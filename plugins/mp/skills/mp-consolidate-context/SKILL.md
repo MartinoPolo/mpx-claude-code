@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Read, Write, Glob
 metadata:
   author: MartinoPolo
-  version: "2.2"
+  version: "2.3"
   category: utility
 ---
 
@@ -24,7 +24,7 @@ See `skills/shared/DOCUMENTATION_STRATEGY.md` for format details.
 
 ### Step 1: Read & Analyze
 
-Read the full file. Scan for each issue type and build a findings list:
+Read every line of the full file against each issue type and build a classified findings list:
 
 | Issue Type | What to Look For |
 |---|---|
@@ -56,7 +56,7 @@ Apply all changes directly and automatically. Produce the consolidated file:
 
 ### Step 3: Write Result
 
-Write the consolidated file to the original path (overwrite). Git history preserves the original.
+Write the consolidated file to the original path (overwrite), then re-read it to confirm the intended sections and retained technical details. Git history preserves the original.
 
 ## Report
 

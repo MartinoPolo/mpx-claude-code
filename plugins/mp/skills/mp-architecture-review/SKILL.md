@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(gh *), Bash(kf *), Bash(glab *), AskUserQuestion, Agent
 metadata:
   author: MartinoPolo
-  version: "0.8"
+  version: "0.9"
   category: planning
 ---
 
@@ -48,6 +48,8 @@ Ask the user which candidate to explore next — interfaces come later, in Step 
 
 ### 3. User picks a candidate
 
+**Gate:** Continue only when the user has unambiguously selected one candidate.
+
 ### 4. Frame the problem space
 
 Before spawning sub-agents, write a user-facing explanation of the problem space for the chosen candidate:
@@ -82,6 +84,8 @@ Present designs sequentially, then compare them in prose.
 After comparing, give your own recommendation: which design you think is strongest and why. If elements from different designs would combine well, propose a hybrid. Be opinionated — the user wants a strong read, not just a menu.
 
 ### 6. User picks an interface (or accepts recommendation)
+
+**Gate:** Continue only when the user has explicitly accepted the final interface shape and its trade-offs.
 
 ### 7. Log the refactor RFC
 

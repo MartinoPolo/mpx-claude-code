@@ -1,12 +1,11 @@
 ---
 name: execute
-description: "Executes a GitHub issue, milestone, or inline task list end to end with TDD, opens a PR, and merges it once CI is green."
-when_to_use: "User asks to execute, implement, or work on an issue, milestone, or task list."
+description: "Executes, implements, or works through a GitHub issue, milestone, or inline task list end to end with TDD, then opens a PR and merges it once CI is green."
 argument-hint: '<#issue | milestone:"Version 1" | "inline task description or checklist">'
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(gh *), Bash(git status *), Bash(git diff *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(git log *), Bash(git fetch *), Bash(git merge *), Bash(git checkout --ours *), Bash(git branch *), Bash(git rev-parse *), Bash(git merge-base *), Bash(git remote *), Bash(git -C *), Bash(node *), Bash(node ${CLAUDE_PLUGIN_ROOT}/../mp/scripts/detect-check-scripts.mjs*), Bash(*run dev*), Bash(*run start*), Bash(*run preview*), Bash(cd * && *run dev*), Bash(cd * && *run start*), Bash(cd * && *run preview*), Bash(npm *), Bash(pnpm *), Bash(yarn *), Bash(bun *), Bash(lsof *), Bash(ss *), Bash(netstat *)
 metadata:
   author: MartinoPolo
-  version: "2.7"
+  version: "2.8"
   category: project-management
 ---
 
@@ -21,18 +20,6 @@ Unified execution skill with TDD methodology. Accepts GitHub issues, milestones,
 Use compressed output throughout execution: drop articles, filler, pleasantries, hedging. Fragments OK. Use abbreviations (DB/auth/config) and arrows (X → Y). Pattern: `[thing] [action] [reason]. [next step].` Keep technical terms exact, code blocks intact, error messages verbatim.
 
 **Exception:** Step 10 final report uses normal professional prose (it's posted as a PR comment and read by humans).
-
-## Usage
-
-```
-/mp:execute #42                        # Single GitHub issue
-/mp:execute milestone:"Version 2"        # Pick one open, unblocked issue from milestone
-/mp:execute "add dark mode toggle"    # Inline task (no GitHub issue)
-/mp:execute "- [ ] add dark mode toggle\n- [ ] fix header spacing"  # Inline checklist
-/mp:execute --full-review #42         # Full reviewer set
-/mp:execute --no-review #42           # Simple task — skip reviewer sub-agents
-/mp:execute --no-auto-merge #42       # Stop after CI green; leave PR open
-```
 
 ## Behavior Contract
 
@@ -173,67 +160,9 @@ Spawn `mp-pr-manager` sub-agent to create or update the PR:
 - **OK** → continue to Step 8d
 - **FAIL** → diagnose error, fix (spawn `mp-executor` with concrete instructions), re-spawn (up to 2 retries). If still failing → escalate to user.
 
-### 8d. Ensure Mergeable (resolve merge conflicts — delegated)
+### 8d. Mergeability, CI, and close-out
 
-Check: `gh pr view <pr_number> --json mergeable,mergeStateStatus --jq '{mergeable, mergeStateStatus}'`
-
-If `mergeable` is `CONFLICTING`: the base branch has diverged and CI **will not run** until conflicts are resolved (the most common reason for missing CI checks — not pending or rate-limited CI). Spawn a `general-purpose` sub-agent with `model: "opus"`:
-
-> Merge origin/<base> into <branch> and resolve all conflicts.
->
-> 1. `git fetch origin <base>` then `git merge origin/<base>`
-> 2. Resolve conflicts: prefer the feature branch's version for code just written for issue #N; incorporate base-only changes where they don't conflict with that work
-> 3. Verify the resolution: spawn `mp-checker` with [static + test commands from Step 3]; fix regressions before committing
-> 4. Spawn `mp-git-committer` with push: true, commit_hint: "merge conflict resolution with <base>"
-> 5. Return ONLY JSON: `{"status": "clean"|"blocked", "summary": "≤5 lines", "conflicts_resolved": ["file", ...]}`
-
-Re-check mergeability. Repeat if still conflicting (up to 2 iterations), then escalate to user.
-
-## Step 9: CI Green Gate (mandatory — completion gate)
-
-**The skill is not done until CI is green.** Local Step 5 is not a substitute — CI environment differences (OS, headless browsers, timing, secrets, build flags) can still produce divergent results.
-
-### 9a. Watch CI
-
-After push (and after confirming PR is mergeable per Step 8d): `gh pr checks <pr_number> --watch`
-
-### 9b. Fix Loop (delegated — main never reads CI logs)
-
-If any CI check fails, get the run id (`gh run list --branch <branch> --limit 1 --json databaseId --jq '.[0].databaseId'`) and spawn an `mp-ci-fixer` sub-agent (omit `model`; it declares its own):
-
-> Fix failing run <run_id> on branch <branch> for PR #<pr_number>.
-> Local verify commands: [static + test commands from Step 3].
-> Return ONLY your JSON contract.
-
-The agent fetches logs, diagnoses, fixes, commits+pushes, and re-watches CI — up to 3 attempts internally.
-
-**Route the returned JSON:**
-
-- `"clean"` → confirm with `gh pr checks <pr_number>`; continue to 9c
-- `"issues_remaining"` → CI green; route `unresolved_findings` through Step 6 triage, then continue
-- `"blocked"` → escalate to user with the agent's `summary` + `blockers`. **Do not declare completion.**
-
-### 9c. Completion Criteria
-
-The skill is done **only when all of these are true**:
-
-- All pushed commits are on the remote branch
-- The PR is merged (default) — or left open if `--no-auto-merge` is set
-- `gh pr checks <pr>` shows **all checks passed**
-- No uncommitted changes remain
-
-## Step 10: Finalization
-
-After CI is green:
-
-1. Compose the final report: issue/task completed, tests added/modified, files changed (from sub-agent `files_changed` lists), PR URL(s), CI run URL (green), remaining blockers, unresolved items triaged, review summary (from Step 5 `summary`).
-2. Post it as a PR comment (GitHub issues only): write the composed text to a temp file, then `gh pr comment <pr_number> --body-file <temp_file>`. The comment must be byte-identical to the final report output — the PR carries a complete audit trail.
-3. Unless `--no-auto-merge` is set, merge and sync:
-   - **3a.** Check state (auto-merge may have already merged): `gh pr view <pr_number> --json state --jq '.state'`
-   - **3b.** If `OPEN`: `gh pr merge <pr_number> --squash --auto` (without `--delete-branch` — it fails in worktree contexts). If `MERGED`: skip.
-   - **3c.** Delete remote branch (idempotent): `git push origin --delete <branch_name> 2>/dev/null || true`
-   - **3d.** Pull merged changes into the main worktree: `MAIN_REPO=$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")` then `git -C "$MAIN_REPO" pull`. Skip when not in a worktree (`git rev-parse --git-common-dir` returns `.git`).
-4. Output the same composed text as the final report of this run.
+After PR creation succeeds, read and follow [CLOSE_OUT.md](CLOSE_OUT.md) for conflict resolution, the mandatory CI gate, final reporting, merging, and worktree sync.
 
 ## Rules
 

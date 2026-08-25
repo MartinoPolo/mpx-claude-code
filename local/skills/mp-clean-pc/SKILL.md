@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash, PowerShell, Read, Write, Agent, Artifact, AskUserQuestion
 metadata:
   author: MartinoPolo
-  version: "0.5"
+  version: "0.6"
   category: utility
 ---
 
@@ -50,7 +50,7 @@ When none is found, offer the install once via the platform file's command. If t
 
 ### Step 3: Scan All Domains in Parallel
 
-Spawn one `general-purpose` sub-agent per domain with `model: "sonnet"`, all in a single message so they run concurrently. `general-purpose` declares no model of its own, so the parameter is load-bearing — see [../shared/SUBAGENT_PROTOCOL.md](../shared/SUBAGENT_PROTOCOL.md) § 1. Tell each to keep its analysis brief: this is a scan, not a review. Give each sub-agent:
+Spawn one `general-purpose` sub-agent per domain with `model: "sonnet"`, all in a single message so they run concurrently. `general-purpose` declares no model of its own, so the parameter is load-bearing — resolve `MPX_SKILLS_DIR` and read `<resolved MPX_SKILLS_DIR>/mp/skills/shared/SUBAGENT_PROTOCOL.md` section 1. Tell each to keep its analysis brief: this is a scan, not a review. Give each sub-agent:
 
 - The domain's section from `DOMAINS.md` and the platform file
 - The resolved roots, the exclusion list, and the quarantine roots
@@ -103,6 +103,8 @@ Attach the propagation warning to every group under a cloud-synced path: deletin
 **Re-verify at execution time.** An approval describes the scan, not the truth. When execution reveals the scan was wrong — an image that turns out to belong to a stopped container, a project that turns out to be live — stop, say so, and ask again. New evidence overrides an earlier approval.
 
 Record every decision in `state.json`, declines included.
+
+**Gate:** Continue only when every candidate group has an explicit approve or decline decision after any required visual review and execution-time re-verification.
 
 ### Step 6: Execute and Report
 

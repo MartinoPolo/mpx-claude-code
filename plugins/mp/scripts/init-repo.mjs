@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Initialize a new project with git and Claude Code structure
+// Initialize a new project with git, repository config, and shared agent instructions
 // Usage: node $HOME/.claude/scripts/init-repo.mjs
 
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -97,55 +97,30 @@ trim_trailing_whitespace = unset
 `
 );
 
-console.log("Creating .claude/ directory...");
-mkdirSync(".claude", { recursive: true });
-
-if (!existsSync(".claude/CLAUDE.md")) {
-    console.log("Creating .claude/CLAUDE.md template...");
+const instructionFiles = ["AGENTS.md", "CLAUDE.md"];
+if (!existsSync("AGENTS.md")) {
+    console.log("Creating AGENTS.md seed...");
     writeFileSync(
-        ".claude/CLAUDE.md",
-        `# Project Context
+        "AGENTS.md",
+        `# Project Instructions
 
-## Overview
-[Brief description of what this project does]
-
-## Tech Stack
-- Language: [e.g., TypeScript, Python]
-- Framework: [e.g., React, FastAPI]
-- Database: [e.g., PostgreSQL, SQLite, None]
-- Package Manager: [e.g., npm, yarn, pip]
-
-## Project Structure
-\`\`\`
-[Add key directories and their purposes]
-\`\`\`
-
-## Development Commands
-\`\`\`bash
-# Install dependencies
-[command]
-
-# Run development server
-[command]
-
-# Run tests
-[command]
-
-# Build for production
-[command]
-\`\`\`
-
-## Key Files
-- \`[file]\`: [purpose]
-
-## Notes
-[Any important context for Claude to know]
+Add only project-specific conventions that cannot be discovered from repository files.
+Point to authoritative documentation for branch-specific workflows instead of copying it here.
 `
     );
 }
 
+if (!existsSync("CLAUDE.md")) {
+    console.log("Creating CLAUDE.md pointer...");
+    writeFileSync("CLAUDE.md", `@AGENTS.md\n`);
+}
+
 console.log("Creating initial commit...");
-execFileSync("git", ["add", ".gitignore", ".gitattributes", ".editorconfig", ".claude/"], { stdio: "inherit" });
+execFileSync(
+    "git",
+    ["add", ".gitignore", ".gitattributes", ".editorconfig", ...instructionFiles],
+    { stdio: "inherit" }
+);
 
 let hasStagedChanges = true;
 try {
@@ -168,8 +143,7 @@ if (!hasStagedChanges) {
 - Add comprehensive .gitignore
 - Add .gitattributes for line ending normalization
 - Add .editorconfig for editor consistency
-- Add .claude/ project structure
-- Add CLAUDE.md template`
+- Add minimal shared agent instructions`
         ],
         { stdio: "inherit" }
     );
@@ -182,13 +156,14 @@ console.log("Created:");
 console.log("  .gitignore          - Comprehensive ignore patterns");
 console.log("  .gitattributes      - Line ending normalization");
 console.log("  .editorconfig       - Editor consistency settings");
-console.log("  .claude/CLAUDE.md   - Project context template");
+console.log("  AGENTS.md           - Shared project-instruction seed (when absent)");
+console.log("  CLAUDE.md           - Pointer to AGENTS.md (when absent)");
 console.log("");
 console.log("Next steps:");
-console.log("  1. Run /mp-grill to work through requirements");
-console.log("  2. Run /mp-to-epic to create an epic");
-console.log("  3. Run /mp-to-issues to break the epic into sub-issues");
-console.log("  4. Run /mp-execute to implement");
+console.log("  1. Run /mp:grill to work through requirements");
+console.log("  2. Run /mp-gh:to-epic to create an epic");
+console.log("  3. Run /mp-gh:to-issues to break the epic into sub-issues");
+console.log("  4. Run /mp-gh:execute to implement");
 console.log("");
 console.log(`${YELLOW}Framework rules:${NC}`);
 console.log("  User-level rules (svelte, python, rust, css, typescript) load from ~/.claude/rules/");

@@ -6,13 +6,13 @@ disable-model-invocation: true
 allowed-tools: Read, AskUserQuestion, PowerShell, Bash(git rev-parse *)
 metadata:
   author: MartinoPolo
-  version: "0.3"
+  version: "0.4"
   category: setup
 ---
 
 # mp-board-setup
 
-One-time setup that creates this project's Obsidian **board** and links it into the repo, so `mp-board-to-issues` and `mp-batch-execute` can read requirements and pasted images. Read `${CLAUDE_SKILL_DIR}/../shared/BOARD_CONVENTION.md` now — board format and link layout. $ARGUMENTS
+One-time setup that creates this project's Obsidian **board** and links it into the repo, so `mp-board-to-issues` and `mp-batch-execute` can read requirements and pasted images. Resolve `MPX_SKILLS_DIR` and read `<resolved MPX_SKILLS_DIR>/mp/skills/shared/BOARD_CONVENTION.md` now — board format and link layout. $ARGUMENTS
 
 ## Step 1: Resolve paths
 
@@ -41,4 +41,4 @@ Without Windows Developer Mode the direct symlink call fails; the script then re
 
 Confirm the script printed both links. If it still warned that the `.mpx/BOARD.md` symlink could not be created (elevation declined, or the UAC prompt wasn't accepted), the junction and board file are already in place — only the file symlink needs the extra privilege. Re-run the script and accept the UAC prompt, or enable Windows Developer Mode (Settings › Privacy & security › For developers) and re-run.
 
-Report the board path, both link paths, and the next step: **open the board in Obsidian, paste any bug/task/feature notes with screenshots under `# To Process` (no need to sort by type), then run `/mp-board-to-issues` or `/mp-batch-execute`.**
+Report the board path, both link paths, and the next step: **open the board in Obsidian, paste any bug/task/feature notes with screenshots under `# To Process` (no need to sort by type), then run `/mp-board-to-issues` or `/mp-batch-execute`.** If symlink privilege remains unresolved, report partial success rather than full completion.
