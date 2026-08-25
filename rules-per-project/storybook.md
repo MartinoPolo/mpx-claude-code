@@ -131,5 +131,20 @@ Stories that demonstrate keyboard interaction must include a visible info box li
 ## Overlay Stories
 
 Overlay components (Dialog, Sheet, Popover, Select, DropdownMenu, ContextMenu) must use `portalProps={{ disabled: true }}` in stories so content renders inside the Storybook canvas rather than escaping to `<body>`.
+
+## Templates Must Consume Args
+
+Every `{#snippet template()}` must take `args` and spread it onto the meta `component` (the compound Root for multi-part components) — otherwise the Controls panel edits nothing and silently does nothing.
+
+```svelte
+{#snippet template(args: BadgeProps)}
+	<Badge {...args} {tone} {badgeStyle} {format} {size}>{tone}</Badge>
+```
+
+- **Showcase/matrix stories** (multiple instances, each pinning specific props by design): spread `{...args}` **first**, pinned props **after** — pinned wins.
+- **Default/single-instance/interactive/play stories**: hardcoded setup props **first**, `{...args}` **last** — controls win.
+- Args type: reuse an existing exported props type if the component has one; otherwise alias `Partial<ComponentProps<typeof X>>` in the module script. Use `Partial`, not the bare `ComponentProps` — a non-`Partial` alias makes every pinned prop that precedes the spread a TS2783 "specified more than once" error under `svelte-check`.
+- bits-ui discriminated-union components (Accordion, Select, Slider, Calendar, RadioGroup, ToggleGroup): also `Omit` the discriminant keys from the args type (`'type' | 'value' | 'onValueChange'`, plus any variant-specific callback like Slider's `onValueCommit`) — the full prop union across variants is too complex for TS to check against a spread. If `Omit` over `ComponentProps` still errors as "too complex to represent," import the single-variant type directly from `bits-ui` (e.g. `CalendarSingleRootProps`) instead.
+- A template that renders no instance of the meta component (e.g. a story that only calls an imperative helper like `toast()` from a button) is exempt — there is nothing for `args` to bind to.
 </content>
 </invoke>
