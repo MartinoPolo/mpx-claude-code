@@ -106,6 +106,6 @@ collisions (and ports held by unrelated processes) are avoided by probing each c
 | Harness | Wiring |
 |---|---|
 | Claude Code | `WorktreeCreate`/`WorktreeRemove` hooks exec the CLI for `claude --worktree`; in-session isolation ignores those hooks, so create manually |
-| Pi | Call the CLI manually, or wrap in a thin `onCreate` extension |
+| Pi | Main sessions use the `worktree` tool or `/worktree <name> [-- <task>]` from `mpx-pi/extensions/worktree`; it calls this CLI, reads `WORKTREE_PATH=`, and hands the conversation to a destination-bound session. Defaults to current `HEAD`; `base`/`--base` overrides it. Subagents retain `Agent` worktree isolation. |
 | Grovekeeper | Repoint its spawn from the bash creator to `node …setup-worktree.mts` |
 | Shell | Source `plugins/mp/scripts/shell-functions.sh`; `setup-worktree` cd's into the new worktree via a `WORKTREE_PATH=` stdout marker |
