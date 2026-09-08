@@ -1,0 +1,14 @@
+{
+  "$schema": "https://mpx.dev/schemas/mpxconfig.schema.json",
+  "schemaVersion": 1,
+  "project": {
+    "id": "MartinoPolo/mpx-claude-code"
+  },
+  "repository": {
+    "provider": "github",
+    "remote": "origin"
+  },
+  "issues": {
+    "provider": "github"
+  }
+}
