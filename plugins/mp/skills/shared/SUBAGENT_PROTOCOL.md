@@ -100,7 +100,8 @@ harnesses.
 | Model class | Claude Code | Pi | Best for |
 | --- | --- | --- | --- |
 | `mechanical` | `haiku`, no effort | Luna, `low` thinking | Bounded, no-judgment work: checks, commits, lookups |
-| `standard` | `sonnet`, `low` or `medium` | Terra, `low` or `medium` | Exploration, review, docs, bounded judgment |
+| `exploration` | `sonnet`, `medium` | Luna, `medium` thinking | Broad codebase discovery and repository search |
+| `standard` | `sonnet`, `low` or `medium` | Terra, `low` or `medium` | Review, docs, bounded judgment |
 | `advanced` | `opus`, task-matched effort | Sol, task-matched | Implementation, design, architecture, deep analysis |
 | `frontier` | `fable`, `high` effort | Sol, `high` | Deliberate manual escalation for large-task orchestration |
 
@@ -118,8 +119,8 @@ terms, not valid `model:` values.
   non-haiku agent, or an agent meant to run cheaply runs at `high` whenever the
   orchestrator does. Effort is inert on haiku (`TESTED`) — leave it unset there.
 - `TESTED` verdicts (raw tables in docs/SUBAGENTS.md):
-  - **Search**: sonnet at `low` matches `medium` and matches opus on multi-hop tracing, at
-    a third of opus's cost. `Explore` keeps `effort: low`.
+  - **Search**: the historical benchmark found Sonnet `low` sufficient, but the current
+    user preference pins `Explore` to `medium`.
   - **Review**: `medium` is the knee — full seeded-defect recall (10/10 vs `low`'s 8/10)
     at the same cost as `high`, zero false positives at every level. `mp-reviewer-*` pin
     `effort: medium`. `UNVERIFIED` for `mp-scanner-architecture` and `mp-issue-analyzer` —
@@ -149,7 +150,7 @@ turns, not token price. The rule that falls out:
 | Implementation — pre-analysed chunk | advanced | low | `mp-executor` |
 | Exploratory loop against live feedback | advanced | high | `mp-chrome-devtools-tester` |
 | Review | standard | medium | 7 × `mp-reviewer-*`, `mp-scanner-architecture` |
-| Exploration / codebase search | standard | low | `Explore` |
+| Exploration / codebase search | exploration | medium | `Explore` |
 | Bounded, some judgment | standard | low | `mp-pr-manager`, `mp-issue-finder`, `mp-unresolved-issue-tracker` |
 | Bounded, no judgment | mechanical | — | `mp-checker`, `mp-git-committer`, `mp-context7-docs-fetcher` |
 

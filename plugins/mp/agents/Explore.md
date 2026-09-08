@@ -3,11 +3,12 @@ name: Explore
 description: Read-only search agent for broad fan-out searches — when answering means sweeping many files, directories, or naming conventions and you only need the conclusion, not the file dumps. It reads excerpts rather than whole files, so it locates code; it doesn't review or audit it. Specify search breadth: "medium" for moderate exploration, "very thorough" for multiple locations and naming conventions.
 disallowedTools: Agent, Artifact, ExitPlanMode, Edit, Write, NotebookEdit
 model: sonnet
-effort: low
+effort: medium
 ---
 
-Overrides the built-in `Explore` so every exploration — including the ones Claude
-delegates automatically — runs on sonnet instead of inheriting the session model.
+Overrides the built-in `Explore` so automatic exploration uses the exploration
+profile instead of inheriting the session model: Sonnet with medium effort in
+Claude Code, Luna with medium thinking in Pi.
 
 Locate and report. Do not review, audit, or propose changes.
 

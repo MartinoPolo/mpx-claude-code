@@ -6,7 +6,7 @@ Skills, agents, hooks, scripts, and instructions that extend [Claude Code](https
 
 - **Full pipeline, hands-off** — requirements → epic → GitHub issues → TDD execution → reviewed PR → CI-green auto-merge, with the main agent as a pure orchestrator (raw findings, test failures, and CI logs never enter its context).
 - **Dozens of cherry-pickable skills and agents** — git workflows, parallel code review, design pipeline, maintenance sweeps, content generators (tutorials, podcasts, video sheets).
-- **Benchmarked model/effort choices** — every agent's model and effort pin is backed by a measured benchmark, not vibes ([details](docs/SUBAGENTS.md)).
+- **Runtime-aware model/effort choices** — agent profiles map to the available runtime model; `Explore` uses medium effort ([details](docs/SUBAGENTS.md)).
 - **Guard-rail hooks** — wrong package manager, dangerous commands, unchecked commits all blocked before they run.
 - **Custom status lines** — clickable, quota-aware main bar with a finished-sub-agent ledger + live per-sub-agent panel with rule-violation markers ([details](docs/STATUS_LINE.md)). Requires a short manual setup step — see [Manual setup](#manual-setup-not-pluginnable) below.
 
@@ -234,7 +234,7 @@ Several depend on the [machine-root environment variables](#machine-roots-mpx_) 
 
 | Agent                       | Model  | Effort | Description                                                                 |
 | --------------------------- | ------ | ------ | --------------------------------------------------------------------------- |
-| Explore                     | Sonnet | Low    | **Overrides the built-in `Explore`** — read-only codebase search            |
+| Explore                     | Sonnet | Medium | **Overrides the built-in `Explore`** — read-only codebase search            |
 | mp-executor                 | Opus   | Low    | Applies pre-analyzed edits to a scoped task chunk                           |
 | mp-check-fixer              | Opus   | High   | Pre-commit gate: checks, reviewers, tests, optional browser verify; dispatches fixes |
 | mp-ci-fixer                 | Opus   | High   | Fixes a failing CI run on a PR branch, pushes, re-watches                   |

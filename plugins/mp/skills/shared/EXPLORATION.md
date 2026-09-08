@@ -15,7 +15,7 @@ just read them.
 
 `agents/Explore.md` pins `model: sonnet` and overrides the built-in, so every
 exploration — including the ones Claude delegates automatically, without anyone
-asking — already runs on sonnet. Verified: bare `Explore` spawns resolve to
+asking — already runs on Sonnet with medium effort. Verified: bare `Explore` spawns resolve to
 `claude-sonnet-5` while the main thread runs `claude-opus-5[1m]`.
 
 Passing `model` at the call site re-states what the agent already declares and

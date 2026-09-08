@@ -6,6 +6,10 @@ with every rule tagged `TESTED`, `DOC`, or `UNVERIFIED`.
 
 ## Model/effort benchmark (July 2026)
 
+The raw results below are historical. The current user preference overrides the former `Explore`
+low-effort pin: `Explore` now runs on Sonnet with medium effort in Claude Code, while MPX resolves
+exploration to Luna with medium thinking in Pi.
+
 An 80-sub-agent benchmark settled three open questions in `SUBAGENT_PROTOCOL.md` § 7:
 
 - The seven `mp-reviewer-*` agents are pinned to `effort: medium`: against a diff with ten
