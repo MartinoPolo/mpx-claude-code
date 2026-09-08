@@ -14,6 +14,8 @@ implementation, callable identically from Claude Code, Pi, Fork, Grovekeeper, or
 Runs under Node's native TypeScript type stripping — no build step, no dependencies. Bash was
 dropped because the port hub needs a JSON registry, cross-platform port probing (`node:net`), and
 Windows parity; the deprecated bash creators remain in [`plugins/mp/scripts/deprecated/`](../plugins/mp/scripts/deprecated/).
+Dependency installation runs in the background. Successful installs remove their temporary output;
+failed installs retain stdout and stderr in `.worktree-install.log` for diagnosis.
 
 ## Usage
 

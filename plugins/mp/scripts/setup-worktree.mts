@@ -13,7 +13,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  openSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
@@ -226,15 +225,14 @@ async function main(): Promise<void> {
   const manager = detectPackageManager(worktreePath, config);
   if (manager !== "none") {
     info(`Installing dependencies with ${BOLD}${manager}${RESET} in the background...`);
-    const logPath = path.join(worktreePath, ".worktree-install.log");
-    const logFd = openSync(logPath, "w");
-    spawn(manager, ["install"], {
+    const installer = path.join(import.meta.dirname, "install-worktree-dependencies.mts");
+    spawn(process.execPath, [installer, manager, worktreePath], {
       cwd: worktreePath,
-      stdio: ["ignore", logFd, logFd],
+      stdio: "ignore",
       detached: true,
-      shell: true,
+      shell: false,
     }).unref();
-    detail(`Install running detached → ${path.relative(worktreePath, logPath)}`);
+    detail("Install running detached; failures are retained in .worktree-install.log");
   }
 
   console.log("");
