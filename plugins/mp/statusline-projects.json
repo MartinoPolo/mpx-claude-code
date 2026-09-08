@@ -3,6 +3,7 @@
     "devServers": {
         "web-components": [8100, 8101],
         "web-app": [5173, 4173, 6006],
-        "mobile-app": [8081]
+        "mobile-app": [8081],
+        "meeplog": [8200, 8201, 8202, 8203, 8204, 8205]
     }
 }
