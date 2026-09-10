@@ -1,4 +1,6 @@
-@instructions/AGENTS.md
+# MPX Claude Code
+
+Claude Code integration and skill sources for MPX.
 
 ## Skill Versioning
 

@@ -19,9 +19,11 @@ of its own.
 Resolve the tracker fresh each run — there is no per-repo setup file to write. Take the first rule
 that matches:
 
-1. **`.mpx/kanbanflow.json` exists at the repo/worktree root** → tracker is **KanbanFlow via the
-   `kf` CLI**; code review is **GitLab via the `glab` CLI**. (This file is written by `kf init`
-   and committed, so its presence is the signal the board is wired up.)
+1. **The nearest committed `mpxconfig.json` selects `issues.provider: "kanbanflow"`** → tracker is
+   **KanbanFlow via the `kf` CLI**. The KanbanFlow/GitLab adapter below requires
+   `repository.provider: "gitlab"` for code review; do not infer the review provider from the issue provider.
+   Read `issues.boardId` and `issues.states` from that manifest. Stop on an invalid configuration or an
+   unsupported configured provider rather than falling back to a different tracker.
 2. **Else the repo has a GitHub remote** (`git remote -v` shows a `github.com` host) → tracker is
    **GitHub via the `gh` CLI** — issues and PRs both.
 3. **Else** → **ask the user** which tracker to use before logging anything.
@@ -43,22 +45,33 @@ clone.
 
 Work items live on the KanbanFlow **board** (`kf`); code review lives on **GitLab** (`glab`) —
 they are different systems in this stack. Board identity and the column mapping come from
-`.mpx/kanbanflow.json`; a missing or broken file means the board is not wired up (the CLI exits
-non-zero), so tell the human to run `kf init` rather than guessing.
+`issues.boardId` and `issues.states` in `mpxconfig.json`. A missing or broken binding needs human repair;
+do not guess a board, write configuration, or run `kf init` as part of an issue workflow. Before a board operation,
+run `kf board --json` at the repository root and require its `_id` to equal the configured board ID.
+
+The CLI source exposes `issue`, not the retired `task` noun. Check installed `kf --help` and
+`kf issue --help` first; if `issue` is missing, stop and request an executable update. The version string alone
+is not a reliable grammar check. Do not translate these commands back to the obsolete noun.
 
 | Verb | Command |
 | --- | --- |
-| Log an issue/task | `kf task create --name "..." [--to <state>] [--label <NAME>]`, then attach the full write-up with `kf comment add <ref> --file <path>` |
-| Fetch a ticket | `kf task view <ref>` |
+| Log an issue/task | `kf issue create --name "..." [--to <state>] [--label <NAME>]`, then attach the full write-up with `kf comment add <ref> --file <path>` |
+| Fetch a ticket | `kf issue view <ref>` |
 | Comment | `kf comment add <ref> --text "..."` (or `--file <path>`) |
-| Apply / remove a label | `kf task edit <ref> --add-label <NAME>` / `--remove-label <NAME>` |
+| Apply / remove a label | `kf issue edit <ref> --add-label <NAME>` / `--remove-label <NAME>` |
 | Open a merge request | `glab mr create` — opened as a **draft**; the human reviews and merges |
 
 `kf` **never creates labels** — it can only apply labels that already exist on the board. If a
 label is refused as unknown, ask the human to add it once via the KanbanFlow UI; do not attempt to
 create it from the CLI. Canonical board states for `--to` are `todo`, `wip`, `review`, `done`,
 `archive`. Richer board workflow (grab, move, finish, AFK/HITL classification) is owned by the
-`kf-task-*` skills — route there rather than re-deriving it here.
+`/kf:*` skills (`issue-create`, `issue-view`, `issue-edit`, `issue-grill`, and `execute`) — route there rather
+than re-deriving it here.
+
+For automation, `kf issue view <ref> --json` returns `{issue, comments, attachments}`;
+`kf issue list --json` returns an array; create with `--json` returns `issueId` and optional `number` and
+`attachments`; edit with `--json` returns the updated issue object. Reuse the immutable returned ID.
+`--open`, `--state`, and `--column` are mutually exclusive list filters. Move and finish do not accept `--json`.
 
 ## Label mapping
 
