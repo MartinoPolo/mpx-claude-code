@@ -40,6 +40,8 @@ interface Fixture {
     expect?: string[];
     /** Substrings the rendered output must not contain. */
     reject?: string[];
+    /** Initialize the sandbox as a credential-free local git repository. */
+    initializeGit?: boolean;
 }
 
 const SUBAGENT_HISTORY_SESSION = "sess-agent-history";
@@ -128,6 +130,18 @@ const statusLineFixtures: Fixture[] = [
         name: "minimal payload, every optional field absent",
         payload: { session_id: "aaaabbbbccccdddd", cwd: REPO_ROOT },
         cacheFiles: { "claude-czk-cache.txt": "23.417\n" }
+    },
+    {
+        name: "location remains while server and branch-state rows stay absent",
+        payload: (sandbox: string) => ({
+            session_id: "location-row-only",
+            model: { display_name: "Opus 5" },
+            cwd: sandbox
+        }),
+        initializeGit: true,
+        cacheFiles: { "claude-czk-cache.txt": "23.417\n" },
+        expect: ["fixture-branch", "󰨞"],
+        reject: ["local", "ports"]
     },
     {
         // The one path unit tests cannot reach: the row is assembled from two
@@ -342,6 +356,9 @@ function isolatedEnv(fixture: Fixture): NodeJS.ProcessEnv {
     seed(cacheDir, fixture.cacheFiles ?? {});
     seed(configDir, fixture.configFiles ?? {});
     seed(sandbox, fixture.sandboxFiles ?? {});
+    if (fixture.initializeGit) {
+        execFileSync("git", ["init", "--quiet", "--initial-branch=fixture-branch"], { cwd: sandbox });
+    }
 
     return { ...process.env, TMPDIR: cacheDir, CLAUDE_CONFIG_DIR: configDir, SANDBOX_ROOT: sandbox };
 }

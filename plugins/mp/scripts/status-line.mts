@@ -137,9 +137,9 @@ const SESSION = `${BOLD}${PALETTE.session}`;
 // The terminal font is Cascadia Mono NF (installed 2026-07-30, set in Windows
 // Terminal settings.json), which carries the full Nerd Font symbol set in the
 // Private Use Area on top of glyphs identical to plain Cascadia Mono. That is
-// what licenses the two pictograms below; every other glyph on the bar
+// what licenses the pictograms below; every other glyph on the bar
 // (≡ ◆ ◇ █ ░ ↑ ↓ ·) was verified against plain Cascadia Mono's cmap, so a
-// fallback to the non-NF font degrades only the two icons, not the layout.
+// fallback to the non-NF font degrades only those icons, not the layout.
 //
 // Anything outside that verified set font-falls-back to Segoe UI Emoji, which
 // draws double-width into the one cell the terminal reserved and smears over
@@ -151,9 +151,6 @@ const BRANCH_ICON = "";
 
 /** VS Code logo (U+F0A1E, Nerd Font Material Design set) — drawn larger than the devicon U+E70C it replaced. */
 const VSCODE_ICON = "󰨞";
-
-/** Console (U+F018D, Nerd Font Material Design set) — the open-a-terminal-tab click target beside the VS Code logo. */
-const TERMINAL_ICON = "󰆍";
 
 /** Pencil (U+F03EB, Nerd Font Material Design set) — the edit-this-config click target beside the dev-server ports. */
 const PENCIL_ICON = "󰏫";
@@ -1312,35 +1309,6 @@ function vscodeShortcutFile(folder: string): string {
     return launcherFile(`claude-open-${cacheKey(folder)}.url`, `[InternetShortcut]\nURL=${url}\n`);
 }
 
-/**
- * A `.cmd` launcher that opens a new Windows Terminal tab at `folder` — the
- * status line's answer to "duplicate this tab".
- *
- * `wt -w 0` addresses the most recently used window, which is the one the click
- * came from, so the tab lands beside the session that drew the icon. The profile
- * comes from `WT_PROFILE_ID`, exported by Windows Terminal into every session it
- * starts and inherited all the way down to this renderer: without it the tab
- * would open under the *default* profile rather than the current one, which is a
- * copy of the wrong thing. Outside Windows Terminal the variable is unset and
- * the flag is dropped, leaving `-w 0` to open a window from scratch.
- *
- * `.cmd` rather than a `.url` because there is no `wt:` URI scheme to point at,
- * and rather than a `.lnk` because writing one means driving COM through
- * PowerShell — a process spawn on a line that renders on every keystroke. The
- * cost is the console window `cmd.exe` flashes while it hands off to `wt`.
- * `start ""` keeps that flash to the shortest possible: cmd exits without
- * waiting. A `%` in the path is doubled because cmd would otherwise read it as
- * the start of a variable reference and swallow it.
- */
-function terminalTabShortcutFile(folder: string): string {
-    const profileId = process.env.WT_PROFILE_ID ?? "";
-    const profileFlag = profileId === "" ? "" : ` -p "${profileId}"`;
-    return launcherFile(
-        `claude-newtab-${cacheKey(folder)}.cmd`,
-        `@start "" wt.exe -w 0 nt${profileFlag} -d "${folder.replace(/%/g, "%%")}"\r\n`
-    );
-}
-
 /** `file:` URL of a generated launcher, passing through the "" that means it could not be written. */
 function launcherUrl(file: string): string {
     return file === "" ? "" : toFileUrl(file);
@@ -1380,10 +1348,11 @@ export function buildSessionLine(
     return `${accountMarker}${SEPARATOR}${body}`;
 }
 
-export function buildModelLine(model: string, effortLevel: string): string {
+export function buildModelLine(model: string, effortLevel: string, mrBlock = ""): string {
     return joinSegments([
         `${ACCENT}${trimModelName(model)}${RESET}`,
-        effortLevel === "" ? "" : `${GRAY}${effortGauge(effortLevel)}${RESET}`
+        effortLevel === "" ? "" : `${GRAY}${effortGauge(effortLevel)}${RESET}`,
+        mrBlock
     ]);
 }
 
@@ -1400,10 +1369,6 @@ export interface LocationLineInput {
     projectEditorUrl: string;
     /** `file:` URL of a shortcut opening VS Code at the cwd; "" outside a worktree. */
     worktreeEditorUrl: string;
-    /** `file:` URL of a launcher opening a terminal tab at the main project folder. */
-    projectTerminalUrl: string;
-    /** `file:` URL of a launcher opening a terminal tab at the cwd; "" outside a worktree. */
-    worktreeTerminalUrl: string;
     branch: string;
     /** Web URL of the branch on its remote host; "" leaves the branch unlinked. */
     branchUrl: string;
@@ -1414,70 +1379,46 @@ export interface LocationLineInput {
  * In a worktree the two path halves are separate click targets — the project name
  * opens the original folder, the worktree name opens the worktree — and the
  * worktree half takes WHITE because it, not the project, answers "where am I".
- * Each half carries its own icon pair — VS Code and a terminal tab — so both the
- * original checkout and the worktree are one click away in either tool.
- *
- * The dev-server ports and the MR/PR block are a separate row (see
- * `buildServersAndReviewLine`): the worktree path and branch can each run long,
- * and trailing that state behind them pushed it off the right edge.
+ * Each half carries its own VS Code shortcut, so both checkouts remain one click
+ * away in the editor. Worktree and branch labels are capped by rendered cells;
+ * their complete folder and remote URLs remain attached to the shortened text.
  */
 export function buildLocationLine(input: LocationLineInput): string {
-    // Every icon keeps a plain space behind it, the last one included: these
-    // glyphs come from the double-width Symbols Nerd Font fallback and paint
-    // into the cell after their own, so any visible character glued to one would
-    // get smeared. The trailing space of the run is trimmed off the whole name
-    // when nothing follows it.
-    const icons = (editorUrl: string, terminalUrl: string) => {
-        const run = [
-            [editorUrl, VSCODE_ICON],
-            [terminalUrl, TERMINAL_ICON]
-        ]
-            .filter(([url]) => url !== "")
-            .map(([url, glyph]) => `${GRAY}${hyperlink(url, glyph)}${RESET}`);
-        return run.length === 0 ? "" : ` ${run.join(" ")} `;
-    };
-    const projectIcons = icons(input.projectEditorUrl, input.projectTerminalUrl);
-    const worktreeIcons = icons(input.worktreeEditorUrl, input.worktreeTerminalUrl);
+    const editorIcon = (editorUrl: string) =>
+        editorUrl === "" ? "" : ` ${GRAY}${hyperlink(editorUrl, VSCODE_ICON)}${RESET} `;
+    const projectIcon = editorIcon(input.projectEditorUrl);
+    const worktreeIcon = editorIcon(input.worktreeEditorUrl);
     const project = maybeLink(input.projectUrl, input.projectName);
+    const worktreeLabel = truncateDisplayLabel(input.worktreeName, LOCATION_LABEL_WIDTH);
+    const branchLabel = truncateDisplayLabel(input.branch, LOCATION_LABEL_WIDTH);
     const name = (
         input.worktreeName === ""
-            ? `${WHITE}${project}${RESET}${projectIcons}`
-            : `${GRAY}${project}${RESET}${projectIcons}${GRAY}/${RESET}` +
-              `${WHITE}${maybeLink(input.worktreeUrl, input.worktreeName)}${RESET}${worktreeIcons}`
+            ? `${WHITE}${project}${RESET}${projectIcon}`
+            : `${GRAY}${project}${RESET}${projectIcon}${GRAY}/${RESET}` +
+              `${WHITE}${maybeLink(input.worktreeUrl, worktreeLabel)}${RESET}${worktreeIcon}`
     ).trimEnd();
     return joinSegments([
         name,
-        input.branch === "" ? "" : `${GRAY}${BRANCH_ICON} ${maybeLink(input.branchUrl, input.branch)}${RESET}`
+        input.branch === "" ? "" : `${GRAY}${BRANCH_ICON} ${maybeLink(input.branchUrl, branchLabel)}${RESET}`
     ]);
 }
 
-/**
- * The outward-facing state of this checkout, split off the location line and
- * indented beneath it: dev-server ports (with their edit-the-config pencil) and
- * the merge/pull request — its number, CI, review comments and age. "" when there
- * is neither, so the row is dropped rather than emitted blank.
- */
-export function buildServersAndReviewLine(devServers: readonly string[], mrBlock: string): string {
-    const line = joinSegments([...devServers, mrBlock]);
-    return line === "" ? "" : `${INDENT_GUARD}   ${line}`;
-}
+const LOCATION_LABEL_WIDTH = 20;
+const ELLIPSIS = "…";
 
-export interface BranchStateInput {
-    gitSigns: string;
-    gitDirt: string[];
-    fetchAge: string;
-}
-
-/**
- * How the branch stands: upstream relation, uncommitted work, fetch age. Split
- * off the location line because those three counts grow without bound during a
- * working session and used to push the MR reference off the right edge.
- * Indented like the servers/review row above it, the way compaction rows nest
- * under the usage line: both read as a detail *of* the location block, not a peer.
- */
-export function buildBranchStateLine(input: BranchStateInput): string {
-    const line = joinSegments([input.gitSigns, ...input.gitDirt, input.fetchAge]);
-    return line === "" ? "" : `${INDENT_GUARD}   ${line}`;
+function truncateDisplayLabel(label: string, maximumWidth: number): string {
+    if (visibleWidth(label) <= maximumWidth) {
+        return label;
+    }
+    const contentWidth = maximumWidth - visibleWidth(ELLIPSIS);
+    let truncated = "";
+    for (const character of label) {
+        if (visibleWidth(truncated + character) > contentWidth) {
+            break;
+        }
+        truncated += character;
+    }
+    return `${truncated}${ELLIPSIS}`;
 }
 
 export interface UsageLineInput {
@@ -2027,7 +1968,6 @@ function render(): string {
     const maxContext = toNonNegativeInt(fields.maxContext, 200000);
     const shortId = fields.sessionId.slice(0, 8);
     const cwdEditorUrl = fields.cwd === "" ? "" : launcherUrl(vscodeShortcutFile(fields.cwd));
-    const cwdTerminalUrl = fields.cwd === "" ? "" : launcherUrl(terminalTabShortcutFile(fields.cwd));
 
     const accountLabel = resolveAccountLabel(resolveConfigDir());
     const accountMarker =
@@ -2037,38 +1977,15 @@ function render(): string {
 
     const git = readGitStatus(fields.cwd);
     const branch = git?.branch ?? "";
-    const remote = remoteUrls(fields.cwd, branch, (git?.ahead ?? 0) > 0);
-    const gitSigns = git ? buildGitSigns(git, remote.compareUrl) : "";
-    const gitDirt = git ? buildGitDirt(git) : [];
+    const remote = remoteUrls(fields.cwd, branch, false);
 
     const location = resolveProjectLocation(fields.cwd, branch === "" ? undefined : readWorktreePaths(fields.cwd));
 
-    // In a worktree the cwd launchers belong to the worktree half; the project
-    // half gets its own pair pointing into the original checkout.
+    // In a worktree the cwd shortcut belongs to the worktree half; the project
+    // half gets its own shortcut pointing into the original checkout.
     const inWorktree = location.worktreeName !== "";
     const projectEditorUrl = inWorktree ? launcherUrl(vscodeShortcutFile(location.projectDir)) : cwdEditorUrl;
-    const projectTerminalUrl = inWorktree
-        ? launcherUrl(terminalTabShortcutFile(location.projectDir))
-        : cwdTerminalUrl;
     const worktreeEditorUrl = inWorktree ? cwdEditorUrl : "";
-    const worktreeTerminalUrl = inWorktree ? cwdTerminalUrl : "";
-
-    // --- Dev servers: cached probe results, refreshed by a detached child ---
-    const devServerPorts = devServerPortsFor(location.projectName);
-    let devServers: string[] = [];
-    if (location.projectName !== "") {
-        const portsConfigUrl = existsSync(portsConfigPath()) ? toFileUrl(portsConfigPath()) : "";
-        let portSchemes: ReadonlyMap<number, PortScheme> = new Map();
-        if (devServerPorts.length > 0) {
-            const portsCache = path.join(CACHE_DIR, `claude-ports-${cacheKey(location.projectDir)}.tsv`);
-            const probedAt = mtimeSeconds(portsCache);
-            if (probedAt === undefined || nowSeconds() - probedAt >= PORT_PROBE_TTL) {
-                spawnSelf("--warm-ports", portsCache, devServerPorts.join(","));
-            }
-            portSchemes = parsePortSchemes(readFileOrEmpty(portsCache));
-        }
-        devServers = buildDevServerSegments(devServerPorts, portSchemes, portsConfigUrl);
-    }
 
     // --- Session cost (USD + CZK) ---
     let usdDisplay = "";
@@ -2142,7 +2059,6 @@ function render(): string {
     // Pure cache read plus a possible detached spawn: the render itself never
     // touches the network, since Claude Code cancels a status line that blocks.
     let mrBlock = "";
-    let fetchAge = "";
     if (branch !== "") {
         const key = cacheKey(`${fields.cwd}|${branch}`);
         const mrCache = path.join(CACHE_DIR, `claude-mr-${key}.tsv`);
@@ -2173,7 +2089,6 @@ function render(): string {
             }
         }
 
-        fetchAge = buildFetchAge(mr.fetchEpoch, now);
         mrBlock = buildMrBlock(mr, cacheAge);
     }
 
@@ -2219,11 +2134,10 @@ function render(): string {
 
     const transcriptUrl = fields.transcriptPath === "" ? "" : toFileUrl(fields.transcriptPath);
     // The left column is every bar row except the finished-agent ledger, which is
-    // pinned to the right. A row with nothing to say is dropped rather than emitted
-    // blank — outside a repo the branch state has no content at all.
+    // pinned to the right. A row with nothing to say is dropped rather than emitted blank.
     const leftLines = [
         buildSessionLine(fields.sessionName, shortId, transcriptUrl, accountMarker),
-        buildModelLine(fields.model, fields.effortLevel),
+        buildModelLine(fields.model, fields.effortLevel, mrBlock),
         buildLocationLine({
             projectName: location.projectName,
             projectUrl: location.projectUrl,
@@ -2231,13 +2145,9 @@ function render(): string {
             worktreeUrl: location.worktreeUrl,
             projectEditorUrl,
             worktreeEditorUrl,
-            projectTerminalUrl,
-            worktreeTerminalUrl,
             branch,
             branchUrl: remote.branchUrl
         }),
-        buildServersAndReviewLine(devServers, mrBlock),
-        buildBranchStateLine({ gitSigns, gitDirt, fetchAge }),
         buildUsageLine({ sessionTokensIn: fields.sessionTokensIn, tokensK, ctxPct, usdDisplay, czkDisplay, compactLimit }),
         ...buildCompactionLines(compactions, `${INDENT_GUARD} `, COMPACTION_STYLE),
         quotaLine

@@ -10,11 +10,10 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
 
 - **One separator.** ` · ` (U+00B7) means "next field" everywhere; there is no second rank of
   separator.
-- **The location row is only project/worktree and branch.** The dev-server ports and the MR/PR
-  block move to a row of their own (`buildServersAndReviewLine`), indented beneath it: the worktree
-  path and branch can each run long, and trailing that state behind them pushed it off the right edge.
-- **Branch state has its own row too.** Its counts grow without bound during a session; it is
-  indented beside the servers/review row, both reading as a detail of the location above.
+- **The location row is only project/worktree and branch.** Worktree and branch labels are capped
+  at 20 display cells, including the ellipsis, while their OSC-8 targets retain the complete paths.
+- **Review follows effort on the model row.** The MR/PR identifier and its review, CI, comment, and
+  age details appear immediately after the effort gauge.
 - **The directory name is the only white field.** It answers "where am I", asked most often and
   from furthest away; every other field on that row stays grey. In a worktree the white moves to
   the worktree half of `project/worktree`, the actual location.
@@ -26,18 +25,17 @@ against Windows Terminal with the `Cascadia Mono, Symbols Nerd Font` fallback pa
   the rest of the row uses, and never renders alone on an otherwise-empty line.
 - **Effort is a gauge, not a word.** `◆◆◆◇◇` (high) reads at a glance; five slots for the five
   levels `low medium high xhigh max`, anything unrecognized falls back to `<level>` text.
-- **Dim grey is for context, not signal.** Fetch age, cache ages, quota countdowns, session cost
+- **Dim grey is for context, not signal.** Cache ages, quota countdowns, session cost
   and a compaction's clock all render dim — they qualify the number beside them rather than
   demanding attention. The one exception is a quota cache old enough that its percentages are
   wrong, which goes coral.
 - **The session name is the only field with weight** — bold, the scheme's bright purple lifted
   toward white. It is the title of the thing you are looking at, found before anything else.
-- **An empty row is dropped, not emitted blank** — outside a repo the branch-state row has no
-  content, so the rows below move up.
+- **An empty row is dropped, not emitted blank.**
 
 ## Two-column layout
 
-The left column (session, model, location, branch state, context/cost, compaction, quota) keeps the
+The left column (session, model, location, context/cost, compaction, quota) keeps the
 left edge; the finished-agent ledger is **pinned to the right**, filling the gutter beside the short
 left rows instead of stacking below them. `composeColumns` does this after both columns are built.
 
@@ -137,11 +135,7 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 | --- | --- |
 | project / worktree name | Explorer in that folder |
 | VS Code glyph beside a name | VS Code in that folder |
-| terminal glyph beside a name | a new Windows Terminal tab in that folder, same profile |
 | branch name | the branch on its remote (`.../tree/<branch>`, GitLab `/-/tree/`) |
-| `↑3` unpushed count | the compare view of the default branch against this one |
-| `:8100` port | `localhost:8100` over the scheme the probe saw it speak |
-| pencil glyph after the ports | `plugins/mp/statusline-projects.json`, where the ports live |
 | session id | the session's transcript `.jsonl` |
 | `5h` / `7d` quota labels | the claude.ai usage dashboard |
 
@@ -149,80 +143,25 @@ Almost every identifier on the line is an OSC-8 hyperlink to the thing it names:
 spellings (scp-like, `ssh://`, `https://`) with `.git` stripped and the tree path picked by host
 (GitLab nests under `/-/`). No parseable remote → plain text, no link.
 
-**The unpushed count links to the compare view** (`.../compare/<default>...<branch>`), the page
-that offers to open a PR/MR. The base branch is resolved from `git for-each-ref` over
-`refs/remotes/origin/{HEAD,main,master}` — refs only, because resolving it over the network is the
-kind of wait a status line cannot afford. The ref read happens only when something is ahead.
-
 **Worktrees split into two click targets.** `git rev-parse --path-format=absolute
 --git-common-dir --show-toplevel` reveals a linked worktree (the shared `.git` lives under the
 main checkout, so `dirname(--git-common-dir)` differs from `--show-toplevel`). The line then
 renders `project/worktree` — project grey linking the original folder, worktree white linking the
 worktree — and each half carries its own VS Code glyph opening its own checkout.
 
-**Dev-server ports** follow the branch segment, declared per project in `plugins/mp/statusline-projects.json`
-at the repo root (worktrees inherit their project's entry). Each renders as `:8100` hyperlinked
-into the browser, green while something listens and dim while nothing does. Liveness comes from a
-cache written by a detached `--warm-ports` child that probes each port with a short timeout; the
-render never opens a socket. Which process belongs to which project is not auto-detected — a dev
-server is usually a `node` grandchild whose working directory Windows will not cheaply reveal —
-hence the config.
-
-The probe decides the **scheme** as well as the state, both load-bearing:
-
-- It dials `localhost`, not `127.0.0.1`, so Node's happy-eyeballs tries both address families. A
-  server bound to `::1` only (which Vite does routinely) otherwise probes as down.
-- Once connected it attempts a TLS handshake: completed → `https`, rejected → `http`. Getting this
-  wrong is not graceful — an `http://` request to a TLS listener returns zero bytes and the browser
-  reports `ERR_EMPTY_RESPONSE`, which looks like a broken server rather than a wrong URL. A down
-  port has no known scheme and falls back to `http`.
-
-A project with no entry renders a dim `pencil ports` hint in the same place, which is how a fresh
-project discovers the feature.
-
-**Editor and terminal links are indirect, because Windows Terminal opens a hyperlink only when its
-scheme is `http`, `https` or `file`.** `vscode://` cannot be emitted directly, so the VS Code glyph
-links to a generated `$TMPDIR/claude-open-<key>.url` shortcut holding the `vscode:` URL — opening a
-`.url` hands its URL to the shell, which dispatches `vscode:` to VS Code. The file is inert data and
-is rewritten every render so a format change cannot be shadowed by a stale file. The terminal glyph
-has no URI scheme at all, so it links to a generated `$TMPDIR/claude-newtab-<key>.cmd` running
-`start "" wt.exe -w 0 nt -p "<profile>" -d "<folder>"`:
-
-- `-w 0` addresses the **most recently used** window, so the tab lands beside the session that drew
-  the icon.
-- `-p` carries `WT_PROFILE_ID` (inherited down to the renderer); without it the tab opens under the
-  default profile. Outside Windows Terminal the variable is unset and the flag is dropped.
-- A `%` in the path is doubled, or `cmd` reads it as a variable reference and swallows it.
+**Editor links are indirect, because Windows Terminal opens a hyperlink only when its scheme is
+`http`, `https` or `file`.** `vscode://` cannot be emitted directly, so the VS Code glyph links to a
+generated `$TMPDIR/claude-open-<key>.url` shortcut holding the `vscode:` URL — opening a `.url` hands
+its URL to the shell, which dispatches `vscode:` to VS Code. The file is inert data and is rewritten
+every render so a format change cannot be shadowed by a stale file.
 
 **Links terminate with `BEL`, not `ESC \`.** Every line passes through `expandBackslashEscapes`,
 which would pair a trailing backslash with the first character of the label (a folder named `code`
 would truncate the line at `\c`).
 
-## Branch signs and MR/PR block
+## MR/PR block
 
-```
-mpx-claude-code <VS Code> <terminal> ·  main
-    ≡ · +2 · !28 · ?9 · 2h ago
-
-yoursafe-components <VS Code> <terminal> ·  martas/agentic-setup · :8100 · !252 draft · ci run · 💬 3
-    ↑3 · +2 · 16m ago
-```
-
-Upstream relation (one state, mutually exclusive): `local` no upstream · `≡` in sync · `↑3` ahead ·
-`↓2` behind · `↑3↓2` diverged · `remote deleted`. Then one segment per non-zero count — `+n` staged,
-`!n` modified, `?n` untracked, `~n` conflicted (powerlevel10k vocabulary) — and fetch age, hidden
-under 10m.
-
-**The whole row is quiet by design**: indented under the location line and dim throughout, because
-it restates work you already know about. Color survives only where git tells you something you might
-not: WARN for diverged/conflicts/deleted remote, green/red for an unpushed/unpulled count, sand for
-a branch that never left the machine.
-
-**Untracked files are counted** — `git status --untracked-files=normal` walks the working tree.
-`normal` (not `all`) collapses an untracked directory to one entry, so the count matches what a
-human sees and a large unignored tree cannot inflate it.
-
-**MR/PR**: `!N` (GitLab) or `#N` (GitHub) linking to the web URL, then one status token (`draft`,
+**MR/PR**, appended to the model row immediately after effort: `!N` (GitLab) or `#N` (GitHub) linking to the web URL, then one status token (`draft`,
 `conflicts`, `changes-req`, `approved`, `N left/req approvals`, `mergeable`, or the raw merge
 status), the pipeline state spelled out and colored (`ci ok/fail/run/skip`), `💬 N` comments, and a
 dim age note when the cache is stale. The status token binds to the reference with a space
@@ -234,10 +173,6 @@ The render path is **network-free**: it reads a `$TMPDIR` cache and, when stale,
 [`plugins/mp/scripts/status-line-mr-refresh.mjs`](../plugins/mp/scripts/status-line-mr-refresh.mjs) detached for one
 `glab api graphql` (GitLab) or `gh pr list` (GitHub) call. Rate limits are a non-issue at this
 call volume.
-
-`in sync` is about *commits*, not files — porcelain-v2's `# branch.ab +0 -0`. Uncommitted work is
-reported by the counts beside it, so `in sync · 28 modified` is consistent. Ahead/behind is measured
-against the *local* copy of the remote ref, which is why the fetch age sits beside it.
 
 ## Sub-agent status line
 
@@ -515,8 +450,7 @@ scheme change shows on the next render.
 
 The terminal font is the fallback pair **`Cascadia Mono, Symbols Nerd Font`** (`profiles.defaults.font.face`;
 WT walks the comma list per glyph). Text comes from Cascadia Mono; the Private Use Area pictograms
-fall through to Symbols Nerd Font — the git-branch glyph U+E725, VS Code U+F0A1E, console U+F018D and
-pencil U+F03EB.
+fall through to Symbols Nerd Font — the git-branch glyph U+E725 and VS Code U+F0A1E.
 
 These pictograms render **single-width** in the configured terminal — one cell each, like the
 surrounding text — so `visibleWidth` measures them as one cell (see [Two-column layout](#two-column-layout)).
@@ -537,11 +471,7 @@ fine once spaced.
 | `◆◇` (five slots) | effort gauge: low `◆◇◇◇◇` → max `◆◆◆◆◆` |
 | U+E725 branch | precedes the branch name |
 | U+F0A1E VS Code | after each folder name; opens the editor there |
-| U+F018D console | after the VS Code glyph; opens a terminal tab there |
-| U+F03EB pencil | after the dev-server ports; opens `statusline-projects.json` |
 | U+2800 braille blank | first character of every indented row |
-| `≡` | branch in sync with upstream |
-| `+n !n ?n ~n` | staged / modified / untracked / conflicted |
 | `█ ░` | every bar: quota and context |
 
 **The indent guard.** Claude Code trims whitespace off each row before rendering, so a plain-space

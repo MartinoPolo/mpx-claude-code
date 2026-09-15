@@ -4,7 +4,6 @@ import {
     INDENT_GUARD,
     SEPARATOR,
     basename,
-    buildBranchStateLine,
     buildBranchUrl,
     buildCompareUrl,
     buildDevServerSegments,
@@ -15,7 +14,6 @@ import {
     buildModelLine,
     buildMrBlock,
     buildQuotaLine,
-    buildServersAndReviewLine,
     buildSessionLine,
     buildSubagentLine,
     buildUsageLine,
@@ -418,7 +416,16 @@ describe("buildModelLine", () => {
         expect(buildModelLine("Opus 5", "")).toBe(`${ACCENT}Opus 5${RESET}`);
     });
 
-    it("renders the model with its effort gauge", () => {
+    it("renders model, effort, and review metadata in that order", () => {
+        const review = `${MR}${hyperlink("https://github.com/acme/repo/pull/42", "#42")}${RESET}` +
+            `${SEPARATOR}${ADD}ci ok${RESET}`;
+
+        expect(buildModelLine("Opus 5 (1M context)", "high", review)).toBe(
+            `${ACCENT}Opus 5 (1M)${RESET}${SEPARATOR}${GRAY}◆◆◆◇◇${RESET}${SEPARATOR}${review}`
+        );
+    });
+
+    it("leaves the model and effort row unchanged when no review exists", () => {
         expect(buildModelLine("Opus 5 (1M context)", "high")).toBe(
             `${ACCENT}Opus 5 (1M)${RESET}${SEPARATOR}${GRAY}◆◆◆◇◇${RESET}`
         );
@@ -428,7 +435,6 @@ describe("buildModelLine", () => {
 describe("buildLocationLine", () => {
     const BRANCH_ICON = "\ue725";
     const VSCODE_ICON = "\u{f0a1e}";
-    const TERMINAL_ICON = "\u{f018d}";
     const empty = {
         projectName: "repo",
         projectUrl: "",
@@ -436,8 +442,6 @@ describe("buildLocationLine", () => {
         worktreeUrl: "",
         projectEditorUrl: "",
         worktreeEditorUrl: "",
-        projectTerminalUrl: "",
-        worktreeTerminalUrl: "",
         branch: "",
         branchUrl: ""
     };
@@ -489,37 +493,33 @@ describe("buildLocationLine", () => {
         );
     });
 
-    it("gives each worktree half its own terminal icon", () => {
-        expect(
-            buildLocationLine({
-                ...empty,
-                worktreeName: "wt-fix",
-                projectTerminalUrl: "file:///c/newtab-main.cmd",
-                worktreeTerminalUrl: "file:///c/newtab-wt.cmd"
-            })
-        ).toBe(
-            `${GRAY}repo${RESET} ${GRAY}${hyperlink("file:///c/newtab-main.cmd", TERMINAL_ICON)}${RESET} ${GRAY}/${RESET}` +
-                `${WHITE}wt-fix${RESET} ${GRAY}${hyperlink("file:///c/newtab-wt.cmd", TERMINAL_ICON)}${RESET}`
+    it("caps Unicode worktree and branch labels while preserving their full hyperlink targets", () => {
+        const line = buildLocationLine({
+            ...empty,
+            worktreeName: "abcdefghijklmno💬qrstuvwxyz",
+            worktreeUrl: "file:///c/abcdefghijklmno%F0%9F%92%ACqrstuvwxyz/",
+            branch: "feature/💬-a-very-long-branch-name",
+            branchUrl: "https://github.com/me/repo/tree/feature/%F0%9F%92%AC-a-very-long-branch-name"
+        });
+
+        expect(line).toContain(
+            hyperlink("file:///c/abcdefghijklmno%F0%9F%92%ACqrstuvwxyz/", "abcdefghijklmno💬qr…")
         );
+        expect(line).toContain(
+            hyperlink(
+                "https://github.com/me/repo/tree/feature/%F0%9F%92%AC-a-very-long-branch-name",
+                "feature/💬-a-very-l…"
+            )
+        );
+        expect(visibleWidth("abcdefghijklmno💬qr…")).toBe(20);
+        expect(visibleWidth("feature/💬-a-very-l…")).toBe(20);
     });
 
-    it("puts the terminal icon after the VS Code icon, one space between them", () => {
-        expect(
-            buildLocationLine({
-                ...empty,
-                projectEditorUrl: "file:///c/open.url",
-                projectTerminalUrl: "file:///c/newtab.cmd"
-            })
-        ).toBe(
-            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}` +
-                ` ${GRAY}${hyperlink("file:///c/newtab.cmd", TERMINAL_ICON)}${RESET}`
-        );
-    });
+    it("renders only the VS Code shortcut beside folder labels", () => {
+        const line = buildLocationLine({ ...empty, projectEditorUrl: "file:///c/open.url" });
 
-    it("renders the terminal icon alone when no editor shortcut could be written", () => {
-        expect(buildLocationLine({ ...empty, projectTerminalUrl: "file:///c/newtab.cmd" })).toBe(
-            `${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/newtab.cmd", TERMINAL_ICON)}${RESET}`
-        );
+        expect(line).toBe(`${WHITE}repo${RESET} ${GRAY}${hyperlink("file:///c/open.url", VSCODE_ICON)}${RESET}`);
+        expect(line).not.toContain("\u{f018d}");
     });
 
     it("joins name+editor and branch in that order, and stops there", () => {
@@ -549,22 +549,6 @@ describe("buildLocationLine", () => {
 
     it("keeps the name readable when no URL could be built", () => {
         expect(buildLocationLine(empty)).not.toContain("\x1b]8");
-    });
-});
-
-describe("buildServersAndReviewLine", () => {
-    it("is empty when there are neither ports nor an MR block", () => {
-        expect(buildServersAndReviewLine([], "")).toBe("");
-    });
-
-    it("indents the ports and MR block under the location line", () => {
-        expect(buildServersAndReviewLine([`${DIM}:8100${RESET}`, `${DIM}:8101${RESET}`], `${MR}#42${RESET}`)).toBe(
-            `${INDENT_GUARD}   ${DIM}:8100${RESET}${SEPARATOR}${DIM}:8101${RESET}${SEPARATOR}${MR}#42${RESET}`
-        );
-    });
-
-    it("renders the MR block alone when there are no ports", () => {
-        expect(buildServersAndReviewLine([], `${MR}#42${RESET}`)).toBe(`${INDENT_GUARD}   ${MR}#42${RESET}`);
     });
 });
 
@@ -766,42 +750,6 @@ describe("toFileUrl", () => {
 
     it("encodes the characters that would otherwise end the path", () => {
         expect(toFileUrl("/home/me/my repo#1?x")).toBe("file:///home/me/my%20repo%231%3Fx");
-    });
-});
-
-describe("buildBranchStateLine", () => {
-    const empty = { gitSigns: "", gitDirt: [] as string[], fetchAge: "" };
-
-    it("is empty outside a repo, so the row is dropped entirely", () => {
-        expect(buildBranchStateLine(empty)).toBe("");
-    });
-
-    it("joins signs, every dirt kind and the fetch age, indented under the location line", () => {
-        expect(
-            buildBranchStateLine({
-                gitSigns: `${DIM}≡${RESET}`,
-                gitDirt: [`${DIM}+1${RESET}`, `${DIM}!2${RESET}`, `${DIM}?4${RESET}`, `${WARN}~3${RESET}`],
-                fetchAge: `${DIM}10m ago${RESET}`
-            })
-        ).toBe(
-            `${INDENT_GUARD}   ${DIM}≡${RESET}${SEPARATOR}${DIM}+1${RESET}${SEPARATOR}${DIM}!2${RESET}` +
-                `${SEPARATOR}${DIM}?4${RESET}${SEPARATOR}${WARN}~3${RESET}` +
-                `${SEPARATOR}${DIM}10m ago${RESET}`
-        );
-    });
-
-    it("never dangles a separator when only one field has content", () => {
-        expect(buildBranchStateLine({ ...empty, gitSigns: `${DIM}≡${RESET}` })).toBe(
-            `${INDENT_GUARD}   ${DIM}≡${RESET}`
-        );
-        expect(buildBranchStateLine({ ...empty, fetchAge: `${DIM}2h ago${RESET}` })).toBe(
-            `${INDENT_GUARD}   ${DIM}2h ago${RESET}`
-        );
-    });
-
-    it("leads with the braille blank so a whitespace trim cannot eat the indent", () => {
-        expect(INDENT_GUARD).toBe("⠀");
-        expect(`${INDENT_GUARD}   x`.trim()).toBe(`${INDENT_GUARD}   x`);
     });
 });
 
